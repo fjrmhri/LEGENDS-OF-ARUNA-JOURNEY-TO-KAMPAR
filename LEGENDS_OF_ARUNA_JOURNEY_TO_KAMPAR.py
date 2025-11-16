@@ -17,9 +17,11 @@ Cara pakai (singkat):
 NB: Untuk produksi, sebaiknya simpan state di database, bukan di memory seperti contoh ini.
 """
 
+import json
 import logging
+import os
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 import random
 
 from telegram import (
@@ -107,11 +109,7 @@ CITY_FEATURES = {
     },
     "SIAK": {
         "description": "Kota sungai damai dengan klinik Safiya dan tempat kerja sederhana.",
-        "shop_items": [
-            "Pisau Sungai (+ATK kecil)",
-            "Jubah Healer (+DEF, bonus pada Umar)",
-            "Potion Kecil (heal 50 HP)",
-        ],
+        "shop_items": ["WOODEN_SWORD", "POTION_SMALL", "ETHER_SMALL"],
         "inn_cost": 20,
         "jobs": {
             "KURIR_OBAT": {
@@ -130,11 +128,7 @@ CITY_FEATURES = {
     },
     "RENGAT": {
         "description": "Kota para penyihir dengan menara-menara riset dan hutan magis.",
-        "shop_items": [
-            "Staf Rimba (+MAG)",
-            "Jubah Rune (+DEF/MAG)",
-            "Ether Kecil (restore 15 MP)",
-        ],
+        "shop_items": ["POTION_SMALL", "POTION_MEDIUM", "ETHER_SMALL"],
         "inn_cost": 30,
         "jobs": {
             "ASISTEN_RISET": {
@@ -153,12 +147,7 @@ CITY_FEATURES = {
     },
     "PEKANBARU": {
         "description": "Metropolis suram, tempat terakhir untuk melengkapi persiapan sebelum Kampar.",
-        "shop_items": [
-            "Pedang Kota Besar (+ATK menengah)",
-            "Armor Baja Riau (+DEF tinggi)",
-            "Light Charm (resist Gelap +10%)",
-            "Potion Sedang (heal 120 HP)",
-        ],
+        "shop_items": ["POTION_MEDIUM", "ETHER_SMALL"],
         "inn_cost": 45,
         "jobs": {
             "PENGAWAL_KARAVAN": {
@@ -180,6 +169,49 @@ CITY_FEATURES = {
         "shop_items": [],
         "inn_cost": 0,
         "jobs": {},
+    },
+}
+
+# =====================================
+# ITEM DEFINITIONS
+# =====================================
+
+ITEMS = {
+    "POTION_SMALL": {
+        "id": "POTION_SMALL",
+        "name": "Potion Kecil",
+        "description": "Memulihkan 50 HP satu karakter.",
+        "type": "consumable",
+        "buy_price": 20,
+        "sell_price": 10,
+        "effects": {"hp_restore": 50, "target": "single"},
+    },
+    "POTION_MEDIUM": {
+        "id": "POTION_MEDIUM",
+        "name": "Potion Sedang",
+        "description": "Memulihkan 120 HP satu karakter.",
+        "type": "consumable",
+        "buy_price": 60,
+        "sell_price": 30,
+        "effects": {"hp_restore": 120, "target": "single"},
+    },
+    "ETHER_SMALL": {
+        "id": "ETHER_SMALL",
+        "name": "Ether Kecil",
+        "description": "Memulihkan 15 MP satu karakter.",
+        "type": "consumable",
+        "buy_price": 40,
+        "sell_price": 20,
+        "effects": {"mp_restore": 15, "target": "single"},
+    },
+    "WOODEN_SWORD": {
+        "id": "WOODEN_SWORD",
+        "name": "Pedang Kayu",
+        "description": "Pedang sederhana untuk pemula.",
+        "type": "weapon",
+        "buy_price": 50,
+        "sell_price": 25,
+        "effects": {"atk_bonus": 3},
     },
 }
 
@@ -477,12 +509,14 @@ SKILLS = {
         "name": "Purify",
         "mp_cost": 8,
         "type": "CLEANSE",
+        "target": "party",
         "description": "Menghilangkan 1 debuff dari ally.",
     },
     "REVIVE": {
         "name": "Revive",
         "mp_cost": 18,
         "type": "REVIVE",
+        "revive_ratio": 0.4,
         "description": "Menghidupkan ally yang tumbang.",
     },
     "SAFIYAS_GRACE": {
@@ -524,12 +558,16 @@ SKILLS = {
         "name": "Abyss Seal",
         "mp_cost": 15,
         "type": "DEBUFF_ENEMY",
+        "debuffs": {"mag": -4, "spd": -3},
+        "duration": 3,
         "description": "Menurunkan MAG dan SPD musuh.",
     },
     "MASTERS_LEGACY": {
         "name": "Master's Legacy",
         "mp_cost": 20,
         "type": "BUFF_TEAM",
+        "buffs": {"atk": 3, "mag": 3, "defense": 3},
+        "duration": 3,
         "description": "Ultimate Reza: buff ATK/MAG/DEF dan resist gelap party.",
     },
 }
@@ -1061,6 +1099,14 @@ class CharacterState:
 
 
 @dataclass
+class BattleTurnState:
+    turn_order: List[str] = field(default_factory=list)
+    current_index: int = -1
+    awaiting_player_input: bool = False
+    active_token: Optional[str] = None
+
+
+@dataclass
 class GameState:
     user_id: int
     scene_id: str = "CH0_S1"
@@ -1068,6 +1114,7 @@ class GameState:
     in_battle: bool = False
     battle_enemies: List[Dict[str, Any]] = field(default_factory=list)
     battle_turn: str = "PLAYER"
+    battle_state: BattleTurnState = field(default_factory=BattleTurnState)
     gold: int = 0
     main_progress: str = "PROLOG"
     party: Dict[str, CharacterState] = field(default_factory=dict)
@@ -1144,8 +1191,192 @@ class GameState:
             self.flags["HAS_REZA"] = True
 
 
+def make_char_buff_key(char_id: str) -> str:
+    return f"CHAR:{char_id}"
+
+
+def make_enemy_buff_key(index: int) -> str:
+    return f"ENEMY:{index}"
+
+
+def get_buff_target(state: GameState, key: str):
+    if not key:
+        return None
+    if key.startswith("CHAR:"):
+        cid = key.split(":", 1)[1]
+        return state.party.get(cid)
+    if key.startswith("ENEMY:"):
+        try:
+            idx = int(key.split(":", 1)[1])
+        except ValueError:
+            return None
+        if 0 <= idx < len(state.battle_enemies):
+            return state.battle_enemies[idx]
+    return None
+
+
+def adjust_stat_value(target: Any, stat: str, amount: int):
+    if target is None or amount == 0:
+        return
+    if isinstance(target, CharacterState):
+        current = getattr(target, stat, None)
+        if current is not None:
+            setattr(target, stat, current + amount)
+    elif isinstance(target, dict):
+        target[stat] = target.get(stat, 0) + amount
+
+
+def apply_temporary_modifier(
+    state: GameState, target_key: str, stat: str, amount: int, duration: int
+):
+    if amount == 0 or duration <= 0:
+        return
+    target = get_buff_target(state, target_key)
+    if target is None:
+        return
+    adjust_stat_value(target, stat, amount)
+    buffs = state.flags.setdefault("ACTIVE_BUFFS", {})
+    buffs.setdefault(target_key, []).append({
+        "stat": stat,
+        "amount": amount,
+        "turns": duration,
+    })
+
+
+def cleanse_character(state: GameState, char_id: str) -> int:
+    key = make_char_buff_key(char_id)
+    buffs = state.flags.get("ACTIVE_BUFFS", {}).get(key, [])
+    if not buffs:
+        return 0
+    target = state.party.get(char_id)
+    kept = []
+    removed = 0
+    for buff in buffs:
+        if buff["amount"] < 0:
+            adjust_stat_value(target, buff["stat"], -buff["amount"])
+            removed += 1
+        else:
+            kept.append(buff)
+    active = state.flags.get("ACTIVE_BUFFS", {})
+    if kept:
+        active[key] = kept
+    else:
+        active.pop(key, None)
+    return removed
+
+
+def clear_active_buffs(state: GameState):
+    active = state.flags.pop("ACTIVE_BUFFS", None)
+    if not active:
+        return
+    for key, buffs in active.items():
+        target = get_buff_target(state, key)
+        if target is None:
+            continue
+        for buff in buffs:
+            adjust_stat_value(target, buff["stat"], -buff["amount"])
+
+
 # Storage in-memory
 USER_STATES: Dict[int, GameState] = {}
+
+SAVE_DIR = "saves"
+
+
+def character_to_dict(character: CharacterState) -> Dict[str, Any]:
+    return {
+        "id": character.id,
+        "name": character.name,
+        "level": character.level,
+        "hp": character.hp,
+        "max_hp": character.max_hp,
+        "mp": character.mp,
+        "max_mp": character.max_mp,
+        "atk": character.atk,
+        "defense": character.defense,
+        "mag": character.mag,
+        "spd": character.spd,
+        "luck": character.luck,
+        "skills": character.skills,
+    }
+
+
+def character_from_dict(data: Dict[str, Any]) -> CharacterState:
+    return CharacterState(
+        id=data.get("id", "UNKNOWN"),
+        name=data.get("name", ""),
+        level=data.get("level", 1),
+        hp=data.get("hp", 1),
+        max_hp=data.get("max_hp", 1),
+        mp=data.get("mp", 0),
+        max_mp=data.get("max_mp", 0),
+        atk=data.get("atk", 1),
+        defense=data.get("defense", 1),
+        mag=data.get("mag", 1),
+        spd=data.get("spd", 1),
+        luck=data.get("luck", 1),
+        skills=list(data.get("skills", [])),
+    )
+
+
+def serialize_game_state(state: GameState) -> Dict[str, Any]:
+    safe_flags = {
+        k: v
+        for k, v in state.flags.items()
+        if k
+        not in {"ACTIVE_BUFFS", "DEFENDING", "ARUNA_DEF_BUFF_TURNS", "LIGHT_BUFF_TURNS", "ARUNA_LIMIT_USED"}
+    }
+    return {
+        "scene_id": state.scene_id,
+        "location": state.location,
+        "main_progress": state.main_progress,
+        "gold": state.gold,
+        "party_order": state.party_order,
+        "party": {cid: character_to_dict(ch) for cid, ch in state.party.items()},
+        "inventory": state.inventory,
+        "xp_pool": state.xp_pool,
+        "flags": safe_flags,
+    }
+
+
+def save_game_state(state: GameState):
+    os.makedirs(SAVE_DIR, exist_ok=True)
+    path = os.path.join(SAVE_DIR, f"{state.user_id}.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(serialize_game_state(state), f, ensure_ascii=False, indent=2)
+
+
+def load_game_state(user_id: int) -> Optional[GameState]:
+    path = os.path.join(SAVE_DIR, f"{user_id}.json")
+    if not os.path.exists(path):
+        return None
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    state = GameState(user_id=user_id)
+    state.scene_id = data.get("scene_id", state.scene_id)
+    state.location = data.get("location", state.location)
+    state.main_progress = data.get("main_progress", state.main_progress)
+    state.gold = data.get("gold", 0)
+    party_data = data.get("party", {})
+    state.party = {cid: character_from_dict(ch) for cid, ch in party_data.items()}
+    saved_order = data.get("party_order", [])
+    state.party_order = [cid for cid in saved_order if cid in state.party]
+    for cid in state.party:
+        if cid not in state.party_order:
+            state.party_order.append(cid)
+    if not state.party:
+        state.ensure_aruna()
+    state.inventory = data.get("inventory", {})
+    state.xp_pool = data.get("xp_pool", {})
+    for cid in state.party_order:
+        state.xp_pool.setdefault(cid, 0)
+    state.flags = data.get("flags", {})
+    state.in_battle = False
+    state.battle_enemies = []
+    state.battle_state = BattleTurnState()
+    state.return_scene_after_battle = None
+    state.loss_scene_after_battle = None
+    return state
 
 
 def get_game_state(user_id: int) -> GameState:
@@ -1212,17 +1443,38 @@ def check_level_up(state: GameState) -> List[str]:
 
 
 def reset_battle_flags(state: GameState):
+    clear_active_buffs(state)
     for key in [
-        "LAST_DEFEND",
         "ARUNA_DEF_BUFF_TURNS",
         "LIGHT_BUFF_TURNS",
         "ARUNA_LIMIT_USED",
     ]:
-        if key in state.flags:
-            state.flags.pop(key)
+        state.flags.pop(key, None)
+    state.flags.pop("DEFENDING", None)
+    state.battle_state = BattleTurnState()
 
 
 def tick_buffs(state: GameState):
+    active = state.flags.get("ACTIVE_BUFFS")
+    if active:
+        to_remove = []
+        for key, buffs in active.items():
+            target = get_buff_target(state, key)
+            remaining = []
+            for buff in buffs:
+                buff["turns"] -= 1
+                if buff["turns"] <= 0:
+                    adjust_stat_value(target, buff["stat"], -buff["amount"])
+                else:
+                    remaining.append(buff)
+            if remaining:
+                active[key] = remaining
+            else:
+                to_remove.append(key)
+        for key in to_remove:
+            active.pop(key, None)
+        if not active:
+            state.flags.pop("ACTIVE_BUFFS", None)
     if state.flags.get("ARUNA_DEF_BUFF_TURNS"):
         state.flags["ARUNA_DEF_BUFF_TURNS"] -= 1
         if state.flags["ARUNA_DEF_BUFF_TURNS"] <= 0:
@@ -1231,6 +1483,308 @@ def tick_buffs(state: GameState):
         state.flags["LIGHT_BUFF_TURNS"] -= 1
         if state.flags["LIGHT_BUFF_TURNS"] <= 0:
             state.flags.pop("LIGHT_BUFF_TURNS", None)
+
+
+def living_party_members(state: GameState) -> List[str]:
+    return [cid for cid in state.party_order if state.party[cid].hp > 0]
+
+
+def living_enemies(state: GameState) -> List[tuple]:
+    return [
+        (idx, enemy)
+        for idx, enemy in enumerate(state.battle_enemies)
+        if enemy.get("hp", 0) > 0
+    ]
+
+
+def get_first_alive_enemy(state: GameState) -> Optional[tuple]:
+    alive = living_enemies(state)
+    return alive[0] if alive else None
+
+
+def choose_random_party_target(state: GameState) -> Optional[str]:
+    alive = living_party_members(state)
+    if not alive:
+        return None
+    return random.choice(alive)
+
+
+def pick_lowest_hp_ally(state: GameState) -> Optional[CharacterState]:
+    candidates = [state.party[cid] for cid in state.party_order if state.party[cid].hp > 0]
+    if not candidates:
+        return None
+    return min(candidates, key=lambda c: c.hp / max(1, c.max_hp))
+
+
+def find_revive_target(state: GameState) -> Optional[CharacterState]:
+    for cid in state.party_order:
+        member = state.party[cid]
+        if member.hp <= 0:
+            return member
+    return None
+
+
+def initialize_battle_turn_state(state: GameState):
+    order = [f"CHAR:{cid}" for cid in state.party_order]
+    order += [f"ENEMY:{idx}" for idx in range(len(state.battle_enemies))]
+    state.battle_state = BattleTurnState(turn_order=order, current_index=-1)
+    advance_to_next_actor(state)
+
+
+def advance_to_next_actor(state: GameState) -> Optional[str]:
+    order = state.battle_state.turn_order
+    if not order:
+        return None
+    total = len(order)
+    for _ in range(total):
+        state.battle_state.current_index = (state.battle_state.current_index + 1) % total
+        token = order[state.battle_state.current_index]
+        if token.startswith("CHAR:"):
+            cid = token.split(":", 1)[1]
+            character = state.party.get(cid)
+            if character and character.hp > 0:
+                state.battle_state.active_token = token
+                state.battle_state.awaiting_player_input = True
+                defending = state.flags.get("DEFENDING", {})
+                defending.pop(cid, None)
+                if not defending:
+                    state.flags.pop("DEFENDING", None)
+                return token
+        elif token.startswith("ENEMY:"):
+            try:
+                idx = int(token.split(":", 1)[1])
+            except ValueError:
+                continue
+            if 0 <= idx < len(state.battle_enemies) and state.battle_enemies[idx]["hp"] > 0:
+                state.battle_state.active_token = token
+                state.battle_state.awaiting_player_input = False
+                return token
+    return None
+
+
+def check_battle_outcome(state: GameState) -> Optional[str]:
+    if not living_enemies(state):
+        return "WIN"
+    if not living_party_members(state):
+        return "LOSE"
+    return None
+
+
+async def resolve_battle_outcome(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, log: List[str]
+) -> bool:
+    outcome = check_battle_outcome(state)
+    if not outcome:
+        return False
+    if outcome == "WIN":
+        total_xp = sum(enemy.get("xp", 0) for enemy in state.battle_enemies)
+        total_gold = sum(enemy.get("gold", 0) for enemy in state.battle_enemies)
+        state.gold += total_gold
+        for cid in state.party_order:
+            state.xp_pool[cid] += total_xp
+        state.in_battle = False
+        state.battle_enemies = []
+        state.flags["LAST_BATTLE_RESULT"] = "WIN"
+        level_msgs = check_level_up(state)
+        if level_msgs:
+            log.extend(level_msgs)
+        await end_battle_and_return(
+            update,
+            context,
+            state,
+            log_text="\n".join(log)
+            + f"\n\nKamu mendapatkan {total_xp} XP dan {total_gold} Gold.",
+        )
+        return True
+    # LOSE
+    for cid in state.party_order:
+        member = state.party[cid]
+        member.hp = max(1, member.max_hp // 3)
+    state.in_battle = False
+    state.battle_enemies = []
+    log.append("Seluruh party tumbang! Kamu kalah dalam pertarungan ini...")
+    state.flags["LAST_BATTLE_RESULT"] = "LOSE"
+    await end_battle_and_return(update, context, state, log_text="\n".join(log))
+    return True
+
+
+def enemy_take_turn(state: GameState, enemy_index: int) -> List[str]:
+    log: List[str] = []
+    if enemy_index < 0 or enemy_index >= len(state.battle_enemies):
+        return log
+    enemy = state.battle_enemies[enemy_index]
+    if enemy.get("hp", 0) <= 0:
+        return log
+    target_id = choose_random_party_target(state)
+    if not target_id:
+        return log
+    target = state.party[target_id]
+    dmg = max(1, int(enemy["atk"] * random.uniform(0.8, 1.1)))
+    defending = state.flags.get("DEFENDING", {})
+    if defending.get(target_id):
+        dmg = max(1, dmg // 2)
+        defending.pop(target_id, None)
+        if not defending:
+            state.flags.pop("DEFENDING", None)
+    if state.flags.get("ARUNA_DEF_BUFF_TURNS") and target_id == "ARUNA":
+        dmg = max(1, int(dmg * 0.7))
+    target.hp -= dmg
+    log.append(f"{enemy['name']} menyerang {target.name} dan memberikan {dmg} damage!")
+    if target.hp <= 0:
+        target.hp = 0
+        log.append(f"{target.name} tumbang!")
+    return log
+
+
+async def conclude_player_turn(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, log: List[str]
+):
+    if await resolve_battle_outcome(update, context, state, log):
+        return
+    next_token = advance_to_next_actor(state)
+    if not next_token:
+        await send_battle_state(update, context, state, intro=False, extra_text="\n".join(log))
+        return
+    enemy_phase = False
+    while next_token and next_token.startswith("ENEMY:"):
+        enemy_phase = True
+        try:
+            enemy_index = int(next_token.split(":", 1)[1])
+        except ValueError:
+            enemy_index = -1
+        log.extend(enemy_take_turn(state, enemy_index))
+        if await resolve_battle_outcome(update, context, state, log):
+            return
+        next_token = advance_to_next_actor(state)
+    if enemy_phase:
+        tick_buffs(state)
+    await send_battle_state(update, context, state, intro=False, extra_text="\n".join(log))
+
+
+async def send_skill_menu(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, character: CharacterState
+):
+    skills = character.skills
+    if not skills:
+        await send_battle_state(
+            update,
+            context,
+            state,
+            intro=False,
+            extra_text=f"{character.name} belum mempelajari skill apa pun.",
+        )
+        return
+    choices = [(SKILLS[s]["name"], f"USE_SKILL|{character.id}|{s}") for s in skills]
+    choices.append(("Kembali", "BATTLE_BACK"))
+    keyboard = make_keyboard(choices)
+    text = battle_status_text(state) + f"\n\nPilih skill {character.name}:"
+    query = update.callback_query
+    if query:
+        await query.edit_message_text(text=text, reply_markup=keyboard)
+    elif update.message:
+        await update.message.reply_text(text=text, reply_markup=keyboard)
+
+
+async def send_battle_item_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
+    consumables = [
+        (item_id, qty)
+        for item_id, qty in state.inventory.items()
+        if qty > 0 and ITEMS.get(item_id, {}).get("type") == "consumable"
+    ]
+    if not consumables:
+        await send_battle_state(
+            update,
+            context,
+            state,
+            intro=False,
+            extra_text="Kamu tidak punya item yang bisa dipakai.",
+        )
+        return
+    buttons = []
+    lines = ["Pilih item yang akan dipakai:"]
+    for item_id, qty in consumables:
+        item = ITEMS[item_id]
+        lines.append(f"- {item['name']} x{qty}")
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    f"{item['name']} (x{qty})", callback_data=f"USE_ITEM|{item_id}"
+                )
+            ]
+        )
+    buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="BATTLE_BACK")])
+    query = update.callback_query
+    if query:
+        await query.edit_message_text(
+            text="\n".join(lines), reply_markup=InlineKeyboardMarkup(buttons)
+        )
+    elif update.message:
+        await update.message.reply_text(
+            text="\n".join(lines), reply_markup=InlineKeyboardMarkup(buttons)
+        )
+
+
+def apply_item_effects_in_battle(
+    state: GameState, user_char_id: str, item_id: str
+) -> Tuple[bool, List[str]]:
+    item = ITEMS.get(item_id)
+    if not item:
+        return False, ["Item tidak dikenal."]
+    effects = item.get("effects", {})
+    target_mode = effects.get("target", "single")
+    targets: List[CharacterState] = []
+    if target_mode == "party":
+        targets = [state.party[cid] for cid in state.party_order if state.party[cid].hp > 0]
+    else:
+        actor = state.party.get(user_char_id)
+        if actor:
+            targets = [actor]
+    if not targets:
+        return False, ["Tidak ada target yang bisa menerima efek item."]
+    logs: List[str] = []
+    hp_restore = effects.get("hp_restore", 0)
+    mp_restore = effects.get("mp_restore", 0)
+    for target in targets:
+        if hp_restore:
+            before = target.hp
+            target.hp = min(target.max_hp, target.hp + hp_restore)
+            logs.append(f"{target.name} memulihkan {target.hp - before} HP.")
+        if mp_restore:
+            before_mp = target.mp
+            target.mp = min(target.max_mp, target.mp + mp_restore)
+            logs.append(f"{target.name} memulihkan {target.mp - before_mp} MP.")
+    if not logs:
+        logs.append("Tidak ada efek yang terlihat.")
+    return True, logs
+
+
+async def process_use_item(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, item_id: str
+):
+    token = state.battle_state.active_token
+    if not token or not token.startswith("CHAR:"):
+        await send_battle_state(update, context, state)
+        return
+    char_id = token.split(":", 1)[1]
+    item = ITEMS.get(item_id)
+    if not item or item.get("type") != "consumable":
+        await send_battle_state(
+            update, context, state, intro=False, extra_text="Item itu tidak bisa dipakai sekarang."
+        )
+        return
+    qty = state.inventory.get(item_id, 0)
+    if qty <= 0:
+        await send_battle_state(
+            update, context, state, intro=False, extra_text="Kamu tidak memiliki item itu."
+        )
+        return
+    success, effect_logs = apply_item_effects_in_battle(state, char_id, item_id)
+    if not success:
+        await send_battle_state(update, context, state, intro=False, extra_text="\n".join(effect_logs))
+        return
+    state.inventory[item_id] = qty - 1
+    log = [f"{state.party[char_id].name} menggunakan {item['name']}."] + effect_logs
+    await conclude_player_turn(update, context, state, log)
 
 
 def create_enemy_from_key(monster_key: str) -> Dict[str, Any]:
@@ -1269,6 +1823,7 @@ async def start_story_battle(
     state.return_scene_after_battle = return_scene
     state.loss_scene_after_battle = loss_scene
     reset_battle_flags(state)
+    initialize_battle_turn_state(state)
     await send_battle_state(update, context, state, intro=True)
 
 
@@ -1350,6 +1905,7 @@ async def start_random_battle(update: Update, context: ContextTypes.DEFAULT_TYPE
     state.return_scene_after_battle = None
     state.loss_scene_after_battle = None
     reset_battle_flags(state)
+    initialize_battle_turn_state(state)
     await send_battle_state(update, context, state, intro=True)
 
 
@@ -1359,6 +1915,21 @@ def battle_status_text(state: GameState) -> str:
     for cid in state.party_order:
         c = state.party[cid]
         lines.append(f"- {c.name} Lv{c.level} HP {c.hp}/{c.max_hp} MP {c.mp}/{c.max_mp}")
+    token = state.battle_state.active_token
+    if token:
+        if token.startswith("CHAR:"):
+            cid = token.split(":", 1)[1]
+            actor = state.party.get(cid)
+            if actor:
+                lines.append(f"\nGiliran saat ini: {actor.name}")
+        elif token.startswith("ENEMY:"):
+            try:
+                idx = int(token.split(":", 1)[1])
+            except ValueError:
+                idx = -1
+            if 0 <= idx < len(state.battle_enemies):
+                enemy = state.battle_enemies[idx]
+                lines.append(f"\nGiliran saat ini: {enemy['name']}")
     lines.append("")
     lines.append("Musuh:")
     for e in state.battle_enemies:
@@ -1400,162 +1971,148 @@ async def send_battle_state(
 async def process_battle_action(
     update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, action: str
 ):
-    """
-    action: BATTLE_ATTACK, BATTLE_DEFEND, BATTLE_RUN, etc.
-    Untuk sekarang: serangan simple Aruna saja (bisa dikembangkan untuk semua party).
-    """
-    aruna = state.party["ARUNA"]
-    enemy = state.battle_enemies[0]
+    token = state.battle_state.active_token
+    if not token or not token.startswith("CHAR:"):
+        token = advance_to_next_actor(state)
+        if not token or not token.startswith("CHAR:"):
+            await send_battle_state(update, context, state)
+            return
+    char_id = token.split(":", 1)[1]
+    character = state.party[char_id]
 
-    log = []
+    if action == "BATTLE_SKILL_MENU":
+        await send_skill_menu(update, context, state, character)
+        return
+    if action == "BATTLE_ITEM":
+        await send_battle_item_menu(update, context, state)
+        return
+
+    log: List[str] = []
 
     if action == "BATTLE_ATTACK":
-        dmg = calc_physical_damage(aruna, enemy["defense"])
-        enemy["hp"] -= dmg
-        log.append(f"Aruna menyerang {enemy['name']} dan memberikan {dmg} damage!")
+        target_info = get_first_alive_enemy(state)
+        if not target_info:
+            if await resolve_battle_outcome(update, context, state, log):
+                return
+        else:
+            idx, enemy = target_info
+            dmg = calc_physical_damage(character, enemy["defense"])
+            enemy["hp"] -= dmg
+            log.append(
+                f"{character.name} menyerang {enemy['name']} dan memberikan {dmg} damage!"
+            )
 
     elif action == "BATTLE_DEFEND":
-        # defensif sederhana: kurang damage musuh nantinya
-        state.flags["LAST_DEFEND"] = True
-        log.append("Aruna bersiap bertahan, mengurangi damage yang diterima di ronde ini.")
+        defend_flags = state.flags.setdefault("DEFENDING", {})
+        defend_flags[char_id] = True
+        log.append(
+            f"{character.name} mengambil posisi bertahan untuk mengurangi damage sementara."
+        )
 
     elif action == "BATTLE_RUN":
-        chance = 0.5 + aruna.luck * 0.01
+        chance = 0.5 + character.luck * 0.01
         if random.random() < chance:
             log.append("Kamu berhasil kabur dari pertarungan.")
             state.in_battle = False
             state.battle_enemies = []
-            state.battle_turn = "PLAYER"
+            state.flags["LAST_BATTLE_RESULT"] = "ESCAPE"
             await end_battle_and_return(update, context, state, log_text="\n".join(log))
             return
-        else:
-            log.append("Kamu gagal kabur!")
+        log.append("Kamu gagal kabur!")
 
-    elif action == "BATTLE_ITEM":
-        log.append("Sistem item belum diimplementasikan penuh. (TODO)")
-
-    elif action == "BATTLE_SKILL_MENU":
-        # Tampilkan skill Aruna saja dulu
-        skills = state.party["ARUNA"].skills
-        choices = [(SKILLS[s]["name"], f"USE_SKILL|ARUNA|{s}") for s in skills]
-        keyboard = make_keyboard(choices + [("Kembali", "BATTLE_BACK")])
-        text = battle_status_text(state) + "\n\nPilih skill Aruna:"
-        query = update.callback_query
-        if query:
-            await query.edit_message_text(text=text, reply_markup=keyboard)
+    elif action == "BATTLE_BACK":
+        await send_battle_state(update, context, state)
         return
 
-    # Cek jika musuh mati
-    if enemy["hp"] <= 0:
-        log.append(f"{enemy['name']} kalah!")
-        xp = enemy["xp"]
-        gold = enemy["gold"]
-        state.gold += gold
-        for cid in state.party_order:
-            state.xp_pool[cid] += xp
-        state.in_battle = False
-        state.battle_enemies = []
-        state.flags["LAST_BATTLE_RESULT"] = "WIN"
-        level_msgs = check_level_up(state)
-        if level_msgs:
-            log.extend(level_msgs)
-        await end_battle_and_return(
-            update,
-            context,
-            state,
-            log_text="\n".join(log)
-            + f"\n\nKamu mendapatkan {xp} XP dan {gold} Gold.",
-        )
+    else:
+        log.append("Aksi belum dikenal dalam sistem battle ini.")
+        await send_battle_state(update, context, state, intro=False, extra_text="\n".join(log))
         return
 
-    # GILIRAN MUSUH
-    dmg_to_player = max(1, int(enemy["atk"] * random.uniform(0.8, 1.1)))
-    if state.flags.get("LAST_DEFEND"):
-        dmg_to_player = max(1, dmg_to_player // 2)
-        state.flags["LAST_DEFEND"] = False
-    if state.flags.get("ARUNA_DEF_BUFF_TURNS"):
-        dmg_to_player = max(1, int(dmg_to_player * 0.7))
-
-    aruna.hp -= dmg_to_player
-    log.append(f"{enemy['name']} menyerang Aruna dan memberikan {dmg_to_player} damage!")
-
-    if aruna.hp <= 0:
-        # GAME OVER lokal (untuk sekarang, tidak langsung BAD END global)
-        aruna.hp = 0
-        log.append("Aruna tumbang! Kamu kalah dalam pertarungan ini...")
-        state.in_battle = False
-        state.battle_enemies = []
-        # Kembalikan Aruna dengan sedikit HP untuk tidak mem-softlock
-        aruna.hp = max(1, aruna.max_hp // 3)
-        state.flags["LAST_BATTLE_RESULT"] = "LOSE"
-        await end_battle_and_return(update, context, state, log_text="\n".join(log))
-        return
-
-    tick_buffs(state)
-    # Kirim status again
-    await send_battle_state(update, context, state, intro=False, extra_text="\n".join(log))
+    await conclude_player_turn(update, context, state, log)
 
 
 async def process_use_skill(
     update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, user: str, skill_id: str
 ):
-    c = state.party[user]
+    token = state.battle_state.active_token
+    if not token or not token.startswith("CHAR:") or token.split(":", 1)[1] != user:
+        await send_battle_state(update, context, state)
+        return
+    character = state.party[user]
     skill = SKILLS.get(skill_id)
     if not skill:
+        await send_battle_state(update, context, state)
         return
-
-    log = []
 
     if skill_id == "ARUNA_CORE_AWAKENING" and state.flags.get("ARUNA_LIMIT_USED"):
-        log.append("Aruna Core sudah bangkit sekali di pertarungan ini!")
-        await send_battle_state(update, context, state, intro=False, extra_text="\n".join(log))
+        await send_battle_state(
+            update,
+            context,
+            state,
+            intro=False,
+            extra_text="Aruna Core sudah bangkit sekali di pertarungan ini!",
+        )
         return
 
-    if c.mp < skill["mp_cost"]:
-        log.append(f"{c.name} tidak punya MP yang cukup untuk menggunakan {skill['name']}!")
-        await send_battle_state(update, context, state, intro=False, extra_text="\n".join(log))
+    if character.mp < skill.get("mp_cost", 0):
+        await send_battle_state(
+            update,
+            context,
+            state,
+            intro=False,
+            extra_text=f"{character.name} tidak punya MP yang cukup untuk menggunakan {skill['name']}!",
+        )
         return
 
-    c.mp -= skill["mp_cost"]
-    enemy = state.battle_enemies[0]
-
+    character.mp -= skill.get("mp_cost", 0)
+    log: List[str] = []
     skill_type = skill.get("type")
     element = skill.get("element", "NETRAL")
 
-    if skill_type == "PHYS":
-        dmg = calc_physical_damage(c, enemy["defense"], skill.get("power", 1.0))
-        if element == "CAHAYA" and state.flags.get("LIGHT_BUFF_TURNS"):
-            dmg = int(dmg * 1.2)
-        enemy["hp"] -= dmg
-        log.append(f"{c.name} menggunakan {skill['name']}! {enemy['name']} menerima {dmg} damage.")
-        if skill_id == "RADIANT_SLASH" and random.random() < 0.2:
-            enemy["atk"] = max(1, enemy["atk"] - 2)
-            log.append(f"{enemy['name']} goyah! ATK-nya melemah sementara.")
-    elif skill_type == "MAG":
-        dmg = calc_magic_damage(c, enemy["defense"], skill.get("power", 1.0))
-        if element == "CAHAYA" and state.flags.get("LIGHT_BUFF_TURNS"):
-            dmg = int(dmg * 1.2)
-        enemy["hp"] -= dmg
-        log.append(f"{c.name} melempar {skill['name']}! {enemy['name']} menerima {dmg} damage.")
+    if skill_type in ("PHYS", "MAG"):
+        target_info = get_first_alive_enemy(state)
+        if not target_info:
+            character.mp += skill.get("mp_cost", 0)
+            if await resolve_battle_outcome(update, context, state, log):
+                return
+        else:
+            idx, enemy = target_info
+            if skill_type == "PHYS":
+                dmg = calc_physical_damage(character, enemy["defense"], skill.get("power", 1.0))
+            else:
+                dmg = calc_magic_damage(character, enemy["defense"], skill.get("power", 1.0))
+            if element == "CAHAYA" and state.flags.get("LIGHT_BUFF_TURNS"):
+                dmg = int(dmg * 1.2)
+            enemy["hp"] -= dmg
+            log.append(f"{character.name} menggunakan {skill['name']}! {enemy['name']} menerima {dmg} damage.")
     elif skill_type == "HEAL_SINGLE":
-        heal_amount = calc_heal_amount(c, skill.get("power", 0.3))
-        target = state.party["ARUNA"]
+        target = pick_lowest_hp_ally(state)
+        if not target:
+            character.mp += skill.get("mp_cost", 0)
+            log.append("Tidak ada target untuk disembuhkan.")
+            await send_battle_state(update, context, state, extra_text="\n".join(log))
+            return
+        heal_amount = calc_heal_amount(character, skill.get("power", 0.3))
         before = target.hp
         target.hp = min(target.max_hp, target.hp + heal_amount)
-        healed = target.hp - before
-        log.append(f"{c.name} menyembuhkan {target.name} sebanyak {healed} HP dengan {skill['name']}.")
+        log.append(
+            f"{character.name} menyembuhkan {target.name} sebanyak {target.hp - before} HP dengan {skill['name']}!"
+        )
     elif skill_type == "HEAL_ALL":
         total = []
         for cid in state.party_order:
             member = state.party[cid]
-            heal_amount = calc_heal_amount(c, skill.get("power", 0.25))
+            if member.hp <= 0:
+                continue
+            heal_amount = calc_heal_amount(character, skill.get("power", 0.25))
             before = member.hp
             member.hp = min(member.max_hp, member.hp + heal_amount)
             total.append(f"{member.name}+{member.hp - before}HP")
-        log.append(f"{c.name} menyalurkan {skill['name']}! ({', '.join(total)})")
+        log.append(f"{character.name} menyalurkan {skill['name']}! ({', '.join(total)})")
     elif skill_type == "BUFF_DEF_SELF":
         state.flags["ARUNA_DEF_BUFF_TURNS"] = skill.get("duration", 3)
-        log.append(f"{c.name} memperkuat pertahanan dengan {skill['name']}! DEF naik sementara.")
+        log.append(f"{character.name} memperkuat pertahanan dengan {skill['name']}! DEF naik sementara.")
     elif skill_type == "LIMIT_HEAL":
         state.flags["ARUNA_LIMIT_USED"] = True
         state.flags["LIGHT_BUFF_TURNS"] = 3
@@ -1571,52 +2128,62 @@ async def process_use_skill(
             + ", ".join(total)
             + ")"
         )
+    elif skill_type == "BUFF_TEAM":
+        buffs = skill.get("buffs", {})
+        duration = skill.get("duration", 3)
+        affected = []
+        for cid in state.party_order:
+            member = state.party[cid]
+            if member.hp <= 0:
+                continue
+            for stat, amount in buffs.items():
+                apply_temporary_modifier(state, make_char_buff_key(cid), stat, amount, duration)
+            affected.append(member.name)
+        log.append(
+            f"{character.name} menyalurkan {skill['name']}! Buff menyelimuti {', '.join(affected)} selama {duration} turn."
+        )
+    elif skill_type == "DEBUFF_ENEMY":
+        target_info = get_first_alive_enemy(state)
+        if not target_info:
+            character.mp += skill.get("mp_cost", 0)
+            log.append("Tidak ada musuh untuk didebuff.")
+            await send_battle_state(update, context, state, extra_text="\n".join(log))
+            return
+        idx, enemy = target_info
+        duration = skill.get("duration", 3)
+        for stat, amount in skill.get("debuffs", {}).items():
+            apply_temporary_modifier(state, make_enemy_buff_key(idx), stat, amount, duration)
+        log.append(
+            f"{character.name} melempar {skill['name']}! Statistik {enemy['name']} melemah selama {duration} turn."
+        )
+    elif skill_type == "CLEANSE":
+        target_mode = skill.get("target", "party")
+        total_removed = 0
+        if target_mode == "party":
+            for cid in state.party_order:
+                total_removed += cleanse_character(state, cid)
+        else:
+            total_removed = cleanse_character(state, user)
+        if total_removed:
+            log.append(f"{character.name} membersihkan {total_removed} debuff dengan {skill['name']}!")
+        else:
+            log.append(f"{character.name} menggunakan {skill['name']}, tetapi tidak ada debuff yang perlu dibersihkan.")
+    elif skill_type == "REVIVE":
+        target = find_revive_target(state)
+        if not target:
+            character.mp += skill.get("mp_cost", 0)
+            log.append("Tidak ada ally yang butuh dihidupkan.")
+            await send_battle_state(update, context, state, extra_text="\n".join(log))
+            return
+        ratio = skill.get("revive_ratio", 0.4)
+        target.hp = max(1, int(target.max_hp * ratio))
+        log.append(f"{character.name} menghidupkan {target.name} dengan {skill['name']}! HP pulih {target.hp}.")
     else:
         log.append(f"{skill['name']} belum bisa digunakan di sistem battle sederhana ini.")
-
-    # cek musuh mati
-    enemy = state.battle_enemies[0]
-    if enemy["hp"] <= 0:
-        log.append(f"{enemy['name']} kalah!")
-        xp = enemy["xp"]
-        gold = enemy["gold"]
-        state.gold += gold
-        for cid in state.party_order:
-            state.xp_pool[cid] += xp
-        state.in_battle = False
-        state.battle_enemies = []
-        state.flags["LAST_BATTLE_RESULT"] = "WIN"
-        level_msgs = check_level_up(state)
-        if level_msgs:
-            log.extend(level_msgs)
-        await end_battle_and_return(
-            update,
-            context,
-            state,
-            log_text="\n".join(log)
-            + f"\n\nKamu mendapatkan {xp} XP dan {gold} Gold.",
-        )
+        await send_battle_state(update, context, state, intro=False, extra_text="\n".join(log))
         return
 
-    # giliran musuh
-    enemy_attack = max(1, int(enemy["atk"] * random.uniform(0.8, 1.1)))
-    target = state.party["ARUNA"]
-    if state.flags.get("ARUNA_DEF_BUFF_TURNS"):
-        enemy_attack = max(1, int(enemy_attack * 0.7))
-    target.hp -= enemy_attack
-    log.append(f"{enemy['name']} menyerang {target.name} dan memberikan {enemy_attack} damage!")
-
-    if target.hp <= 0:
-        log.append(f"{target.name} tumbang! Kamu kalah dalam pertarungan ini...")
-        target.hp = max(1, target.max_hp // 3)
-        state.in_battle = False
-        state.battle_enemies = []
-        state.flags["LAST_BATTLE_RESULT"] = "LOSE"
-        await end_battle_and_return(update, context, state, log_text="\n".join(log))
-        return
-
-    tick_buffs(state)
-    await send_battle_state(update, context, state, intro=False, extra_text="\n".join(log))
+    await conclude_player_turn(update, context, state, log)
 
 
 async def end_battle_and_return(
@@ -1912,6 +2479,67 @@ async def send_job_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, stat
         await update.message.reply_text(text="\n".join(lines), reply_markup=keyboard)
 
 
+async def send_shop_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
+    query = update.callback_query
+    loc_info = LOCATIONS.get(state.location)
+    if not loc_info or not loc_info.get("has_shop"):
+        if query:
+            await query.edit_message_text(
+                "Tidak ada toko di lokasi ini.",
+                reply_markup=make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")]),
+            )
+        elif update.message:
+            await update.message.reply_text("Tidak ada toko di lokasi ini.")
+        return
+    features = CITY_FEATURES.get(state.location, {})
+    shop_items = features.get("shop_items", [])
+    lines = [f"🏪 Toko di {loc_info['name']}", f"Gold-mu saat ini: {state.gold}"]
+    buttons = []
+    if not shop_items:
+        lines.append("Toko ini kehabisan barang.")
+    else:
+        lines.append("Barang yang tersedia:")
+        for item_id in shop_items:
+            item = ITEMS.get(item_id)
+            if not item:
+                continue
+            lines.append(f"- {item['name']} ({item['buy_price']} Gold)")
+            buttons.append(
+                [
+                    InlineKeyboardButton(
+                        f"Beli {item['name']} ({item['buy_price']})",
+                        callback_data=f"BUY_ITEM|{item_id}",
+                    )
+                ]
+            )
+    buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="BACK_CITY_MENU")])
+    if query:
+        await query.edit_message_text(
+            "\n".join(lines), reply_markup=InlineKeyboardMarkup(buttons)
+        )
+    elif update.message:
+        await update.message.reply_text(
+            "\n".join(lines), reply_markup=InlineKeyboardMarkup(buttons)
+        )
+
+
+async def handle_buy_item(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, item_id: str
+):
+    item = ITEMS.get(item_id)
+    if not item:
+        await update.callback_query.answer("Item tidak dikenal.", show_alert=True)
+        return
+    price = item.get("buy_price", 0)
+    if state.gold < price:
+        await update.callback_query.answer("Gold-mu tidak cukup.", show_alert=True)
+        return
+    state.gold -= price
+    state.inventory[item_id] = state.inventory.get(item_id, 0) + 1
+    await update.callback_query.answer(f"Kamu membeli {item['name']}!", show_alert=False)
+    await send_shop_menu(update, context, state)
+
+
 async def resolve_job(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, job_id: str):
     features = CITY_FEATURES.get(state.location, {})
     job = features.get("jobs", {}).get(job_id)
@@ -1968,6 +2596,30 @@ async def map_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_world_map(update, context, state)
 
 
+async def save_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    state = get_game_state(user_id)
+    save_game_state(state)
+    if update.message:
+        await update.message.reply_text("Progress berhasil disimpan.")
+
+
+async def load_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    loaded = load_game_state(user_id)
+    if not loaded:
+        if update.message:
+            await update.message.reply_text("Belum ada file save untuk akun ini.")
+        return
+    loaded.ensure_aruna()
+    USER_STATES[user_id] = loaded
+    if update.message:
+        loc_name = LOCATIONS.get(loaded.location, {}).get("name", loaded.location)
+        await update.message.reply_text(
+            f"Save berhasil dimuat. Kamu berada di {loc_name}. Gunakan /status untuk mengecek party."
+        )
+
+
 # ==========================
 # CALLBACK QUERY HANDLER
 # ==========================
@@ -1997,6 +2649,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("Kamu tidak sedang dalam battle.")
             return
         await process_use_skill(update, context, state, char_id, skill_id)
+        return
+
+    if data.startswith("USE_ITEM|"):
+        _, item_id = data.split("|", 1)
+        if not state.in_battle:
+            await query.edit_message_text("Kamu tidak sedang dalam battle.")
+            return
+        await process_use_item(update, context, state, item_id)
         return
 
     if data == "DUNGEON_BATTLE_AGAIN":
@@ -2079,15 +2739,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if data == "MENU_SHOP":
-        features = CITY_FEATURES.get(state.location, {})
-        items = features.get("shop_items", [])
-        if not items:
-            text = "Tidak ada toko yang beroperasi di kota terkutuk ini."
-        else:
-            text = "SHOP – Barang yang tersedia:\n" + "\n".join(f"- {item}" for item in items)
-            text += "\n\n(Belum bisa membeli secara langsung di versi demo.)"
-        keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
-        await query.edit_message_text(text=text, reply_markup=keyboard)
+        await send_shop_menu(update, context, state)
+        return
+
+    if data.startswith("BUY_ITEM|"):
+        _, item_id = data.split("|", 1)
+        await handle_buy_item(update, context, state, item_id)
         return
 
     if data == "MENU_JOB":
@@ -2181,6 +2838,8 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("status", status_cmd))
     application.add_handler(CommandHandler("map", map_cmd))
+    application.add_handler(CommandHandler("save", save_cmd))
+    application.add_handler(CommandHandler("load", load_cmd))
 
     application.add_handler(CallbackQueryHandler(button))
 
