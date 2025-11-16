@@ -17,6 +17,7 @@ Cara pakai (singkat):
 NB: Untuk produksi, sebaiknya simpan state di database, bukan di memory seperti contoh ini.
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -109,7 +110,7 @@ CITY_FEATURES = {
     },
     "SIAK": {
         "description": "Kota sungai damai dengan klinik Safiya dan tempat kerja sederhana.",
-        "shop_items": ["WOODEN_SWORD", "POTION_SMALL", "ETHER_SMALL"],
+        "shop_items": ["WOODEN_SWORD", "LEATHER_ARMOR", "POTION_SMALL", "ETHER_SMALL"],
         "inn_cost": 20,
         "jobs": {
             "KURIR_OBAT": {
@@ -128,7 +129,7 @@ CITY_FEATURES = {
     },
     "RENGAT": {
         "description": "Kota para penyihir dengan menara-menara riset dan hutan magis.",
-        "shop_items": ["POTION_SMALL", "POTION_MEDIUM", "ETHER_SMALL"],
+        "shop_items": ["LIGHT_ROBE", "POTION_SMALL", "POTION_MEDIUM", "ETHER_SMALL"],
         "inn_cost": 30,
         "jobs": {
             "ASISTEN_RISET": {
@@ -147,7 +148,7 @@ CITY_FEATURES = {
     },
     "PEKANBARU": {
         "description": "Metropolis suram, tempat terakhir untuk melengkapi persiapan sebelum Kampar.",
-        "shop_items": ["POTION_MEDIUM", "ETHER_SMALL"],
+        "shop_items": ["MYSTIC_CLOAK", "POTION_MEDIUM", "ETHER_SMALL"],
         "inn_cost": 45,
         "jobs": {
             "PENGAWAL_KARAVAN": {
@@ -211,7 +212,56 @@ ITEMS = {
         "type": "weapon",
         "buy_price": 50,
         "sell_price": 25,
+        "allowed_users": ["ARUNA"],
         "effects": {"atk_bonus": 3},
+    },
+    "LEATHER_ARMOR": {
+        "id": "LEATHER_ARMOR",
+        "name": "Baju Kulit",
+        "description": "Pelindung ringan yang meningkatkan ketahanan Aruna.",
+        "type": "armor",
+        "buy_price": 65,
+        "sell_price": 30,
+        "allowed_users": ["ARUNA"],
+        "effects": {"def_bonus": 3, "hp_bonus": 12},
+    },
+    "LIGHT_ROBE": {
+        "id": "LIGHT_ROBE",
+        "name": "Jubah Cahaya",
+        "description": "Jubah tipis untuk Umar atau Reza yang menambah MAG.",
+        "type": "armor",
+        "buy_price": 110,
+        "sell_price": 55,
+        "allowed_users": ["UMAR", "REZA"],
+        "effects": {"def_bonus": 2, "mag_bonus": 3, "hp_bonus": 8},
+    },
+    "MYSTIC_CLOAK": {
+        "id": "MYSTIC_CLOAK",
+        "name": "Jubah Mistik",
+        "description": "Cloak langka yang melindungi penyihir dari serangan gelap.",
+        "type": "armor",
+        "buy_price": 200,
+        "sell_price": 100,
+        "allowed_users": ["ARUNA", "UMAR", "REZA"],
+        "effects": {
+            "def_bonus": 4,
+            "mag_bonus": 4,
+            "mp_bonus": 12,
+            "passives": {"element_boost": {"CAHAYA": 0.05}},
+        },
+    },
+    "PEDANG_WARISAN_HARSAN": {
+        "id": "PEDANG_WARISAN_HARSAN",
+        "name": "Pedang Warisan Harsan",
+        "description": "Senjata legendaris ayah Aruna yang beresonansi dengan Aruna Core.",
+        "type": "weapon",
+        "buy_price": 0,
+        "sell_price": 0,
+        "allowed_users": ["ARUNA"],
+        "effects": {
+            "atk_bonus": 12,
+            "passives": {"element_boost": {"CAHAYA": 0.25}},
+        },
     },
 }
 
@@ -240,6 +290,8 @@ MONSTERS = {
         "xp": 5,
         "gold": 3,
         "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
     },
     "MIST_WOLF": {
         "name": "Mist Wolf",
@@ -255,6 +307,8 @@ MONSTERS = {
         "xp": 8,
         "gold": 5,
         "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
     },
     "SHADOW_BANDIT": {
         "name": "Shadow Bandit",
@@ -270,6 +324,8 @@ MONSTERS = {
         "xp": 12,
         "gold": 10,
         "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
     },
     "GATE_SPIRIT": {
         "name": "Gate Spirit",
@@ -285,6 +341,8 @@ MONSTERS = {
         "xp": 16,
         "gold": 12,
         "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
     },
     "CORRUPTED_TREANT": {
         "name": "Corrupted Treant",
@@ -300,6 +358,8 @@ MONSTERS = {
         "xp": 20,
         "gold": 15,
         "element": "ALAM",
+        "weakness": ["API"],
+        "resist": ["ALAM"],
     },
     "FOREST_WISP": {
         "name": "Forest Wisp",
@@ -315,6 +375,8 @@ MONSTERS = {
         "xp": 22,
         "gold": 18,
         "element": "CAHAYA",
+        "weakness": ["GELAP"],
+        "resist": ["CAHAYA"],
     },
     "CORRUPTED_FOREST_GOLEM": {
         "name": "Corrupted Forest Golem",
@@ -330,6 +392,8 @@ MONSTERS = {
         "xp": 80,
         "gold": 50,
         "element": "ALAM",
+        "weakness": ["API"],
+        "resist": ["ALAM"],
     },
     "PHANTOM_MERCHANT": {
         "name": "Phantom Merchant",
@@ -345,6 +409,8 @@ MONSTERS = {
         "xp": 30,
         "gold": 25,
         "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
     },
     "CURSED_MILITIA": {
         "name": "Cursed Militia",
@@ -360,6 +426,8 @@ MONSTERS = {
         "xp": 35,
         "gold": 28,
         "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
     },
     "ABYSS_HOUND": {
         "name": "Abyss Hound",
@@ -375,6 +443,8 @@ MONSTERS = {
         "xp": 45,
         "gold": 40,
         "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
     },
     "VOID_KNIGHT": {
         "name": "Void Knight",
@@ -390,6 +460,8 @@ MONSTERS = {
         "xp": 60,
         "gold": 50,
         "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
     },
     "HOUND_OF_VOID": {
         "name": "Hound of Void",
@@ -405,6 +477,8 @@ MONSTERS = {
         "xp": 120,
         "gold": 0,
         "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
     },
     "VOID_SENTINEL": {
         "name": "Void Sentinel",
@@ -420,6 +494,25 @@ MONSTERS = {
         "xp": 150,
         "gold": 0,
         "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
+    },
+    "LUMINAR_SENTINEL": {
+        "name": "Luminar Sentinel",
+        "area": "HARSAN_SHRINE",
+        "level": 11,
+        "hp": 160,
+        "mp": 40,
+        "atk": 18,
+        "defense": 14,
+        "mag": 18,
+        "spd": 10,
+        "luck": 5,
+        "xp": 90,
+        "gold": 80,
+        "element": "CAHAYA",
+        "weakness": ["GELAP"],
+        "resist": ["CAHAYA"],
     },
     "FEBRI_LORD": {
         "name": "Febri, Lord of Abyss",
@@ -437,6 +530,50 @@ MONSTERS = {
         "element": "GELAP",
     },
 }
+
+# Drop tables per area
+DROP_TABLES = {
+    "HUTAN_SELATPANJANG": [
+        {"item_id": "POTION_SMALL", "chance": 0.35, "min_qty": 1, "max_qty": 2},
+        {"item_id": "WOODEN_SWORD", "chance": 0.08, "min_qty": 1, "max_qty": 1},
+    ],
+    "HUTAN_SIAK": [
+        {"item_id": "POTION_SMALL", "chance": 0.3, "min_qty": 1, "max_qty": 2},
+        {"item_id": "LEATHER_ARMOR", "chance": 0.06, "min_qty": 1, "max_qty": 1},
+    ],
+    "HUTAN_RENGAT": [
+        {"item_id": "POTION_MEDIUM", "chance": 0.25, "min_qty": 1, "max_qty": 1},
+        {"item_id": "LIGHT_ROBE", "chance": 0.08, "min_qty": 1, "max_qty": 1},
+    ],
+    "HUTAN_PEKANBARU": [
+        {"item_id": "ETHER_SMALL", "chance": 0.25, "min_qty": 1, "max_qty": 1},
+        {"item_id": "MYSTIC_CLOAK", "chance": 0.05, "min_qty": 1, "max_qty": 1},
+    ],
+    "KAMPAR_LUAR": [
+        {"item_id": "POTION_MEDIUM", "chance": 0.35, "min_qty": 1, "max_qty": 2},
+    ],
+    "HARSAN_SHRINE": [
+        {"item_id": "ETHER_SMALL", "chance": 0.4, "min_qty": 1, "max_qty": 2},
+    ],
+}
+
+
+def grant_battle_drops(state: GameState) -> List[str]:
+    area = state.flags.get("CURRENT_BATTLE_AREA")
+    if not area:
+        return []
+    drops = []
+    for entry in DROP_TABLES.get(area, []):
+        chance = entry.get("chance", 0)
+        if random.random() > chance:
+            continue
+        qty = random.randint(entry.get("min_qty", 1), entry.get("max_qty", 1))
+        item_id = entry["item_id"]
+        adjust_inventory(state, item_id, qty)
+        item = ITEMS.get(item_id)
+        name = item["name"] if item else item_id
+        drops.append(f"{name} x{qty}")
+    return drops
 
 # Skill dasar lengkap
 SKILLS = {
@@ -496,6 +633,8 @@ SKILLS = {
         "name": "Small Barrier",
         "mp_cost": 5,
         "type": "BUFF_DEF_SINGLE",
+        "duration": 3,
+        "buffs": {"defense": 4},
         "description": "Meningkatkan DEF satu ally untuk beberapa turn.",
     },
     "GROUP_HEAL": {
@@ -538,6 +677,7 @@ SKILLS = {
         "name": "Mana Shield",
         "mp_cost": 6,
         "type": "BUFF_SPECIAL",
+        "duration": 3,
         "description": "Mengubah damage fisik menjadi konsumsi MP sementara.",
     },
     "CHAIN_LIGHTNING": {
@@ -552,7 +692,18 @@ SKILLS = {
         "name": "Arcane Focus",
         "mp_cost": 8,
         "type": "BUFF_SELF",
+        "duration": 3,
+        "buffs": {"mag": 5},
+        "penalties": {"spd": -2},
         "description": "Meningkatkan MAG Reza namun menurunkan SPD sementara.",
+    },
+    "LEGACY_RADIANCE": {
+        "name": "Legacy Radiance",
+        "mp_cost": 12,
+        "type": "PHYS",
+        "power": 1.6,
+        "element": "CAHAYA",
+        "description": "Tebasan cahaya dari pedang warisan Harsan yang membakar kegelapan.",
     },
     "ABYSS_SEAL": {
         "name": "Abyss Seal",
@@ -657,7 +808,7 @@ SCENE_DATA = {
             "Malam turun. Aruna duduk di ranjang, memegang kalung bercahaya lembut yang selalu menggantung di lehernya.\n"
             "Paman: \"Suatu hari, kau akan mengerti kenapa kalung itu penting. Tapi belum sekarang.\"\n"
             "Kalung berpendar lemah.\n"
-            "Aruna: \"Kalung ini... satu-satunya peninggalan orang tuaku. Siapa kalian sebenarnya?\"\n"
+            "Aruna: \"Kalung ini... satu-satunya peninggalan Harsan dan Rusmini. Siapa kalian sebenarnya?\"\n"
             "Paman hanya tersenyum getir.\n"
         ),
         "choices": [("Kalung itu menyala...", "CH0_S3")],
@@ -767,8 +918,8 @@ SCENE_DATA = {
     },
     "CH2_REZA_REVEAL": {
         "text": (
-            "Reza: \"Kalung itu... milik guruku. Ia memberikannya pada Penjaga Cahaya terakhir, Ashalon.\"\n"
-            "Aruna: \"Ashalon?\"\n"
+            "Reza: \"Kalung itu... milik guruku. Ia memberikannya pada Penjaga Cahaya terakhir, Harsan.\"\n"
+            "Aruna: \"Harsan?\"\n"
             "Reza: \"Ayahmu. Ia mengejar muridnya yang berkhianat, Febri, ke Kampar lima belas tahun lalu.\""
         ),
         "choices": [("Dengar cerita lebih jauh", "CH2_REZA_PAST")],
@@ -833,10 +984,10 @@ SCENE_DATA = {
     },
     "CH3_DREAM": {
         "text": (
-            "Malam itu Aruna bermimpi. Ashalon berdiri di hadapan Febri muda.\n"
-            "Ashalon: \"Berhentilah, Febri! Kekuatan itu bukan milik manusia!\"\n"
+            "Malam itu Aruna bermimpi. Harsan berdiri di hadapan Febri muda.\n"
+            "Harsan: \"Berhentilah, Febri! Kekuatan itu bukan milik manusia!\"\n"
             "Febri: \"Dengan ini aku bisa membalikkan waktu! Aku bisa menyelamatkannya!\"\n"
-            "Cahaya dan kegelapan bertubrukan. Ashalon menghilang bersama segel Kampar."
+            "Cahaya dan kegelapan bertubrukan. Harsan menghilang bersama segel Kampar."
         ),
         "choices": [("Bangun dari mimpi", "CH3_WAKE")],
     },
@@ -856,6 +1007,38 @@ SCENE_DATA = {
         "choices": [("Buka world map", "SET_MAIN_KAMPAR")],
     },
 
+    "SQ_HARSAN_BLADE_INTRO": {
+        "text": (
+            "Di sudut perpustakaan Pekanbaru, seorang arsiparis tua memandangi kalungmu.\n"
+            "Arsiparis: \"Lambang itu... milik Harsan dan Rusmini. Pedang mereka dipisah dari Aruna Core agar Febri tak bisa menemukannya.\"\n"
+            "Aruna: \"Kau tahu di mana pedang itu disembunyikan?\"\n"
+            "Arsiparis: \"Di sebuah shrine yang hanya merespons cahaya warisanmu. Jika ingin menjemputnya, ikuti aliran sungai ke arah Kampar dan cari gerbang batu bertuliskan nama Harsan.\""
+        ),
+        "choices": [
+            ("Menuju shrine tersembunyi", "SQ_HARSAN_SHRINE"),
+            ("Kembali ke Pekanbaru", "BACK_CITY_MENU"),
+        ],
+    },
+    "SQ_HARSAN_BLADE_SHRINE": {
+        "text": (
+            "Malam turun saat kalian tiba di shrine kuno. Pilar bercahaya menampilkan relief Harsan dan Rusmini memisahkan pedang dari kalung.\n"
+            "Reza: \"Segel ini hanya membuka diri pada darah mereka. Beranikah kita?\"\n"
+            "Aruna: \"Aku harus melakukannya. Pedang itu bagian dari keluarga kami.\""
+        ),
+        "choices": [
+            ("Sentuh rune dan hadapi penjaga", "BATTLE_HARSAN_SENTINEL"),
+            ("Kembali ke Pekanbaru", "BACK_CITY_MENU"),
+        ],
+    },
+    "SQ_HARSAN_BLADE_VISION": {
+        "text": (
+            "Penjaga cahaya runtuh. Saat Aruna menyentuh pedang kusam itu dengan Aruna Core, cahaya menyala dan suara Harsan menggema.\n"
+            "Harsan: \"Jika kau mendengar ini, berarti kau siap menanggung warisan kami. Rusmini percaya kau akan memilih cahaya, anakku.\"\n"
+            "Pedang Warisan Harsan bangkit, melengkung bersama energi Aruna Core."
+        ),
+        "choices": [("Kembali ke Pekanbaru", "BACK_CITY_MENU")],
+    },
+
     # KAMPAR
     "CH4_KAMPAR_ENTRY": {
         "text": (
@@ -868,8 +1051,8 @@ SCENE_DATA = {
     "CH4_FLASHBACK": {
         "text": (
             "Kalung Aruna menyala menyilaukan. Kilasan masa lalu muncul.\n"
-            "Ashalon menyerahkan bayi Aruna kepada seorang paman di Selatpanjang.\n"
-            "Ashalon: \"Suatu hari... kau yang harus memilih. Selamatkan dunia atau biarkan kegelapan menang.\""
+            "Harsan dan Rusmini menyerahkan bayi Aruna kepada seorang paman di Selatpanjang.\n"
+            "Harsan: \"Suatu hari... kau yang harus memilih. Selamatkan dunia atau biarkan kegelapan menang.\""
         ),
         "choices": [("Menuju kastil Febri", "CH4_CASTLE_APPROACH")],
     },
@@ -931,16 +1114,16 @@ SCENE_DATA = {
     "CH5_FLOOR5": {
         "text": (
             "Tahta Kegelapan – Febri berdiri dengan tubuh setengah manusia setengah iblis.\n"
-            "Febri: \"Ashalon... aku sudah lama menunggu.\"\n"
+            "Febri: \"Harsan... aku sudah lama menunggu.\"\n"
             "Aruna: \"Aku bukan ayahku. Aku Aruna, anak yang kau tinggalkan di dalam kegelapanmu.\"\n"
-            "Febri tertawa: \"Ashalon mengorbankan segalanya demi kamu. Seharusnya kaulah yang mati hari itu.\""
+            "Febri tertawa: \"Harsan mengorbankan segalanya demi kamu. Seharusnya kaulah yang mati hari itu.\""
         ),
         "choices": [("Pertarungan terakhir", "BATTLE_FEBRI")],
     },
     "CH5_FINAL_WIN": {
         "text": (
             "Febri jatuh berlutut. Aura Abyss goyah.\n"
-            "Febri: \"Ashalon... maafkan aku...\"\n"
+            "Febri: \"Harsan... maafkan aku...\"\n"
             "Aruna memegang Aruna Core yang menyala hebat. Saatnya menentukan akhir perang ini."
         ),
         "choices": [("Gunakan cahaya untuk menentukan akhir", "RESOLVE_ENDING")],
@@ -1096,6 +1279,8 @@ class CharacterState:
     spd: int
     luck: int
     skills: List[str] = field(default_factory=list)
+    weapon_id: Optional[str] = None
+    armor_id: Optional[str] = None
 
 
 @dataclass
@@ -1191,6 +1376,158 @@ class GameState:
             self.flags["HAS_REZA"] = True
 
 
+EQUIP_BONUS_MAP = {
+    "atk_bonus": "atk",
+    "def_bonus": "defense",
+    "mag_bonus": "mag",
+    "hp_bonus": "max_hp",
+    "mp_bonus": "max_mp",
+    "spd_bonus": "spd",
+    "luck_bonus": "luck",
+}
+
+
+def adjust_inventory(state: GameState, item_id: str, delta: int) -> int:
+    if delta == 0:
+        return state.inventory.get(item_id, 0)
+    new_value = state.inventory.get(item_id, 0) + delta
+    if new_value <= 0:
+        state.inventory.pop(item_id, None)
+        return 0
+    state.inventory[item_id] = new_value
+    return new_value
+
+
+def apply_equipment_stat_changes(character: CharacterState, item: Dict[str, Any], direction: int):
+    effects = item.get("effects", {})
+    for effect_key, attr in EQUIP_BONUS_MAP.items():
+        bonus = effects.get(effect_key, 0)
+        if not bonus:
+            continue
+        amount = bonus * direction
+        if attr == "max_hp":
+            character.max_hp += amount
+            if direction > 0:
+                character.hp = min(character.max_hp, character.hp + bonus)
+            else:
+                character.hp = min(character.hp, character.max_hp)
+                if character.hp < 0:
+                    character.hp = 0
+        elif attr == "max_mp":
+            character.max_mp += amount
+            if direction > 0:
+                character.mp = min(character.max_mp, character.mp + bonus)
+            else:
+                character.mp = min(character.mp, character.max_mp)
+                if character.mp < 0:
+                    character.mp = 0
+        else:
+            current = getattr(character, attr, None)
+            if current is not None:
+                setattr(character, attr, current + amount)
+
+
+def unequip_item(state: GameState, char_id: str, slot: str) -> Tuple[bool, str]:
+    character = state.party.get(char_id)
+    if not character:
+        return False, "Karakter tidak ditemukan."
+    slot_attr = "weapon_id" if slot == "weapon" else "armor_id"
+    equipped_id = getattr(character, slot_attr)
+    if not equipped_id:
+        return False, "Tidak ada equipment yang terpasang."
+    item = ITEMS.get(equipped_id)
+    if item:
+        apply_equipment_stat_changes(character, item, -1)
+    adjust_inventory(state, equipped_id, 1)
+    setattr(character, slot_attr, None)
+    message = f"{character.name} melepas {item['name']}." if item else "Equipment dilepas."
+    return True, message
+
+
+def equip_item(state: GameState, char_id: str, item_id: str) -> Tuple[bool, str]:
+    character = state.party.get(char_id)
+    if not character:
+        return False, "Karakter tidak ditemukan."
+    item = ITEMS.get(item_id)
+    if not item:
+        return False, "Item tidak dikenal."
+    if item.get("type") not in {"weapon", "armor"}:
+        return False, "Item itu bukan equipment."
+    allowed = item.get("allowed_users")
+    if allowed and char_id not in allowed:
+        return False, f"{item['name']} tidak cocok untuk {character.name}."
+    qty = state.inventory.get(item_id, 0)
+    if qty <= 0:
+        return False, "Kamu tidak memiliki item tersebut."
+    slot_attr = "weapon_id" if item["type"] == "weapon" else "armor_id"
+    currently_equipped = getattr(character, slot_attr)
+    if currently_equipped:
+        unequip_item(state, char_id, item["type"])
+    adjust_inventory(state, item_id, -1)
+    setattr(character, slot_attr, item_id)
+    apply_equipment_stat_changes(character, item, 1)
+    return True, f"{character.name} memasang {item['name']}."
+
+
+def get_equipped_owners(state: GameState, item_id: str) -> List[str]:
+    owners = []
+    for cid in state.party_order:
+        character = state.party[cid]
+        if character.weapon_id == item_id or character.armor_id == item_id:
+            owners.append(character.name)
+    return owners
+
+
+def get_character_passive_effects(character: CharacterState) -> Dict[str, Any]:
+    result: Dict[str, Any] = {}
+    for slot in [character.weapon_id, character.armor_id]:
+        if not slot:
+            continue
+        item = ITEMS.get(slot)
+        if not item:
+            continue
+        passives = item.get("effects", {}).get("passives", {})
+        for key, value in passives.items():
+            if key == "element_boost" and isinstance(value, dict):
+                dest = result.setdefault("element_boost", {})
+                for elem, bonus in value.items():
+                    dest[elem] = dest.get(elem, 0.0) + bonus
+            else:
+                result[key] = result.get(key, 0) + value
+    return result
+
+
+def get_character_weapon_element(character: CharacterState) -> str:
+    weapon = ITEMS.get(character.weapon_id) if character.weapon_id else None
+    if not weapon:
+        return "NETRAL"
+    return weapon.get("effects", {}).get("element", "NETRAL")
+
+
+def list_equippable_items(state: GameState, char_id: str, slot_type: str) -> List[Tuple[str, Dict[str, Any], int]]:
+    results: List[Tuple[str, Dict[str, Any], int]] = []
+    for item_id, qty in state.inventory.items():
+        if qty <= 0:
+            continue
+        item = ITEMS.get(item_id)
+        if not item or item.get("type") != slot_type:
+            continue
+        allowed = item.get("allowed_users")
+        if allowed and char_id not in allowed:
+            continue
+        results.append((item_id, item, qty))
+    return results
+
+
+def manual_targeting_enabled(state: GameState) -> bool:
+    """Placeholder to toggle manual target selection in the future."""
+    return bool(state.flags.get("MANUAL_TARGETING"))
+
+
+def clear_manual_target_request(state: GameState):
+    state.flags.pop("PENDING_TARGET", None)
+
+
 def make_char_buff_key(char_id: str) -> str:
     return f"CHAR:{char_id}"
 
@@ -1279,6 +1616,7 @@ def clear_active_buffs(state: GameState):
 
 # Storage in-memory
 USER_STATES: Dict[int, GameState] = {}
+USER_LOCKS: Dict[int, asyncio.Lock] = {}
 
 SAVE_DIR = "saves"
 
@@ -1298,6 +1636,8 @@ def character_to_dict(character: CharacterState) -> Dict[str, Any]:
         "spd": character.spd,
         "luck": character.luck,
         "skills": character.skills,
+        "weapon_id": character.weapon_id,
+        "armor_id": character.armor_id,
     }
 
 
@@ -1316,6 +1656,8 @@ def character_from_dict(data: Dict[str, Any]) -> CharacterState:
         spd=data.get("spd", 1),
         luck=data.get("luck", 1),
         skills=list(data.get("skills", [])),
+        weapon_id=data.get("weapon_id"),
+        armor_id=data.get("armor_id"),
     )
 
 
@@ -1324,7 +1666,15 @@ def serialize_game_state(state: GameState) -> Dict[str, Any]:
         k: v
         for k, v in state.flags.items()
         if k
-        not in {"ACTIVE_BUFFS", "DEFENDING", "ARUNA_DEF_BUFF_TURNS", "LIGHT_BUFF_TURNS", "ARUNA_LIMIT_USED"}
+        not in {
+            "ACTIVE_BUFFS",
+            "DEFENDING",
+            "ARUNA_DEF_BUFF_TURNS",
+            "LIGHT_BUFF_TURNS",
+            "ARUNA_LIMIT_USED",
+            "CURRENT_BATTLE_AREA",
+            "MANA_SHIELD",
+        }
     }
     return {
         "scene_id": state.scene_id,
@@ -1342,8 +1692,10 @@ def serialize_game_state(state: GameState) -> Dict[str, Any]:
 def save_game_state(state: GameState):
     os.makedirs(SAVE_DIR, exist_ok=True)
     path = os.path.join(SAVE_DIR, f"{state.user_id}.json")
-    with open(path, "w", encoding="utf-8") as f:
+    tmp_path = f"{path}.tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(serialize_game_state(state), f, ensure_ascii=False, indent=2)
+    os.replace(tmp_path, path)
 
 
 def load_game_state(user_id: int) -> Optional[GameState]:
@@ -1386,6 +1738,14 @@ def get_game_state(user_id: int) -> GameState:
         state.ensure_aruna()
         USER_STATES[user_id] = state
     return state
+
+
+def get_user_lock(user_id: int) -> asyncio.Lock:
+    lock = USER_LOCKS.get(user_id)
+    if not lock:
+        lock = asyncio.Lock()
+        USER_LOCKS[user_id] = lock
+    return lock
 
 
 def xp_required_for_next_level(current_level: int) -> int:
@@ -1448,13 +1808,16 @@ def reset_battle_flags(state: GameState):
         "ARUNA_DEF_BUFF_TURNS",
         "LIGHT_BUFF_TURNS",
         "ARUNA_LIMIT_USED",
+        "CURRENT_BATTLE_AREA",
     ]:
         state.flags.pop(key, None)
     state.flags.pop("DEFENDING", None)
+    state.flags.pop("MANA_SHIELD", None)
     state.battle_state = BattleTurnState()
 
 
-def tick_buffs(state: GameState):
+def tick_buffs(state: GameState) -> List[str]:
+    logs: List[str] = []
     active = state.flags.get("ACTIVE_BUFFS")
     if active:
         to_remove = []
@@ -1465,6 +1828,10 @@ def tick_buffs(state: GameState):
                 buff["turns"] -= 1
                 if buff["turns"] <= 0:
                     adjust_stat_value(target, buff["stat"], -buff["amount"])
+                    if target and isinstance(target, CharacterState):
+                        logs.append(
+                            f"Buff {buff['stat']} pada {target.name} menghilang."
+                        )
                 else:
                     remaining.append(buff)
             if remaining:
@@ -1475,6 +1842,21 @@ def tick_buffs(state: GameState):
             active.pop(key, None)
         if not active:
             state.flags.pop("ACTIVE_BUFFS", None)
+    shields = state.flags.get("MANA_SHIELD")
+    if shields:
+        expired: List[str] = []
+        for cid in list(shields.keys()):
+            shields[cid] -= 1
+            if shields[cid] <= 0:
+                expired.append(cid)
+        for cid in expired:
+            shields.pop(cid, None)
+            target = state.party.get(cid)
+            if target:
+                logs.append(f"Mana Shield di sekitar {target.name} menghilang.")
+        if not shields:
+            state.flags.pop("MANA_SHIELD", None)
+    return logs
     if state.flags.get("ARUNA_DEF_BUFF_TURNS"):
         state.flags["ARUNA_DEF_BUFF_TURNS"] -= 1
         if state.flags["ARUNA_DEF_BUFF_TURNS"] <= 0:
@@ -1588,6 +1970,11 @@ async def resolve_battle_outcome(
         level_msgs = check_level_up(state)
         if level_msgs:
             log.extend(level_msgs)
+        drop_logs = grant_battle_drops(state)
+        if drop_logs:
+            log.append("Kamu menemukan loot:")
+            for entry in drop_logs:
+                log.append(f"- {entry}")
         await end_battle_and_return(
             update,
             context,
@@ -1628,6 +2015,9 @@ def enemy_take_turn(state: GameState, enemy_index: int) -> List[str]:
             state.flags.pop("DEFENDING", None)
     if state.flags.get("ARUNA_DEF_BUFF_TURNS") and target_id == "ARUNA":
         dmg = max(1, int(dmg * 0.7))
+    dmg = apply_mana_shield_absorption(state, target_id, dmg, log)
+    if dmg <= 0:
+        return log
     target.hp -= dmg
     log.append(f"{enemy['name']} menyerang {target.name} dan memberikan {dmg} damage!")
     if target.hp <= 0:
@@ -1657,7 +2047,9 @@ async def conclude_player_turn(
             return
         next_token = advance_to_next_actor(state)
     if enemy_phase:
-        tick_buffs(state)
+        buff_logs = tick_buffs(state)
+        if buff_logs:
+            log.extend(buff_logs)
     await send_battle_state(update, context, state, intro=False, extra_text="\n".join(log))
 
 
@@ -1782,7 +2174,7 @@ async def process_use_item(
     if not success:
         await send_battle_state(update, context, state, intro=False, extra_text="\n".join(effect_logs))
         return
-    state.inventory[item_id] = qty - 1
+    adjust_inventory(state, item_id, -1)
     log = [f"{state.party[char_id].name} menggunakan {item['name']}."] + effect_logs
     await conclude_player_turn(update, context, state, log)
 
@@ -1804,6 +2196,9 @@ def create_enemy_from_key(monster_key: str) -> Dict[str, Any]:
         "xp": base["xp"],
         "gold": base["gold"],
         "element": base.get("element", "NETRAL"),
+        "weakness": list(base.get("weakness", [])),
+        "resist": list(base.get("resist", [])),
+        "area": base.get("area", "UNKNOWN"),
         "id": monster_key,
     }
 
@@ -1823,6 +2218,7 @@ async def start_story_battle(
     state.return_scene_after_battle = return_scene
     state.loss_scene_after_battle = loss_scene
     reset_battle_flags(state)
+    state.flags["CURRENT_BATTLE_AREA"] = enemy.get("area")
     initialize_battle_turn_state(state)
     await send_battle_state(update, context, state, intro=True)
 
@@ -1864,25 +2260,69 @@ def pick_random_monster_for_area(area: str) -> Dict[str, Any]:
         "xp": base["xp"],
         "gold": base["gold"],
         "element": base.get("element", "NETRAL"),
+        "weakness": list(base.get("weakness", [])),
+        "resist": list(base.get("resist", [])),
+        "area": base.get("area", area),
         "id": base["name"].upper().replace(" ", "_"),
     }
 
 
-def calc_physical_damage(attacker: CharacterState, target_def: int, power: float = 1.0) -> int:
+def compute_elemental_multiplier(
+    element: str,
+    target_weakness: Optional[List[str]],
+    target_resist: Optional[List[str]],
+    passives: Optional[Dict[str, Any]] = None,
+) -> float:
+    multiplier = 1.0
+    if element and target_weakness and element in target_weakness:
+        multiplier *= 1.5
+    if element and target_resist and element in target_resist:
+        multiplier *= 0.75
+    if passives:
+        boost = passives.get("element_boost", {})
+        if element in boost:
+            multiplier *= 1 + boost[element]
+    return multiplier
+
+
+def calc_physical_damage(
+    attacker: CharacterState,
+    target_def: int,
+    power: float = 1.0,
+    element: str = "NETRAL",
+    target_weakness: Optional[List[str]] = None,
+    target_resist: Optional[List[str]] = None,
+) -> int:
     base = attacker.atk - target_def // 2
     if base < 1:
         base = 1
     # variasi kecil
     base = int(base * random.uniform(0.9, 1.1))
-    base = int(base * power)
+    passives = get_character_passive_effects(attacker)
+    element_multiplier = compute_elemental_multiplier(
+        element, target_weakness, target_resist, passives
+    )
+    base = int(base * power * element_multiplier)
     return max(1, base)
 
 
-def calc_magic_damage(attacker: CharacterState, target_def: int, power: float) -> int:
+def calc_magic_damage(
+    attacker: CharacterState,
+    target_def: int,
+    power: float,
+    element: str = "NETRAL",
+    target_weakness: Optional[List[str]] = None,
+    target_resist: Optional[List[str]] = None,
+) -> int:
     base = int((attacker.mag - target_def / 3) * power)
     if base < 1:
         base = 1
     base = int(base * random.uniform(0.9, 1.1))
+    passives = get_character_passive_effects(attacker)
+    element_multiplier = compute_elemental_multiplier(
+        element, target_weakness, target_resist, passives
+    )
+    base = int(base * element_multiplier)
     return max(1, base)
 
 
@@ -1891,6 +2331,28 @@ def calc_heal_amount(caster: CharacterState, power: float) -> int:
     if base < 1:
         base = 1
     return base
+
+
+def apply_mana_shield_absorption(
+    state: GameState, target_id: str, damage: int, log: List[str]
+) -> int:
+    if damage <= 0:
+        return 0
+    shields = state.flags.get("MANA_SHIELD")
+    if not shields or target_id not in shields:
+        return damage
+    target = state.party.get(target_id)
+    if not target:
+        return damage
+    absorb = min(target.mp, damage)
+    if absorb > 0:
+        target.mp -= absorb
+        damage -= absorb
+        log.append(f"Mana Shield menyerap {absorb} damage dari {target.name}.")
+    if damage <= 0:
+        log.append(f"{target.name} terlindungi sepenuhnya oleh Mana Shield!")
+        return 0
+    return damage
 
 
 async def start_random_battle(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
@@ -1905,6 +2367,7 @@ async def start_random_battle(update: Update, context: ContextTypes.DEFAULT_TYPE
     state.return_scene_after_battle = None
     state.loss_scene_after_battle = None
     reset_battle_flags(state)
+    state.flags["CURRENT_BATTLE_AREA"] = area
     initialize_battle_turn_state(state)
     await send_battle_state(update, context, state, intro=True)
 
@@ -1996,7 +2459,14 @@ async def process_battle_action(
                 return
         else:
             idx, enemy = target_info
-            dmg = calc_physical_damage(character, enemy["defense"])
+            weapon_element = get_character_weapon_element(character)
+            dmg = calc_physical_damage(
+                character,
+                enemy["defense"],
+                element=weapon_element,
+                target_weakness=enemy.get("weakness"),
+                target_resist=enemy.get("resist"),
+            )
             enemy["hp"] -= dmg
             log.append(
                 f"{character.name} menyerang {enemy['name']} dan memberikan {dmg} damage!"
@@ -2079,9 +2549,23 @@ async def process_use_skill(
         else:
             idx, enemy = target_info
             if skill_type == "PHYS":
-                dmg = calc_physical_damage(character, enemy["defense"], skill.get("power", 1.0))
+                dmg = calc_physical_damage(
+                    character,
+                    enemy["defense"],
+                    skill.get("power", 1.0),
+                    element,
+                    enemy.get("weakness"),
+                    enemy.get("resist"),
+                )
             else:
-                dmg = calc_magic_damage(character, enemy["defense"], skill.get("power", 1.0))
+                dmg = calc_magic_damage(
+                    character,
+                    enemy["defense"],
+                    skill.get("power", 1.0),
+                    element,
+                    enemy.get("weakness"),
+                    enemy.get("resist"),
+                )
             if element == "CAHAYA" and state.flags.get("LIGHT_BUFF_TURNS"):
                 dmg = int(dmg * 1.2)
             enemy["hp"] -= dmg
@@ -2113,6 +2597,17 @@ async def process_use_skill(
     elif skill_type == "BUFF_DEF_SELF":
         state.flags["ARUNA_DEF_BUFF_TURNS"] = skill.get("duration", 3)
         log.append(f"{character.name} memperkuat pertahanan dengan {skill['name']}! DEF naik sementara.")
+    elif skill_type == "BUFF_DEF_SINGLE":
+        target = pick_lowest_hp_ally(state) or character
+        buffs = skill.get("buffs", {"defense": 3})
+        duration = skill.get("duration", 3)
+        for stat, amount in buffs.items():
+            apply_temporary_modifier(
+                state, make_char_buff_key(target.id), stat, amount, duration
+            )
+        log.append(
+            f"{character.name} menyalurkan {skill['name']} pada {target.name}! Pertahanan meningkat selama {duration} turn."
+        )
     elif skill_type == "LIMIT_HEAL":
         state.flags["ARUNA_LIMIT_USED"] = True
         state.flags["LIGHT_BUFF_TURNS"] = 3
@@ -2168,6 +2663,22 @@ async def process_use_skill(
             log.append(f"{character.name} membersihkan {total_removed} debuff dengan {skill['name']}!")
         else:
             log.append(f"{character.name} menggunakan {skill['name']}, tetapi tidak ada debuff yang perlu dibersihkan.")
+    elif skill_type == "BUFF_SELF":
+        duration = skill.get("duration", 3)
+        for stat, amount in skill.get("buffs", {}).items():
+            apply_temporary_modifier(state, make_char_buff_key(user), stat, amount, duration)
+        for stat, amount in skill.get("penalties", {}).items():
+            apply_temporary_modifier(state, make_char_buff_key(user), stat, amount, duration)
+        log.append(
+            f"{character.name} memfokuskan energi melalui {skill['name']} untuk {duration} turn."
+        )
+    elif skill_type == "BUFF_SPECIAL":
+        duration = skill.get("duration", 3)
+        shields = state.flags.setdefault("MANA_SHIELD", {})
+        shields[user] = duration
+        log.append(
+            f"{character.name} menciptakan {skill['name']}! Damage akan menguras MP lebih dulu selama {duration} turn."
+        )
     elif skill_type == "REVIVE":
         target = find_revive_target(state)
         if not target:
@@ -2235,12 +2746,33 @@ async def end_battle_and_return(
 # STORY / SCENE HANDLER
 # ==========================
 
+def handle_scene_side_effects(state: GameState) -> str:
+    extra = ""
+    if state.scene_id == "SQ_HARSAN_BLADE_VISION" and not state.flags.get("QUEST_WEAPON_DONE"):
+        state.flags["QUEST_WEAPON_DONE"] = True
+        state.flags["QUEST_WEAPON_STARTED"] = True
+        adjust_inventory(state, "PEDANG_WARISAN_HARSAN", 1)
+        success, equip_msg = equip_item(state, "ARUNA", "PEDANG_WARISAN_HARSAN")
+        if not success:
+            equip_msg = "Pedang baru tersimpan di tas."
+        aruna = state.party.get("ARUNA")
+        if aruna:
+            grant_skill_to_character(aruna, "LEGACY_RADIANCE")
+        extra = (
+            "Pedang Warisan Harsan meresap ke dalam Aruna Core!\n"
+            + equip_msg
+            + "\nSkill baru diperoleh: Legacy Radiance."
+        )
+    return extra
+
+
 async def send_scene(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
     state: GameState,
     extra_text: str = "",
 ):
+    reward_text = handle_scene_side_effects(state)
     data = SCENE_DATA.get(state.scene_id)
     if not data:
         # fallback
@@ -2254,6 +2786,8 @@ async def send_scene(
         return
 
     text = data["text"]
+    if reward_text:
+        extra_text = reward_text + ("\n\n" + extra_text if extra_text else "")
     if extra_text:
         text = extra_text + "\n\n" + text
 
@@ -2302,6 +2836,11 @@ async def handle_scene_choice(
         await start_story_battle(update, context, state, "FEBRI_LORD", "CH5_FINAL_WIN", loss_scene="ENDING_BAD")
         return
 
+    if choice_data == "BATTLE_HARSAN_SENTINEL":
+        state.scene_id = "SQ_HARSAN_BLADE_SHRINE"
+        await start_story_battle(update, context, state, "LUMINAR_SENTINEL", "SQ_HARSAN_BLADE_VISION")
+        return
+
     if choice_data == "GO_TO_WORLD_MAP":
         state.main_progress = "WORLD"
         await send_world_map(update, context, state)
@@ -2336,6 +2875,11 @@ async def handle_scene_choice(
         if aruna:
             grant_skill_to_character(aruna, "ARUNA_CORE_AWAKENING")
         await send_world_map(update, context, state)
+        return
+
+    if choice_data == "SQ_HARSAN_SHRINE":
+        state.scene_id = "SQ_HARSAN_BLADE_SHRINE"
+        await send_scene(update, context, state)
         return
 
     if choice_data == "ADD_REZA_PARTY":
@@ -2419,7 +2963,7 @@ async def send_city_menu(
         text += extra_text + "\n"
     text += "Apa yang ingin kamu lakukan?"
 
-    choices = [("Lihat status party", "MENU_STATUS")]
+    choices = [("Lihat status party", "MENU_STATUS"), ("Kelola equipment", "MENU_EQUIPMENT"), ("Cek inventori", "MENU_INVENTORY")]
     if loc.get("has_shop"):
         choices.append(("Pergi ke toko", "MENU_SHOP"))
     if loc.get("has_job") and features.get("jobs"):
@@ -2439,6 +2983,17 @@ async def send_city_menu(
         choices.append(("Side Quest Reza: Suara dari Segel", "QUEST_REZA"))
     if state.location == "PEKANBARU" and not state.flags.get("PEKANBARU_RUMOR_DONE"):
         choices.append(("Cari rumor di kafe remang", "EVENT_PEKANBARU_CAFE"))
+    if (
+        state.location == "PEKANBARU"
+        and state.flags.get("VISITED_PEKANBARU")
+        and not state.flags.get("QUEST_WEAPON_DONE")
+    ):
+        label = (
+            "Lanjutkan pencarian pedang Harsan"
+            if state.flags.get("QUEST_WEAPON_STARTED")
+            else "Jejak pedang warisan Harsan"
+        )
+        choices.append((label, "QUEST_HARSAN_BLADE"))
     if state.location == "KAMPAR":
         choices.append(("Menuju Kastil Febri", "EVENT_KASTIL_ENTRY"))
 
@@ -2494,11 +3049,28 @@ async def send_shop_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, sta
     features = CITY_FEATURES.get(state.location, {})
     shop_items = features.get("shop_items", [])
     lines = [f"🏪 Toko di {loc_info['name']}", f"Gold-mu saat ini: {state.gold}"]
-    buttons = []
+    buttons = [
+        [InlineKeyboardButton("🛒 Beli barang", callback_data="SHOP_BUY")],
+        [InlineKeyboardButton("💰 Jual barang", callback_data="SHOP_SELL")],
+        [InlineKeyboardButton("⬅ Kembali", callback_data="BACK_CITY_MENU")],
+    ]
+    text = "\n".join(lines)
+    markup = InlineKeyboardMarkup(buttons)
+    if query:
+        await query.edit_message_text(text=text, reply_markup=markup)
+    elif update.message:
+        await update.message.reply_text(text=text, reply_markup=markup)
+
+
+async def send_shop_buy_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
+    query = update.callback_query
+    features = CITY_FEATURES.get(state.location, {})
+    shop_items = features.get("shop_items", [])
+    lines = ["Daftar barang yang dijual:", f"Gold: {state.gold}"]
+    buttons: List[List[InlineKeyboardButton]] = []
     if not shop_items:
-        lines.append("Toko ini kehabisan barang.")
+        lines.append("Toko ini sedang kosong.")
     else:
-        lines.append("Barang yang tersedia:")
         for item_id in shop_items:
             item = ITEMS.get(item_id)
             if not item:
@@ -2507,20 +3079,45 @@ async def send_shop_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, sta
             buttons.append(
                 [
                     InlineKeyboardButton(
-                        f"Beli {item['name']} ({item['buy_price']})",
-                        callback_data=f"BUY_ITEM|{item_id}",
+                        f"Beli {item['name']}", callback_data=f"BUY_ITEM|{item_id}"
                     )
                 ]
             )
-    buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="BACK_CITY_MENU")])
+    buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="MENU_SHOP")])
+    markup = InlineKeyboardMarkup(buttons)
     if query:
-        await query.edit_message_text(
-            "\n".join(lines), reply_markup=InlineKeyboardMarkup(buttons)
+        await query.edit_message_text("\n".join(lines), reply_markup=markup)
+    else:
+        await update.message.reply_text("\n".join(lines), reply_markup=markup)
+
+
+async def send_shop_sell_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
+    query = update.callback_query
+    lines = ["Pilih item yang ingin dijual:"]
+    buttons: List[List[InlineKeyboardButton]] = []
+    any_item = False
+    for item_id, qty in sorted(state.inventory.items()):
+        if qty <= 0:
+            continue
+        item = ITEMS.get(item_id)
+        if not item:
+            continue
+        sell_price = item.get("sell_price", 0)
+        if sell_price <= 0:
+            continue
+        any_item = True
+        lines.append(f"- {item['name']} x{qty} (jual {sell_price} Gold)")
+        buttons.append(
+            [InlineKeyboardButton(f"Jual {item['name']}", callback_data=f"SELL_ITEM|{item_id}")]
         )
-    elif update.message:
-        await update.message.reply_text(
-            "\n".join(lines), reply_markup=InlineKeyboardMarkup(buttons)
-        )
+    if not any_item:
+        lines.append("Tidak ada item yang bisa dijual.")
+    buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="MENU_SHOP")])
+    markup = InlineKeyboardMarkup(buttons)
+    if query:
+        await query.edit_message_text("\n".join(lines), reply_markup=markup)
+    else:
+        await update.message.reply_text("\n".join(lines), reply_markup=markup)
 
 
 async def handle_buy_item(
@@ -2535,9 +3132,32 @@ async def handle_buy_item(
         await update.callback_query.answer("Gold-mu tidak cukup.", show_alert=True)
         return
     state.gold -= price
-    state.inventory[item_id] = state.inventory.get(item_id, 0) + 1
+    adjust_inventory(state, item_id, 1)
     await update.callback_query.answer(f"Kamu membeli {item['name']}!", show_alert=False)
-    await send_shop_menu(update, context, state)
+    await send_shop_buy_menu(update, context, state)
+
+
+async def handle_sell_item(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, item_id: str
+):
+    item = ITEMS.get(item_id)
+    if not item:
+        await update.callback_query.answer("Item tidak dikenal.", show_alert=True)
+        return
+    sell_price = item.get("sell_price", 0)
+    if sell_price <= 0:
+        await update.callback_query.answer("Item itu tidak bisa dijual.", show_alert=True)
+        return
+    qty = state.inventory.get(item_id, 0)
+    if qty <= 0:
+        await update.callback_query.answer("Kamu tidak memiliki item tersebut.", show_alert=True)
+        return
+    adjust_inventory(state, item_id, -1)
+    state.gold += sell_price
+    await update.callback_query.answer(
+        f"Kamu menjual {item['name']} seharga {sell_price} Gold.", show_alert=False
+    )
+    await send_shop_sell_menu(update, context, state)
 
 
 async def resolve_job(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, job_id: str):
@@ -2561,23 +3181,259 @@ async def resolve_job(update: Update, context: ContextTypes.DEFAULT_TYPE, state:
         await update.message.reply_text(text=text, reply_markup=keyboard)
 
 
+async def send_equipment_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
+    lines = ["Kelola equipment party:"]
+    buttons = []
+    for cid in state.party_order:
+        c = state.party[cid]
+        weapon = ITEMS.get(c.weapon_id, {}).get("name") if c.weapon_id else "(Kosong)"
+        armor = ITEMS.get(c.armor_id, {}).get("name") if c.armor_id else "(Kosong)"
+        lines.append(f"- {c.name}: Senjata {weapon} | Armor {armor}")
+        buttons.append([InlineKeyboardButton(c.name, callback_data=f"EQUIP_CHAR|{cid}")])
+    buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="BACK_CITY_MENU")])
+    markup = InlineKeyboardMarkup(buttons)
+    query = update.callback_query
+    text = "\n".join(lines)
+    if query:
+        await query.edit_message_text(text=text, reply_markup=markup)
+    else:
+        await update.message.reply_text(text=text, reply_markup=markup)
+
+
+async def send_character_equipment_menu(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    char_id: str,
+    extra_text: str = "",
+):
+    character = state.party.get(char_id)
+    if not character:
+        await send_equipment_menu(update, context, state)
+        return
+    weapon = ITEMS.get(character.weapon_id, {}).get("name") if character.weapon_id else "(Kosong)"
+    armor = ITEMS.get(character.armor_id, {}).get("name") if character.armor_id else "(Kosong)"
+    lines = [f"Kelola gear untuk {character.name}:", f"Senjata saat ini: {weapon}", f"Armor saat ini: {armor}"]
+    if extra_text:
+        lines.append("")
+        lines.append(extra_text)
+    buttons: List[List[InlineKeyboardButton]] = []
+    weapon_choices = list_equippable_items(state, char_id, "weapon")
+    if weapon_choices:
+        lines.append("\nSenjata di tas:")
+        for item_id, item, qty in weapon_choices:
+            buttons.append(
+                [
+                    InlineKeyboardButton(
+                        f"Pasang {item['name']} (x{qty})",
+                        callback_data=f"EQUIP_ITEM|{char_id}|{item_id}",
+                    )
+                ]
+            )
+    if character.weapon_id:
+        buttons.append(
+            [InlineKeyboardButton("Lepas senjata", callback_data=f"UNEQUIP|{char_id}|weapon")]
+        )
+    armor_choices = list_equippable_items(state, char_id, "armor")
+    if armor_choices:
+        lines.append("\nArmor di tas:")
+        for item_id, item, qty in armor_choices:
+            buttons.append(
+                [
+                    InlineKeyboardButton(
+                        f"Pasang {item['name']} (x{qty})",
+                        callback_data=f"EQUIP_ITEM|{char_id}|{item_id}",
+                    )
+                ]
+            )
+    if character.armor_id:
+        buttons.append(
+            [InlineKeyboardButton("Lepas armor", callback_data=f"UNEQUIP|{char_id}|armor")]
+        )
+    buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="MENU_EQUIPMENT")])
+    markup = InlineKeyboardMarkup(buttons)
+    query = update.callback_query
+    text = "\n".join(lines)
+    if query:
+        await query.edit_message_text(text=text, reply_markup=markup)
+    else:
+        await update.message.reply_text(text=text, reply_markup=markup)
+
+
+async def handle_equip_item_selection(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, char_id: str, item_id: str
+):
+    success, message = equip_item(state, char_id, item_id)
+    if not success:
+        await update.callback_query.answer(message, show_alert=True)
+    else:
+        await update.callback_query.answer(message, show_alert=False)
+    await send_character_equipment_menu(update, context, state, char_id)
+
+
+async def handle_unequip_selection(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, char_id: str, slot: str
+):
+    success, message = unequip_item(state, char_id, slot)
+    if not success:
+        await update.callback_query.answer(message, show_alert=True)
+    else:
+        await update.callback_query.answer(message, show_alert=False)
+    await send_character_equipment_menu(update, context, state, char_id)
+
+
+def apply_consumable_outside_battle(
+    state: GameState, item_id: str, target_id: str
+) -> Tuple[bool, List[str]]:
+    item = ITEMS.get(item_id)
+    if not item or item.get("type") != "consumable":
+        return False, ["Item itu tidak bisa dipakai di luar battle."]
+    target = state.party.get(target_id)
+    if not target:
+        return False, ["Target tidak ditemukan."]
+    if target.hp <= 0:
+        return False, ["Tidak bisa menggunakan item pada anggota yang tumbang."]
+    effects = item.get("effects", {})
+    logs: List[str] = []
+    hp_restore = effects.get("hp_restore", 0)
+    mp_restore = effects.get("mp_restore", 0)
+    if hp_restore:
+        before = target.hp
+        target.hp = min(target.max_hp, target.hp + hp_restore)
+        restored = target.hp - before
+        if restored > 0:
+            logs.append(f"{target.name} memulihkan {restored} HP.")
+    if mp_restore:
+        before_mp = target.mp
+        target.mp = min(target.max_mp, target.mp + mp_restore)
+        restored_mp = target.mp - before_mp
+        if restored_mp > 0:
+            logs.append(f"{target.name} memulihkan {restored_mp} MP.")
+    if not logs:
+        logs.append("Tidak ada efek berarti.")
+    adjust_inventory(state, item_id, -1)
+    return True, logs
+
+
+async def send_inventory_menu(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    extra_text: str = "",
+):
+    lines = ["=== INVENTORI ==="]
+    if extra_text:
+        lines.append(extra_text)
+        lines.append("")
+    if not state.inventory:
+        lines.append("Tas kamu kosong.")
+    else:
+        for item_id, qty in sorted(state.inventory.items()):
+            if qty <= 0:
+                continue
+            item = ITEMS.get(item_id)
+            if not item:
+                continue
+            owners = get_equipped_owners(state, item_id)
+            owner_text = f" | Dipakai: {', '.join(owners)}" if owners else ""
+            lines.append(f"- {item['name']} x{qty}{owner_text}")
+            lines.append(f"  {item['description']}")
+    lines.append("\nPerlengkapan terpasang:")
+    for cid in state.party_order:
+        c = state.party[cid]
+        weapon = ITEMS.get(c.weapon_id, {}).get("name") if c.weapon_id else "(Kosong)"
+        armor = ITEMS.get(c.armor_id, {}).get("name") if c.armor_id else "(Kosong)"
+        lines.append(f"- {c.name}: Senjata {weapon} | Armor {armor}")
+    buttons: List[List[InlineKeyboardButton]] = []
+    for item_id, qty in sorted(state.inventory.items()):
+        if qty <= 0:
+            continue
+        item = ITEMS.get(item_id)
+        if not item or item.get("type") != "consumable":
+            continue
+        effects = item.get("effects", {})
+        if not effects.get("hp_restore") and not effects.get("mp_restore"):
+            continue
+        buttons.append(
+            [InlineKeyboardButton(f"Gunakan {item['name']}", callback_data=f"INV_USE|{item_id}")]
+        )
+    buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="BACK_CITY_MENU")])
+    markup = InlineKeyboardMarkup(buttons)
+    query = update.callback_query
+    text = "\n".join(lines)
+    if query:
+        await query.edit_message_text(text=text, reply_markup=markup)
+    elif update.message:
+        await update.message.reply_text(text=text, reply_markup=markup)
+
+
+async def prompt_inventory_target_selection(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, item_id: str
+):
+    item = ITEMS.get(item_id)
+    if not item:
+        await update.callback_query.answer("Item tidak dikenal.", show_alert=True)
+        await send_inventory_menu(update, context, state)
+        return
+    buttons = []
+    for cid in state.party_order:
+        member = state.party[cid]
+        if member.hp <= 0:
+            continue
+        buttons.append(
+            [InlineKeyboardButton(member.name, callback_data=f"INV_APPLY|{item_id}|{cid}")]
+        )
+    if not buttons:
+        await update.callback_query.answer(
+            "Tidak ada anggota party yang bisa menerima item itu.", show_alert=True
+        )
+        await send_inventory_menu(update, context, state)
+        return
+    buttons.append([InlineKeyboardButton("Batal", callback_data="MENU_INVENTORY")])
+    text = f"Pilih target untuk {item['name']}:"
+    markup = InlineKeyboardMarkup(buttons)
+    query = update.callback_query
+    if query:
+        await query.edit_message_text(text=text, reply_markup=markup)
+    else:
+        await update.message.reply_text(text=text, reply_markup=markup)
+
+
+async def handle_inventory_item_use(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    item_id: str,
+    target_id: str,
+):
+    success, logs = apply_consumable_outside_battle(state, item_id, target_id)
+    if not success:
+        await update.callback_query.answer(" ".join(logs), show_alert=True)
+        await send_inventory_menu(update, context, state)
+        return
+    await update.callback_query.answer("Berhasil menggunakan item.", show_alert=False)
+    await send_inventory_menu(update, context, state, extra_text="\n".join(logs))
+
+
 # ==========================
 # HANDLER KOMANDO
 # ==========================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    state = get_game_state(user_id)
-    state.scene_id = "CH0_S1"
-    state.location = "SELATPANJANG"
-    state.main_progress = "PROLOG"
-    state.ensure_aruna()
+    async with get_user_lock(user_id):
+        state = get_game_state(user_id)
+        state.scene_id = "CH0_S1"
+        state.location = "SELATPANJANG"
+        state.main_progress = "PROLOG"
+        state.ensure_aruna()
     await send_scene(update, context, state)
 
 
 async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    state = get_game_state(user_id)
+    async with get_user_lock(user_id):
+        state = get_game_state(user_id)
     lines = ["=== STATUS PARTY ==="]
     for cid in state.party_order:
         c = state.party[cid]
@@ -2592,32 +3448,42 @@ async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def map_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    state = get_game_state(user_id)
+    async with get_user_lock(user_id):
+        state = get_game_state(user_id)
     await send_world_map(update, context, state)
 
 
 async def save_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    state = get_game_state(user_id)
-    save_game_state(state)
+    async with get_user_lock(user_id):
+        state = get_game_state(user_id)
+        save_game_state(state)
     if update.message:
         await update.message.reply_text("Progress berhasil disimpan.")
 
 
 async def load_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    loaded = load_game_state(user_id)
-    if not loaded:
-        if update.message:
-            await update.message.reply_text("Belum ada file save untuk akun ini.")
-        return
-    loaded.ensure_aruna()
-    USER_STATES[user_id] = loaded
+    async with get_user_lock(user_id):
+        loaded = load_game_state(user_id)
+        if not loaded:
+            if update.message:
+                await update.message.reply_text("Belum ada file save untuk akun ini.")
+            return
+        loaded.ensure_aruna()
+        USER_STATES[user_id] = loaded
     if update.message:
         loc_name = LOCATIONS.get(loaded.location, {}).get("name", loaded.location)
         await update.message.reply_text(
             f"Save berhasil dimuat. Kamu berada di {loc_name}. Gunakan /status untuk mengecek party."
         )
+
+
+async def inventory_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    async with get_user_lock(user_id):
+        state = get_game_state(user_id)
+    await send_inventory_menu(update, context, state)
 
 
 # ==========================
@@ -2628,204 +3494,238 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     user_id = query.from_user.id
-    state = get_game_state(user_id)
-    data = query.data
+    async with get_user_lock(user_id):
+        state = get_game_state(user_id)
+        data = query.data
 
-    # BATTLE-related
-    if data.startswith("BATTLE_"):
-        if not state.in_battle:
-            await query.edit_message_text("Kamu tidak sedang dalam battle.")
+        # BATTLE-related
+        if data.startswith("BATTLE_"):
+            if not state.in_battle:
+                await query.edit_message_text("Kamu tidak sedang dalam battle.")
+                return
+            if data == "BATTLE_BACK":
+                await send_battle_state(update, context, state)
+                return
+            await process_battle_action(update, context, state, data)
             return
-        if data == "BATTLE_BACK":
-            await send_battle_state(update, context, state)
+
+        if data.startswith("USE_SKILL|"):
+            # format: USE_SKILL|CHAR_ID|SKILL_ID
+            _, char_id, skill_id = data.split("|")
+            if not state.in_battle:
+                await query.edit_message_text("Kamu tidak sedang dalam battle.")
+                return
+            await process_use_skill(update, context, state, char_id, skill_id)
             return
-        await process_battle_action(update, context, state, data)
-        return
 
-    if data.startswith("USE_SKILL|"):
-        # format: USE_SKILL|CHAR_ID|SKILL_ID
-        _, char_id, skill_id = data.split("|")
-        if not state.in_battle:
-            await query.edit_message_text("Kamu tidak sedang dalam battle.")
+        if data.startswith("USE_ITEM|"):
+            _, item_id = data.split("|", 1)
+            if not state.in_battle:
+                await query.edit_message_text("Kamu tidak sedang dalam battle.")
+                return
+            await process_use_item(update, context, state, item_id)
             return
-        await process_use_skill(update, context, state, char_id, skill_id)
-        return
 
-    if data.startswith("USE_ITEM|"):
-        _, item_id = data.split("|", 1)
-        if not state.in_battle:
-            await query.edit_message_text("Kamu tidak sedang dalam battle.")
+        if data == "DUNGEON_BATTLE_AGAIN":
+            await start_random_battle(update, context, state)
             return
-        await process_use_item(update, context, state, item_id)
-        return
 
-    if data == "DUNGEON_BATTLE_AGAIN":
-        await start_random_battle(update, context, state)
-        return
+        if data == "RETURN_TO_CITY":
+            await send_city_menu(update, context, state)
+            return
 
-    if data == "RETURN_TO_CITY":
-        await send_city_menu(update, context, state)
-        return
+        # WORLD MAP / TRAVEL
+        if data.startswith("GOTO_CITY|"):
+            _, loc_id = data.split("|")
+            loc_info = LOCATIONS[loc_id]
+            aruna = state.party["ARUNA"]
+            if aruna.level < loc_info["min_level"]:
+                text = (
+                    f"Level kamu ({aruna.level}) belum cukup untuk masuk ke {loc_info['name']} "
+                    f"(butuh Lv {loc_info['min_level']})."
+                )
+                keyboard = make_keyboard([("Kembali ke map", "GO_TO_WORLD_MAP")])
+                await query.edit_message_text(text=text, reply_markup=keyboard)
+                return
+            state.location = loc_id
+            if loc_id == "SIAK" and not state.flags.get("VISITED_SIAK"):
+                state.flags["VISITED_SIAK"] = True
+                state.scene_id = "CH1_SIAK_ENTRY"
+                await send_scene(update, context, state)
+            elif loc_id == "RENGAT" and not state.flags.get("VISITED_RENGAT"):
+                state.flags["VISITED_RENGAT"] = True
+                state.scene_id = "CH2_RENGAT_GATE"
+                await send_scene(update, context, state)
+            elif loc_id == "PEKANBARU" and not state.flags.get("VISITED_PEKANBARU"):
+                state.flags["VISITED_PEKANBARU"] = True
+                state.scene_id = "CH3_PEKANBARU_ENTRY"
+                await send_scene(update, context, state)
+            elif loc_id == "KAMPAR" and not state.flags.get("VISITED_KAMPAR"):
+                state.flags["VISITED_KAMPAR"] = True
+                state.scene_id = "CH4_KAMPAR_ENTRY"
+                await send_scene(update, context, state)
+            else:
+                await send_city_menu(update, context, state)
+            return
 
-    # WORLD MAP / TRAVEL
-    if data.startswith("GOTO_CITY|"):
-        _, loc_id = data.split("|")
-        loc_info = LOCATIONS[loc_id]
-        # cek level Aruna
-        aruna = state.party["ARUNA"]
-        if aruna.level < loc_info["min_level"]:
-            text = (
-                f"Level kamu ({aruna.level}) belum cukup untuk masuk ke {loc_info['name']} "
-                f"(butuh Lv {loc_info['min_level']})."
+        if data == "ENTER_DUNGEON":
+            area = NEAREST_DUNGEON.get(state.location, "HUTAN_SELATPANJANG")
+            text = f"Kamu memasuki {area}. Monster berkeliaran di sini."
+            keyboard = make_keyboard(
+                [("Cari monster", "DUNGEON_BATTLE_AGAIN"), ("Kembali ke kota", "RETURN_TO_CITY")]
             )
-            keyboard = make_keyboard([("Kembali ke map", "GO_TO_WORLD_MAP")])
             await query.edit_message_text(text=text, reply_markup=keyboard)
             return
-        # kalau cukup
-        state.location = loc_id
-        if loc_id == "SIAK" and not state.flags.get("VISITED_SIAK"):
-            state.flags["VISITED_SIAK"] = True
-            state.scene_id = "CH1_SIAK_ENTRY"
-            await send_scene(update, context, state)
-        elif loc_id == "RENGAT" and not state.flags.get("VISITED_RENGAT"):
-            state.flags["VISITED_RENGAT"] = True
-            state.scene_id = "CH2_RENGAT_GATE"
-            await send_scene(update, context, state)
-        elif loc_id == "PEKANBARU" and not state.flags.get("VISITED_PEKANBARU"):
-            state.flags["VISITED_PEKANBARU"] = True
-            state.scene_id = "CH3_PEKANBARU_ENTRY"
-            await send_scene(update, context, state)
-        elif loc_id == "KAMPAR" and not state.flags.get("VISITED_KAMPAR"):
-            state.flags["VISITED_KAMPAR"] = True
-            state.scene_id = "CH4_KAMPAR_ENTRY"
-            await send_scene(update, context, state)
-        else:
-            await send_city_menu(update, context, state)
-        return
 
-    if data == "ENTER_DUNGEON":
-        # masuk hutan terdekat
-        area = NEAREST_DUNGEON.get(state.location, "HUTAN_SELATPANJANG")
-        text = f"Kamu memasuki {area}. Monster berkeliaran di sini."
-        keyboard = make_keyboard(
-            [("Cari monster", "DUNGEON_BATTLE_AGAIN"), ("Kembali ke kota", "RETURN_TO_CITY")]
-        )
-        await query.edit_message_text(text=text, reply_markup=keyboard)
-        return
-
-    # MENU KOTA
-    if data == "MENU_STATUS":
-        # tampilkan status via edit message
-        lines = ["=== STATUS PARTY ==="]
-        for cid in state.party_order:
-            c = state.party[cid]
-            lines.append(
-                f"{c.name} Lv {c.level} | HP {c.hp}/{c.max_hp} | MP {c.mp}/{c.max_mp}"
-            )
-        lines.append(f"\nGold: {state.gold}")
-        lines.append(f"Lokasi: {LOCATIONS[state.location]['name']}")
-        lines.append(f"Main Quest: {state.main_progress}")
-        text = "\n".join(lines)
-        keyboard = make_keyboard(
-            [
-                ("Kembali ke kota", "BACK_CITY_MENU"),
-            ]
-        )
-        await query.edit_message_text(text=text, reply_markup=keyboard)
-        return
-
-    if data == "BACK_CITY_MENU":
-        await send_city_menu(update, context, state)
-        return
-
-    if data == "MENU_SHOP":
-        await send_shop_menu(update, context, state)
-        return
-
-    if data.startswith("BUY_ITEM|"):
-        _, item_id = data.split("|", 1)
-        await handle_buy_item(update, context, state, item_id)
-        return
-
-    if data == "MENU_JOB":
-        await send_job_menu(update, context, state)
-        return
-
-    if data == "MENU_INN":
-        cost = CITY_FEATURES.get(state.location, {}).get("inn_cost", 0)
-        if cost > state.gold:
-            text = f"Biaya penginapan {cost} Gold, tapi Gold-mu tidak cukup."
-        else:
-            state.gold -= cost
+        # MENU KOTA
+        if data == "MENU_STATUS":
+            lines = ["=== STATUS PARTY ==="]
             for cid in state.party_order:
                 c = state.party[cid]
-                c.hp = c.max_hp
-                c.mp = c.max_mp
-            if cost == 0:
-                text = "Kamu beristirahat gratis. HP & MP seluruh party pulih."
-            else:
-                text = (
-                    f"Kamu membayar {cost} Gold dan beristirahat di penginapan. "
-                    "HP & MP seluruh party pulih."
+                lines.append(
+                    f"{c.name} Lv {c.level} | HP {c.hp}/{c.max_hp} | MP {c.mp}/{c.max_mp}"
                 )
-        keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
-        await query.edit_message_text(text=text, reply_markup=keyboard)
-        return
-
-    if data == "MENU_CLINIC":
-        # trigger klinik Umar di Siak
-        if state.location != "SIAK":
-            await query.edit_message_text(
-                "Klinik hanya ada di Siak.", reply_markup=make_keyboard([("Kembali", "BACK_CITY_MENU")])
-            )
-            return
-        # jika Umar belum join, jalankan scene Umar
-        if not state.flags.get("HAS_UMAR"):
-            state.scene_id = "CH1_UMAR_CLINIC"
-            await send_scene(update, context, state)
-        else:
-            text = "Umar: \"Jaga dirimu baik-baik, Aruna. Aku di sini kalau kau butuh bantuan.\"\n"
+            lines.append(f"\nGold: {state.gold}")
+            lines.append(f"Lokasi: {LOCATIONS[state.location]['name']}")
+            lines.append(f"Main Quest: {state.main_progress}")
+            text = "\n".join(lines)
             keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
             await query.edit_message_text(text=text, reply_markup=keyboard)
-        return
+            return
 
-    if data == "EVENT_SIAK_GATE":
-        state.scene_id = "CH1_GATE_ALERT"
-        await send_scene(update, context, state)
-        return
+        if data == "BACK_CITY_MENU":
+            await send_city_menu(update, context, state)
+            return
 
-    if data == "EVENT_PEKANBARU_CAFE":
-        state.flags["PEKANBARU_RUMOR_DONE"] = True
-        state.scene_id = "CH3_PEKANBARU_ENTRY"
-        await send_scene(update, context, state)
-        return
+        if data == "MENU_SHOP":
+            await send_shop_menu(update, context, state)
+            return
+        if data == "SHOP_BUY":
+            await send_shop_buy_menu(update, context, state)
+            return
+        if data == "SHOP_SELL":
+            await send_shop_sell_menu(update, context, state)
+            return
+        if data.startswith("BUY_ITEM|"):
+            _, item_id = data.split("|", 1)
+            await handle_buy_item(update, context, state, item_id)
+            return
+        if data.startswith("SELL_ITEM|"):
+            _, item_id = data.split("|", 1)
+            await handle_sell_item(update, context, state, item_id)
+            return
 
-    if data == "EVENT_KASTIL_ENTRY":
-        state.scene_id = "CH4_CASTLE_APPROACH"
-        await send_scene(update, context, state)
-        return
+        if data == "MENU_JOB":
+            await send_job_menu(update, context, state)
+            return
 
-    if data == "QUEST_UMAR":
-        state.scene_id = "SQ_UMAR_INTRO"
-        await send_scene(update, context, state)
-        return
+        if data == "MENU_INN":
+            cost = CITY_FEATURES.get(state.location, {}).get("inn_cost", 0)
+            if cost > state.gold:
+                text = f"Biaya penginapan {cost} Gold, tapi Gold-mu tidak cukup."
+            else:
+                state.gold -= cost
+                for cid in state.party_order:
+                    c = state.party[cid]
+                    c.hp = c.max_hp
+                    c.mp = c.max_mp
+                if cost == 0:
+                    text = "Kamu beristirahat gratis. HP & MP seluruh party pulih."
+                else:
+                    text = (
+                        f"Kamu membayar {cost} Gold dan beristirahat di penginapan. "
+                        "HP & MP seluruh party pulih."
+                    )
+            keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
+            await query.edit_message_text(text=text, reply_markup=keyboard)
+            return
 
-    if data == "QUEST_REZA":
-        state.scene_id = "SQ_REZA_INTRO"
-        await send_scene(update, context, state)
-        return
+        if data == "MENU_CLINIC":
+            if state.location != "SIAK":
+                await query.edit_message_text(
+                    "Klinik hanya ada di Siak.",
+                    reply_markup=make_keyboard([("Kembali", "BACK_CITY_MENU")]),
+                )
+                return
+            if not state.flags.get("HAS_UMAR"):
+                state.scene_id = "CH1_UMAR_CLINIC"
+                await send_scene(update, context, state)
+            else:
+                text = "Umar: \"Jaga dirimu baik-baik, Aruna. Aku di sini kalau kau butuh bantuan.\"\n"
+                keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
+                await query.edit_message_text(text=text, reply_markup=keyboard)
+            return
 
-    if data.startswith("DO_JOB|"):
-        _, job_id = data.split("|")
-        await resolve_job(update, context, state, job_id)
-        return
+        if data == "MENU_EQUIPMENT":
+            await send_equipment_menu(update, context, state)
+            return
+        if data.startswith("EQUIP_CHAR|"):
+            _, char_id = data.split("|", 1)
+            await send_character_equipment_menu(update, context, state, char_id)
+            return
+        if data.startswith("EQUIP_ITEM|"):
+            _, char_id, item_id = data.split("|", 2)
+            await handle_equip_item_selection(update, context, state, char_id, item_id)
+            return
+        if data.startswith("UNEQUIP|"):
+            _, char_id, slot = data.split("|", 2)
+            await handle_unequip_selection(update, context, state, char_id, slot)
+            return
 
-    if data == "GO_TO_WORLD_MAP":
-        await send_world_map(update, context, state)
-        return
+        if data == "MENU_INVENTORY":
+            await send_inventory_menu(update, context, state)
+            return
+        if data.startswith("INV_USE|"):
+            _, item_id = data.split("|", 1)
+            await prompt_inventory_target_selection(update, context, state, item_id)
+            return
+        if data.startswith("INV_APPLY|"):
+            _, item_id, target_id = data.split("|", 2)
+            await handle_inventory_item_use(update, context, state, item_id, target_id)
+            return
 
-    # SCENE / STORY CHOICE
-    await handle_scene_choice(update, context, state, data)
+        if data == "EVENT_SIAK_GATE":
+            state.scene_id = "CH1_GATE_ALERT"
+            await send_scene(update, context, state)
+            return
+
+        if data == "EVENT_PEKANBARU_CAFE":
+            state.flags["PEKANBARU_RUMOR_DONE"] = True
+            state.scene_id = "CH3_PEKANBARU_ENTRY"
+            await send_scene(update, context, state)
+            return
+
+        if data == "EVENT_KASTIL_ENTRY":
+            state.scene_id = "CH4_CASTLE_APPROACH"
+            await send_scene(update, context, state)
+            return
+
+        if data == "QUEST_UMAR":
+            state.scene_id = "SQ_UMAR_INTRO"
+            await send_scene(update, context, state)
+            return
+
+        if data == "QUEST_REZA":
+            state.scene_id = "SQ_REZA_INTRO"
+            await send_scene(update, context, state)
+            return
+        if data == "QUEST_HARSAN_BLADE":
+            state.flags["QUEST_WEAPON_STARTED"] = True
+            state.scene_id = "SQ_HARSAN_BLADE_INTRO"
+            await send_scene(update, context, state)
+            return
+
+        if data.startswith("DO_JOB|"):
+            _, job_id = data.split("|")
+            await resolve_job(update, context, state, job_id)
+            return
+
+        if data == "GO_TO_WORLD_MAP":
+            await send_world_map(update, context, state)
+            return
+
+        # SCENE / STORY CHOICE
+        await handle_scene_choice(update, context, state, data)
 
 
 # ==========================
@@ -2840,6 +3740,7 @@ def main():
     application.add_handler(CommandHandler("map", map_cmd))
     application.add_handler(CommandHandler("save", save_cmd))
     application.add_handler(CommandHandler("load", load_cmd))
+    application.add_handler(CommandHandler("inventory", inventory_cmd))
 
     application.add_handler(CallbackQueryHandler(button))
 
