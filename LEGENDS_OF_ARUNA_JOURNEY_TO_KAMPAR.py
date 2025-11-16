@@ -904,56 +904,62 @@ SCENE_DATA = {
     "CH2_RENGAT_GATE": {
         "text": (
             "Aura magis menyelimuti gerbang Rengat. Rune bercahaya mengambang di udara.\n"
-            "Penjaga: \"Selamat datang di kota para penyihir. Banyak yang mencari ilmu di sini... banyak juga yang hilang saat pergi ke Kampar.\""
+            "Penjaga: \"Selamat datang di kota para penyihir. Banyak yang datang belajar, tapi para penyihir yang menantang Kampar tidak pernah kembali.\"\n"
+            "Penjaga: \"Kalau kalian ke sini untuk main-main, pulanglah. Kampar bukan tempat manusia.\""
         ),
         "choices": [("Masuki kota magis", "CH2_REZA_TOWER")],
     },
     "CH2_REZA_TOWER": {
         "text": (
             "Menara batu sunyi menjulang. Reza menatapmu dari balik buku tebal.\n"
-            "Reza: \"Aku tidak menerima murid baru. Pergi.\"\n"
+            "Reza: \"Aku tidak menerima murid baru. Kalau kalian ke sini untuk belajar sihir, pulanglah.\"\n"
+            "Aruna: \"Kami bukan mencari guru. Kami mencari kebenaran tentang Kampar.\"\n"
             "Kalungmu kembali berpendar terang."
         ),
         "choices": [("Tunjukkan kalung Aruna Core", "CH2_REZA_REVEAL")],
     },
     "CH2_REZA_REVEAL": {
         "text": (
-            "Reza: \"Kalung itu... milik guruku. Ia memberikannya pada Penjaga Cahaya terakhir, Harsan.\"\n"
-            "Aruna: \"Harsan?\"\n"
-            "Reza: \"Ayahmu. Ia mengejar muridnya yang berkhianat, Febri, ke Kampar lima belas tahun lalu.\""
+            "Reza (tertegun): \"Kalung itu... simbol Aruna Core. Dari mana kau mendapatkannya?\"\n"
+            "Aruna: \"Ini satu-satunya peninggalan dari orang tuaku.\"\n"
+            "Reza: \"Kalung itu pernah dimiliki guruku. Setelah itu, ia memberikannya kepada seorang Penjaga Cahaya bernama Harsan...\"\n"
+            "Reza: \"Jika benar ini kalung yang sama... berarti kau adalah anak Harsan.\""
         ),
         "choices": [("Dengar cerita lebih jauh", "CH2_REZA_PAST")],
     },
     "CH2_REZA_PAST": {
         "text": (
-            "Reza mengungkap rahasia: Febri haus akan sihir terlarang dan ingin membalikkan waktu.\n"
-            "Umar: \"Kenapa seseorang ingin memutar waktu dengan harga segila itu?\"\n"
-            "Reza: \"Karena rasa kehilangan. Tapi Kampar hancur karenanya.\"\n"
-            "Tiba-tiba tanah bergetar.\n"
+            "Reza: \"Lima belas tahun lalu, Harsan dan muridnya, Febri, pergi ke Kampar.\"\n"
+            "Reza: \"Febri adalah murid paling berbakat... dan paling haus kekuatan. Ia ingin membangkitkan Abyss untuk membalikkan waktu.\"\n"
+            "Reza: \"Harsan berusaha menghentikannya, tapi sejak itu tidak ada kabar dari mereka.\"\n"
+            "Umar: \"Jadi Kampar berubah karena ambisi satu orang?\"\n"
+            "Reza: \"Abyss selalu meminta harga. Dan kini segelnya melemah.\"\n"
+            "Tiba-tiba tanah bergetar. Suara berat mendekat dari hutan magis.\n"
         ),
         "choices": [("Apa itu?!", "CH2_GOLEM_ALERT")],
     },
     "CH2_GOLEM_ALERT": {
         "text": (
-            "NPC: \"Golem Hutan datang lagi!\"\n"
-            "Reza: \"Dia dulu penjaga hutan. Aura Kampar membuatnya gila.\"\n"
-            "Umar: \"Kalau begitu kita bebaskan dia.\""
+            "NPC: \"Golem hutan datang lagi!\"\n"
+            "Reza: \"Dia dulu penjaga rimba Rengat. Aura Kampar membuatnya gila.\"\n"
+            "Umar: \"Kalau begitu kita bebaskan dia dari kutukan Abyss.\""
         ),
         "choices": [("Lindungi Rengat", "BATTLE_RENGAT_GOLEM")],
     },
     "CH2_GOLEM_AFTER": {
         "text": (
-            "Corrupted Forest Golem runtuh dan kembali tenang. Reza menatapmu.\n"
-            "Reza: \"Kalian lebih kuat dari yang kuduga. Tanpa Aruna Core, segel itu tidak akan bertahan.\"\n"
+            "Corrupted Forest Golem runtuh dan kembali tenang. Cahaya Aruna Core menenangkan tanah yang retak.\n"
+            "Reza: \"Kekuatan kalian... tidak buruk. Tanpa Aruna Core, segel Abyss di sini pasti jebol.\"\n"
             "Umar: \"Jadi kau akan ikut?\"\n"
-            "Reza: \"Guruku mungkin masih terjerat di Kampar. Aku tidak akan membiarkan pengorbanannya sia-sia.\""
+            "Reza: \"Guruku mungkin masih terjerat di Kampar. Dan hanya Aruna Core milikmu yang bisa menembus segel Abyss. Aku ikut.\""
         ),
         "choices": [("Biarkan Reza bergabung", "ADD_REZA_PARTY")],
     },
     "CH2_REZA_JOINS": {
         "text": (
             "Reza resmi bergabung dalam party. Cahaya Aruna Core terasa lebih stabil.\n"
-            "Reza: \"Sebelum Kampar, kita perlu menguatkan diri di Pekanbaru. Itu kota besar terakhir sebelum neraka.\""
+            "Reza: \"Sebelum Kampar, kita perlu menguatkan diri di Pekanbaru. Itu kota besar terakhir sebelum neraka.\"\n"
+            "Reza: \"Di sana mungkin ada orang yang tahu kenapa Febri memilih jalan Abyss.\""
         ),
         "choices": [("Rencanakan perjalanan", "CH2_PEKANBARU_POINTER")],
     },
@@ -969,33 +975,38 @@ SCENE_DATA = {
     "CH3_PEKANBARU_ENTRY": {
         "text": (
             "Pekanbaru terlihat muram. Toko-toko tutup lebih awal dan orang-orang berbisik tentang Kampar.\n"
-            "NPC: \"Kau lihat kastil hitam di horizon? Katanya dipanggil dari tanah oleh iblis.\""
+            "NPC: \"Kampar bukan lagi kota. Itu neraka.\"\n"
+            "NPC lain: \"Sebuah kastil muncul dari tanah, seolah dipanggil iblis. Jangan dekati!\""
         ),
         "choices": [("Cari informasi di kafe gelap", "CH3_PEKANBARU_CAFE")],
     },
     "CH3_PEKANBARU_CAFE": {
         "text": (
-            "Kafe remang penuh asap. Seorang orang tua menatap kalungmu.\n"
-            "Orang Tua: \"Kalung itu segel cahaya. Aku melihat Febri sebelum ia berubah. Ia dulu manusia... murid jenius yang ingin membalikkan waktu.\"\n"
-            "Reza: \"Guruku punya murid lain?\"\n"
-            "Orang Tua: \"Sihir terlarang selalu menuntut harga.\""
+            "Kafe remang penuh asap. Seorang orang tua menatap kalungmu lama sekali.\n"
+            "Orang Tua: \"Kalung cahaya itu... sudah lama sekali aku tak melihat simbol seperti itu.\"\n"
+            "Orang Tua: \"Dulu, aku melihat Febri sebelum ia berubah. Ia hanya manusia, murid penyihir agung dari Rengat.\"\n"
+            "Reza (terkejut): \"Itu... guruku. Jadi Febri adalah murid guruku.\"\n"
+            "Orang Tua: \"Febri ingin membalikkan waktu. Ia ingin menyelamatkan seseorang. Abyss membayar keinginannya dengan tubuh dan jiwanya.\"\n"
+            "Orang Tua: \"Kalau kau ke Kampar, jangan terjebak ambisi yang sama.\""
         ),
         "choices": [("Biarkan cerita mengalir", "CH3_DREAM")],
     },
     "CH3_DREAM": {
         "text": (
-            "Malam itu Aruna bermimpi. Harsan berdiri di hadapan Febri muda.\n"
-            "Harsan: \"Berhentilah, Febri! Kekuatan itu bukan milik manusia!\"\n"
-            "Febri: \"Dengan ini aku bisa membalikkan waktu! Aku bisa menyelamatkannya!\"\n"
-            "Cahaya dan kegelapan bertubrukan. Harsan menghilang bersama segel Kampar."
+            "Malam itu Aruna bermimpi. Harsan berdiri di hadapan Febri muda di tengah ritual Abyss.\n"
+            "Harsan: \"Berhentilah, Febri! Kekuatan itu bukan milik manusia.\"\n"
+            "Febri: \"Aku tidak peduli! Jika dengan ini aku bisa membalikkan waktu dan menyelamatkannya... aku akan menanggung apa pun!\"\n"
+            "Cahaya dan kegelapan bertubrukan. Harsan menggunakan Aruna Core untuk menahan ledakan, sementara bayangan Febri meraung.\n"
+            "Suara Rusmini menggema lembut di kejauhan: \"Harsan... lindungi Aruna...\"\n"
+            "Cahaya menelan semua. Harsan menghilang bersama segel sementara Febri terperangkap."
         ),
         "choices": [("Bangun dari mimpi", "CH3_WAKE")],
     },
     "CH3_WAKE": {
         "text": (
-            "Aruna terbangun berkeringat.\n"
-            "Aruna: \"Aku melihat ayahku. Dia menyegel Febri... lalu lenyap.\"\n"
-            "Reza: \"Kalungmu bereaksi makin kuat. Kampar memanggilmu.\""
+            "Aruna terbangun berkeringat, kalungnya berpendar kuat.\n"
+            "Aruna: \"Aku melihat ayahku. Dia menyegel Febri dengan Aruna Core... lalu lenyap.\"\n"
+            "Reza: \"Seal itu melemah. Kampar memanggilmu. Jika kita terlambat, Abyss akan bangkit penuh.\""
         ),
         "choices": [("Terima panggilan Kampar", "CH3_KAMPAR_POINTER")],
     },
@@ -1043,16 +1054,27 @@ SCENE_DATA = {
     "CH4_KAMPAR_ENTRY": {
         "text": (
             "Begitu melewati perbatasan Kampar, langit kehilangan warnanya. Rumah-rumah hancur, jalan retak, tak ada suara manusia.\n"
-            "Umar: \"Aku tidak merasakan satu pun kehidupan... hanya kegelapan.\"\n"
-            "Reza: \"Aura Abyss menutup semuanya.\""
+            "Umar: \"Aku tidak merasakan satu pun kehidupan...\"\n"
+            "Reza: \"Ini adalah napas Abyss. Kota ini sudah mati, tapi segelnya memanggil kita.\""
         ),
         "choices": [("Biarkan kalung memandu", "CH4_FLASHBACK")],
     },
     "CH4_FLASHBACK": {
         "text": (
-            "Kalung Aruna menyala menyilaukan. Kilasan masa lalu muncul.\n"
-            "Harsan dan Rusmini menyerahkan bayi Aruna kepada seorang paman di Selatpanjang.\n"
-            "Harsan: \"Suatu hari... kau yang harus memilih. Selamatkan dunia atau biarkan kegelapan menang.\""
+            "Kalung Aruna menyala menyilaukan. Kilasan masa lalu muncul seakan diproyeksikan dari Aruna Core.\n"
+            "Harsan berdiri sebagai Penjaga Cahaya terakhir, sementara Febri menatapnya dengan mata yang dipenuhi iri.\n"
+            "Febri: \"Kenapa kau yang selalu dipilih? Aku juga pantas merasakan kekuatan itu.\"\n"
+            "Untuk melindungi bayi Aruna, Harsan dan Rusmini memisahkan pedang warisan dan kalung Aruna Core lalu menyerahkannya pada wali di Selatpanjang."
+        ),
+        "choices": [("Teruskan penglihatan", "CH4_FLASHBACK_2")],
+    },
+    "CH4_FLASHBACK_2": {
+        "text": (
+            "Flashback berlanjut. Febri membuat perjanjian dengan Abyss, memanggil kastil hitam dari tanah Kampar.\n"
+            "Harsan: \"Rusmini... jika aku tidak kembali, lindungi Aruna.\"\n"
+            "Rusmini: \"Jika dunia menuntut pengorbanan kita, jangan biarkan ia ikut terbakar.\"\n"
+            "Harsan menahan ledakan kegelapan dengan Aruna Core, menyegel Febri sementara dan menghilang bersama cahaya.\n"
+            "Bayangan pendulum kalung menarikmu ke pusat kota yang kini hanya tersisa kastil hitam."
         ),
         "choices": [("Menuju kastil Febri", "CH4_CASTLE_APPROACH")],
     },
@@ -1068,39 +1090,40 @@ SCENE_DATA = {
     # KASTIL FEBRI
     "CH5_CASTLE_ENTRY": {
         "text": (
-            "Lantai 1 – Koridor Bayangan. Dinding hidup dan bayangan merayap.\n"
+            "Lantai 1 – Koridor Bayangan. Dinding hidup dan bayangan merayap mengikuti langkahmu.\n"
             "Umar: \"Monster di sini jauh lebih kuat dari luar.\"\n"
-            "Reza: \"Ini baru pintu depan. Jangan lengah.\""
+            "Reza: \"Ini baru pintu depan. Jangan lengah. Jalan kembali tidak ada.\""
         ),
         "choices": [("Terus ke Balai Kekosongan", "CH5_FLOOR2")],
     },
     "CH5_FLOOR2": {
         "text": (
-            "Lantai 2 – Balai Kekosongan. Hound of Void menatap dengan mata ungu menyala.\n"
+            "Lantai 2 – Balai Kekosongan. Hound of Void menatap dengan mata ungu menyala dan taring meneteskan kabut hitam.\n"
             "Umar: \"Aura kegelapannya membuat napasku sesak!\"\n"
-            "Reza: \"Ini penjaga pertama Abyss.\""
+            "Reza: \"Ini penjaga pertama Abyss. Jangan biarkan dia memisahkan kita.\""
         ),
         "choices": [("Hadapi Hound of Void", "BATTLE_HOUND_OF_VOID")],
     },
     "CH5_FLOOR2_AFTER": {
         "text": (
             "Hound of Void runtuh. Cakar terakhirnya hampir merobek Umar, tapi Aruna Core memancarkan cahaya dan menyembuhkannya.\n"
+            "Umar: \"Aku... tidak boleh mati di sini. Aku masih punya janji pada ibuku...\"\n"
             "Sistem: \"Aruna Core bereaksi! Umar dipulihkan oleh Cahaya Aruna.\""
         ),
         "choices": [("Naik ke Ruang Segel Lama", "CH5_FLOOR3")],
     },
     "CH5_FLOOR3": {
         "text": (
-            "Ruang segel lama dipenuhi rune retak. Di tengahnya hanya tersisa jubah tua.\n"
-            "Reza: \"Ini jubah guruku... Febri memakan jiwanya. Yang tersisa hanya kenangan.\"\n"
-            "Reza menatap Aruna: \"Mulai sekarang, aku bersumpah melindungimu.\""
+            "Ruang segel lama dipenuhi rune retak. Di tengahnya hanya tersisa jubah tua dan lingkaran rune yang patah.\n"
+            "Reza: \"...Ini jubah guruku. Febri... kau bahkan memakan jiwanya.\"\n"
+            "Reza menatap Aruna: \"Mulai sekarang, aku bersumpah melindungimu sampai akhir.\""
         ),
         "choices": [("Buka Gerbang Takdir", "CH5_FLOOR4")],
     },
     "CH5_FLOOR4": {
         "text": (
             "Void Sentinel, armor besar tanpa tubuh, melayang di depan gerbang terakhir.\n"
-            "Suara Febri bergema: \"Jika ingin menemuiku, buktikan bahwa kau pantas mati di tanganku.\""
+            "Febri (suara bergema): \"Kalian benar-benar datang sejauh ini hanya untuk mati di hadapanku?\""
         ),
         "choices": [("Hancurkan Void Sentinel", "BATTLE_VOID_SENTINEL")],
     },
@@ -1114,9 +1137,9 @@ SCENE_DATA = {
     "CH5_FLOOR5": {
         "text": (
             "Tahta Kegelapan – Febri berdiri dengan tubuh setengah manusia setengah iblis.\n"
-            "Febri: \"Harsan... aku sudah lama menunggu.\"\n"
-            "Aruna: \"Aku bukan ayahku. Aku Aruna, anak yang kau tinggalkan di dalam kegelapanmu.\"\n"
-            "Febri tertawa: \"Harsan mengorbankan segalanya demi kamu. Seharusnya kaulah yang mati hari itu.\""
+            "Febri: \"Harsan... kau akhirnya datang kembali?\"\n"
+            "Aruna: \"Aku bukan ayahku. Aku Aruna, putra Harsan. Dan aku akan mengakhiri ini!\"\n"
+            "Febri tertawa: \"Hahaha... jadi anak kecil itu masih hidup. Ayahmu mengorbankan segalanya demi kamu. Seharusnya kaulah yang mati saat itu!\""
         ),
         "choices": [("Pertarungan terakhir", "BATTLE_FEBRI")],
     },
@@ -1132,7 +1155,8 @@ SCENE_DATA = {
     # ENDINGS
     "ENDING_GOOD": {
         "text": (
-            "Kau menghancurkan Febri dan memutus paktanya. Kampar perlahan pulih, meski luka masih tertinggal.\n"
+            "Cahaya Aruna Core menghancurkan Febri yang sudah menjadi iblis sepenuhnya. Ia lenyap tanpa kata maaf.\n"
+            "Kampar perlahan pulih, tapi luka Abyss masih menganga. Aura gelap di sudut-sudut kota menunggu waktu untuk sembuh.\n"
             "Aruna kembali ke Selatpanjang sebagai Penjaga Cahaya baru. Umar membuka klinik besar di Siak, Reza memimpin akademi sihir Rengat.\n"
             "Namun jauh di dalam hati, kau tahu ada cara yang lebih damai... jika saja luka lama bisa disembuhkan."
         ),
@@ -1140,16 +1164,19 @@ SCENE_DATA = {
     },
     "ENDING_TRUE": {
         "text": (
-            "Cahaya Aruna Core menyegel Febri tanpa menghancurkan jiwanya. Sisa kemanusiaan Febri menangis menyesal sebelum lenyap dalam cahaya.\n"
-            "Aura Abyss hilang. Kampar bersih dari kegelapan dan menjadi simbol harapan baru.\n"
-            "Umar dan Reza menyelesaikan penyesalan keluarga mereka, sementara Aruna menjaga dunia sebagai Penjaga Cahaya yang matang."
+            "Aruna menggunakan Aruna Core bukan untuk membunuh, tapi untuk menyegel Febri tanpa kebencian.\n"
+            "Febri kembali manusia sejenak: \"Harsan... Aruna... maafkan aku...\"\n"
+            "Aruna: \"Ayahku tidak ingin kau mati. Dia ingin kau berhenti tenggelam dalam kebencian.\"\n"
+            "Segel cahaya menenangkan Abyss. Kampar pulih sepenuhnya; kastil hitam runtuh menjadi serpihan cahaya.\n"
+            "Umar dan Reza menutup penyesalan masa lalu, dan dunia memiliki Penjaga Cahaya yang memilih belas kasih."
         ),
         "choices": [("Nikmati kedamaian", "GO_TO_WORLD_MAP")],
     },
     "ENDING_BAD": {
         "text": (
             "Teriakan Aruna tenggelam dalam tawa Febri. Kampar tidak lagi sekadar kota terkutuk—ia menjadi pusat kegelapan yang menelan dunia.\n"
-            "Aruna Core hancur, Umar dan Reza gugur. Hanya kenangan tentang cahaya yang tersisa di dunia yang runtuh."
+            "Kegelapan menyebar. Siak, Rengat, Pekanbaru tumbang satu per satu. Umar dan Reza gugur, Aruna Core hancur.\n"
+            "Febri menjadi dewa Abyss, dan hanya kenangan tentang cahaya yang tersisa di dunia yang runtuh."
         ),
         "choices": [("Bangkit dari kegagalan", "GO_TO_WORLD_MAP")],
     },
