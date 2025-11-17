@@ -583,6 +583,8 @@ MONSTERS = {
         "xp": 999,
         "gold": 0,
         "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
     },
 }
 
@@ -2472,17 +2474,19 @@ def compute_elemental_multiplier(
     target_weakness: Optional[List[str]],
     target_resist: Optional[List[str]],
     passives: Optional[Dict[str, Any]] = None,
-) -> float:
+) -> Tuple[float, bool, bool]:
     multiplier = 1.0
-    if element and target_weakness and element in target_weakness:
+    hit_weakness = bool(element and target_weakness and element in target_weakness)
+    hit_resist = bool(element and target_resist and element in target_resist)
+    if hit_weakness:
         multiplier *= 1.5
-    if element and target_resist and element in target_resist:
+    if hit_resist:
         multiplier *= 0.75
     if passives:
         boost = passives.get("element_boost", {})
         if element in boost:
             multiplier *= 1 + boost[element]
-    return multiplier
+    return multiplier, hit_weakness, hit_resist
 
 
 def compute_passive_damage_bonus(
@@ -2507,7 +2511,7 @@ def calc_physical_damage(
     target_weakness: Optional[List[str]] = None,
     target_resist: Optional[List[str]] = None,
     target_element: Optional[str] = None,
-) -> int:
+) -> Tuple[int, bool, bool]:
     attacker_atk = get_effective_stat(attacker, "atk")
     base = attacker_atk - target_def // 2
     if base < 1:
@@ -2515,12 +2519,12 @@ def calc_physical_damage(
     # variasi kecil
     base = int(base * random.uniform(0.9, 1.1))
     passives = get_character_passive_effects(attacker)
-    element_multiplier = compute_elemental_multiplier(
+    element_multiplier, hit_weakness, hit_resist = compute_elemental_multiplier(
         element, target_weakness, target_resist, passives
     )
     passive_bonus = compute_passive_damage_bonus(passives, target_element, element)
     base = int(base * power * element_multiplier * passive_bonus)
-    return max(1, base)
+    return max(1, base), hit_weakness, hit_resist
 
 
 def calc_magic_damage(
@@ -2531,19 +2535,19 @@ def calc_magic_damage(
     target_weakness: Optional[List[str]] = None,
     target_resist: Optional[List[str]] = None,
     target_element: Optional[str] = None,
-) -> int:
+) -> Tuple[int, bool, bool]:
     attacker_mag = get_effective_stat(attacker, "mag")
     base = int((attacker_mag - target_def / 3) * power)
     if base < 1:
         base = 1
     base = int(base * random.uniform(0.9, 1.1))
     passives = get_character_passive_effects(attacker)
-    element_multiplier = compute_elemental_multiplier(
+    element_multiplier, hit_weakness, hit_resist = compute_elemental_multiplier(
         element, target_weakness, target_resist, passives
     )
     passive_bonus = compute_passive_damage_bonus(passives, target_element, element)
     base = int(base * element_multiplier * passive_bonus)
-    return max(1, base)
+    return max(1, base), hit_weakness, hit_resist
 
 
 def calc_heal_amount(caster: CharacterState, power: float) -> int:
@@ -2682,7 +2686,7 @@ async def process_battle_action(
         else:
             idx, enemy = target_info
             weapon_element = get_character_weapon_element(character)
-            dmg = calc_physical_damage(
+            dmg, hit_weakness, hit_resist = calc_physical_damage(
                 character,
                 enemy["defense"],
                 element=weapon_element,
@@ -2694,6 +2698,10 @@ async def process_battle_action(
             log.append(
                 f"{character.name} menyerang {enemy['name']} dan memberikan {dmg} damage!"
             )
+            if hit_weakness:
+                log.append("Itu serangan yang sangat efektif!")
+            if hit_resist:
+                log.append("Musuh tampaknya menahan serangan itu.")
 
     elif action == "BATTLE_DEFEND":
         defend_flags = state.flags.setdefault("DEFENDING", {})
@@ -2772,7 +2780,7 @@ async def process_use_skill(
         else:
             idx, enemy = target_info
             if skill_type == "PHYS":
-                dmg = calc_physical_damage(
+                dmg, hit_weakness, hit_resist = calc_physical_damage(
                     character,
                     enemy["defense"],
                     skill.get("power", 1.0),
@@ -2782,7 +2790,7 @@ async def process_use_skill(
                     enemy.get("element"),
                 )
             else:
-                dmg = calc_magic_damage(
+                dmg, hit_weakness, hit_resist = calc_magic_damage(
                     character,
                     enemy["defense"],
                     skill.get("power", 1.0),
@@ -2795,6 +2803,10 @@ async def process_use_skill(
                 dmg = int(dmg * 1.2)
             enemy["hp"] -= dmg
             log.append(f"{character.name} menggunakan {skill['name']}! {enemy['name']} menerima {dmg} damage.")
+            if hit_weakness:
+                log.append("Itu serangan yang sangat efektif!")
+            if hit_resist:
+                log.append("Musuh tampaknya menahan serangan itu.")
     elif skill_type == "HEAL_SINGLE":
         target = pick_lowest_hp_ally(state)
         if not target:
