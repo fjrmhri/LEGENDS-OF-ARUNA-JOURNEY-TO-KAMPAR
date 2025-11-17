@@ -930,6 +930,67 @@ SCENE_FILES = [os.path.join("data", "scenes_main.json")]
 SCENES: Dict[str, Dict[str, Any]] = {}
 
 
+def _normalize_flags(flag_data: Any) -> Dict[str, List[str]]:
+    set_flags: List[str] = []
+    unset_flags: List[str] = []
+    if isinstance(flag_data, dict):
+        set_raw = flag_data.get("set") or flag_data.get("set_flags") or []
+        unset_raw = flag_data.get("unset") or flag_data.get("unset_flags") or []
+        if isinstance(set_raw, list):
+            set_flags = [f for f in set_raw if isinstance(f, str)]
+        if isinstance(unset_raw, list):
+            unset_flags = [f for f in unset_raw if isinstance(f, str)]
+    elif isinstance(flag_data, list):
+        set_flags = [f for f in flag_data if isinstance(f, str)]
+    return {"set": set_flags, "unset": unset_flags}
+
+
+def _normalize_requirements(req_data: Any) -> Dict[str, Any]:
+    req_flags: List[str] = []
+    min_level: Optional[int] = None
+    if isinstance(req_data, dict):
+        flags_raw = req_data.get("flags", [])
+        if isinstance(flags_raw, list):
+            req_flags = [f for f in flags_raw if isinstance(f, str)]
+        level_raw = req_data.get("min_level")
+        if isinstance(level_raw, int):
+            min_level = level_raw
+    return {"flags": req_flags, "min_level": min_level}
+
+
+def _normalize_choice(choice: Any, scene_id: str, index: int) -> Optional[Dict[str, Any]]:
+    if not isinstance(choice, dict):
+        return None
+    label = choice.get("label")
+    next_scene = choice.get("next_scene") or choice.get("next")
+    battle_key = choice.get("battle")
+    command = choice.get("command")
+    callback_data = (
+        choice.get("callback_data")
+        or command
+        or next_scene
+        or battle_key
+        or f"SCENECHOICE|{scene_id}|{index}"
+    )
+    return {
+        "label": label or "Lanjut",
+        "next_scene": next_scene,
+        "battle": battle_key,
+        "command": command,
+        "flags": _normalize_flags(choice.get("flags")),
+        "requirements": _normalize_requirements(choice.get("requirements")),
+        "callback_data": str(callback_data),
+    }
+
+
+def _normalize_text(text_data: Any) -> List[str]:
+    if isinstance(text_data, list):
+        return [str(line) for line in text_data]
+    if isinstance(text_data, str):
+        return text_data.split("\n")
+    return []
+
+
 def load_scenes(paths: Optional[List[str]] = None) -> None:
     """Muat semua file scene eksternal ke dalam kamus global SCENES."""
 
@@ -950,19 +1011,22 @@ def load_scenes(paths: Optional[List[str]] = None) -> None:
             logger.warning("Format scene file tidak valid (harus dict): %s", path)
             continue
         for scene_id, scene_data in data.items():
-            text_lines = scene_data.get("text", [])
-            if isinstance(text_lines, str):
-                text_lines = text_lines.split("\n")
+            text_lines = _normalize_text(scene_data.get("text", []))
+            flags = _normalize_flags(scene_data.get("flags"))
+            requirements = _normalize_requirements(scene_data.get("requirements"))
             choices_raw = scene_data.get("choices", [])
-            choices: List[Dict[str, str]] = []
-            for choice in choices_raw:
-                if not isinstance(choice, dict):
-                    continue
-                label = choice.get("label")
-                next_scene = choice.get("next_scene")
-                if label and next_scene:
-                    choices.append({"label": label, "next_scene": next_scene})
-            loaded[scene_id] = {"text": text_lines, "choices": choices}
+            choices: List[Dict[str, Any]] = []
+            if isinstance(choices_raw, list):
+                for idx, choice in enumerate(choices_raw):
+                    normalized = _normalize_choice(choice, scene_id, idx)
+                    if normalized:
+                        choices.append(normalized)
+            loaded[scene_id] = {
+                "text": text_lines,
+                "choices": choices,
+                "flags": flags,
+                "requirements": requirements,
+            }
     SCENES = loaded
 
 
@@ -2683,6 +2747,247 @@ async def end_battle_and_return(
 # STORY / SCENE HANDLER
 # ==========================
 
+STORY_BATTLE_ROUTES = {
+    "BATTLE_TUTORIAL_1": {
+        "type": "random",
+        "set_scene": "CH0_S3",
+    },
+    "BATTLE_SIAK_GATE": {
+        "type": "story",
+        "set_scene": "CH1_GATE_ALERT",
+        "enemy": "GATE_SPIRIT",
+        "return_scene": "CH1_GATE_AFTER",
+    },
+    "BATTLE_UMAR_HERB": {
+        "type": "story",
+        "set_scene": "SQ_UMAR_MINIDUNGEON",
+        "enemy": "HERB_GUARDIAN",
+        "return_scene": "SQ_UMAR_HEAL",
+    },
+    "BATTLE_RENGAT_GOLEM": {
+        "type": "story",
+        "set_scene": "CH2_GOLEM_ALERT",
+        "enemy": "CORRUPTED_FOREST_GOLEM",
+        "return_scene": "CH2_GOLEM_AFTER",
+    },
+    "BATTLE_REZA_SEAL": {
+        "type": "story",
+        "set_scene": "SQ_REZA_MASTER",
+        "enemy": "SEAL_WARDEN",
+        "return_scene": "SQ_REZA_RESOLVE",
+    },
+    "BATTLE_HOUND_OF_VOID": {
+        "type": "story",
+        "set_scene": "CH5_FLOOR2",
+        "enemy": "HOUND_OF_VOID",
+        "return_scene": "CH5_FLOOR2_AFTER",
+    },
+    "BATTLE_VOID_SENTINEL": {
+        "type": "story",
+        "set_scene": "CH5_FLOOR4",
+        "enemy": "VOID_SENTINEL",
+        "return_scene": "CH5_FLOOR4_AFTER",
+    },
+    "BATTLE_FEBRI": {
+        "type": "story",
+        "set_scene": "CH5_FLOOR5",
+        "enemy": "FEBRI_LORD",
+        "return_scene": "CH5_FINAL_WIN",
+        "loss_scene": "BAD_ENDING",
+    },
+    "BATTLE_HARSAN_SENTINEL": {
+        "type": "story",
+        "set_scene": "SQ_HARSAN_SHRINE_CORE",
+        "enemy": "LUMINAR_SENTINEL",
+        "return_scene": "SQ_HARSAN_BLADE_VISION",
+    },
+    "BATTLE_ABYSS_SHADE": {
+        "type": "story",
+        "set_scene": "SQ_HARSAN_SHRINE_PILLARS",
+        "enemy": "ABYSS_SHADE",
+        "return_scene": "SQ_HARSAN_SHRINE_CORE",
+    },
+}
+
+
+def apply_flags_from_data(state: GameState, flags: Optional[Dict[str, List[str]]]) -> None:
+    if not flags:
+        return
+    for flag in flags.get("set", []):
+        state.flags[flag] = True
+    for flag in flags.get("unset", []):
+        state.flags[flag] = False
+
+
+def highest_party_level(state: GameState) -> int:
+    return max((c.level for c in state.party.values()), default=1)
+
+
+def requirements_met(requirements: Optional[Dict[str, Any]], state: GameState) -> bool:
+    if not requirements:
+        return True
+    req_flags = requirements.get("flags") or []
+    for flag in req_flags:
+        if not state.flags.get(flag):
+            return False
+    min_level = requirements.get("min_level")
+    if isinstance(min_level, int) and highest_party_level(state) < min_level:
+        return False
+    return True
+
+
+def find_choice_by_callback(scene_data: Optional[Dict[str, Any]], callback_data: str) -> Optional[Dict[str, Any]]:
+    if not scene_data:
+        return None
+    for choice in scene_data.get("choices", []):
+        possible = {
+            choice.get("callback_data"),
+            choice.get("next_scene"),
+            choice.get("next"),
+            choice.get("command"),
+            choice.get("battle"),
+        }
+        if callback_data in possible:
+            return choice
+    return None
+
+
+def build_default_choice() -> Dict[str, Any]:
+    return {
+        "label": "Lanjut",
+        "next_scene": "GO_TO_WORLD_MAP",
+        "battle": None,
+        "command": "GO_TO_WORLD_MAP",
+        "flags": {"set": [], "unset": []},
+        "requirements": {"flags": [], "min_level": None},
+        "callback_data": "GO_TO_WORLD_MAP",
+    }
+
+
+async def send_scene_not_found(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState
+) -> None:
+    text = "Maaf, terjadi kesalahan pada cerita. Scene tidak ditemukan."
+    keyboard = make_keyboard([("Kembali ke map", "GO_TO_WORLD_MAP")])
+    query = update.callback_query
+    if query:
+        await query.edit_message_text(text=text, reply_markup=keyboard)
+    elif update.message:
+        await update.message.reply_text(text=text, reply_markup=keyboard)
+    await send_world_map(update, context, state)
+
+
+async def execute_story_command(
+    command: Optional[str],
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    extra_text: str = "",
+) -> bool:
+    if not command:
+        return False
+    if command in {"GO_TO_WORLD_MAP", "WORLD_MAP"}:
+        state.main_progress = "WORLD"
+        await send_world_map(update, context, state)
+        return True
+    if command == "SIAK_CITY_MENU":
+        state.location = "SIAK"
+        await send_city_menu(update, context, state)
+        return True
+    if command == "SIAK_CITY_MENU_AFTER_UMAR":
+        state.location = "SIAK"
+        state.add_umar()
+        await send_city_menu(
+            update, context, state, extra_text="Umar kini menjadi anggota party."
+        )
+        return True
+    if command == "SET_MAIN_RENGAT":
+        state.main_progress = "Menuju Rengat (Lv 5+)"
+        state.flags["SIAK_GATE_EVENT_DONE"] = True
+        await send_world_map(update, context, state)
+        return True
+    if command == "SET_MAIN_PEKANBARU":
+        state.main_progress = "Menuju Pekanbaru (Lv 8+)"
+        await send_world_map(update, context, state)
+        return True
+    if command == "SET_MAIN_KAMPAR":
+        state.main_progress = "Menuju Kampar (Lv 12+)"
+        state.flags["PEKANBARU_RUMOR_DONE"] = True
+        aruna = state.party.get("ARUNA")
+        if aruna:
+            grant_skill_to_character(aruna, "ARUNA_CORE_AWAKENING")
+        await send_world_map(update, context, state)
+        return True
+    if command == "SQ_HARSAN_SHRINE":
+        state.scene_id = "SQ_HARSAN_BLADE_SHRINE"
+        await send_scene(update, context, state)
+        return True
+    if command == "ADD_REZA_PARTY":
+        state.add_reza()
+        state.scene_id = "CH2_REZA_JOINS"
+        await send_scene(update, context, state)
+        return True
+    if command == "COMPLETE_UMAR_QUEST":
+        state.flags["UMAR_QUEST_DONE"] = True
+        umar = state.party.get("UMAR")
+        if umar:
+            grant_skill_to_character(umar, "SAFIYA_GRACE")
+        state.scene_id = "SQ_UMAR_REWARD"
+        await send_scene(
+            update,
+            context,
+            state,
+            extra_text=extra_text or "Umar mempelajari skill baru: Grace Safiya!",
+        )
+        return True
+    if command == "COMPLETE_REZA_QUEST":
+        state.flags["REZA_QUEST_DONE"] = True
+        reza = state.party.get("REZA")
+        if reza:
+            grant_skill_to_character(reza, "MASTER_LEGACY")
+        state.scene_id = "SQ_REZA_REWARD"
+        await send_scene(
+            update,
+            context,
+            state,
+            extra_text=extra_text or "Reza mempelajari skill baru: Warisan Sang Guru!",
+        )
+        return True
+    return False
+
+
+async def handle_story_battle_trigger(
+    battle_key: Optional[str],
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    next_scene: Optional[str] = None,
+) -> bool:
+    if not battle_key:
+        return False
+    route = STORY_BATTLE_ROUTES.get(battle_key)
+    if not route:
+        return False
+    set_scene = route.get("set_scene")
+    if set_scene:
+        state.scene_id = set_scene
+    if route.get("type") == "random":
+        await start_random_battle(update, context, state)
+        return True
+    enemy = route.get("enemy")
+    return_scene = next_scene or route.get("return_scene")
+    if not enemy or not return_scene:
+        return False
+    await start_story_battle(
+        update,
+        context,
+        state,
+        enemy,
+        return_scene,
+        loss_scene=route.get("loss_scene"),
+    )
+    return True
+
 def handle_scene_side_effects(state: GameState) -> str:
     extras: List[str] = []
     if state.scene_id == "SQ_HARSAN_BLADE_VISION" and not state.flags.get("WEAPON_QUEST_DONE"):
@@ -2736,28 +3041,46 @@ async def send_scene(
     reward_text = handle_scene_side_effects(state)
     data = get_scene(state.scene_id)
     if not data:
-        # fallback
-        text = "Scene belum diimplementasikan. (TODO) \nID: " + state.scene_id
+        await send_scene_not_found(update, context, state)
+        return
+
+    apply_flags_from_data(state, data.get("flags"))
+
+    if not requirements_met(data.get("requirements"), state):
+        text = "Maaf, terjadi kesalahan pada cerita. Syarat scene belum terpenuhi."
         keyboard = make_keyboard([("Kembali ke map", "GO_TO_WORLD_MAP")])
         query = update.callback_query
         if query:
             await query.edit_message_text(text=text, reply_markup=keyboard)
-        else:
+        elif update.message:
             await update.message.reply_text(text=text, reply_markup=keyboard)
+        await send_world_map(update, context, state)
         return
 
-    text_lines = data.get("text", [])
+    text_lines = data.get("text", []) or []
     if isinstance(text_lines, str):
         text_lines = text_lines.split("\n")
+    if not text_lines:
+        text_lines = ["Maaf, terjadi kesalahan pada cerita. Teks scene kosong."]
     text = "\n".join(text_lines)
     if reward_text:
         extra_text = reward_text + ("\n\n" + extra_text if extra_text else "")
     if extra_text:
         text = extra_text + "\n\n" + text
 
-    choices_raw = data.get("choices", [])
-    choices = [(c.get("label"), c.get("next_scene")) for c in choices_raw if c.get("label") and c.get("next_scene")]
-    keyboard = make_keyboard(choices)
+    choices_raw = data.get("choices", []) or []
+    visible_choices: List[Tuple[str, str]] = []
+    for choice in choices_raw:
+        if not requirements_met(choice.get("requirements"), state):
+            continue
+        callback_data = choice.get("callback_data")
+        label = choice.get("label") or "Lanjut"
+        if callback_data:
+            visible_choices.append((label, callback_data))
+    if not visible_choices:
+        default_choice = build_default_choice()
+        visible_choices.append((default_choice["label"], default_choice["callback_data"]))
+    keyboard = make_keyboard(visible_choices)
     query = update.callback_query
     if query:
         await query.edit_message_text(text=text, reply_markup=keyboard)
@@ -2782,135 +3105,64 @@ async def handle_scene_choice(
     state: GameState,
     choice_data: str,
 ):
-    # beberapa keyword khusus
-    if choice_data == "BATTLE_TUTORIAL_1":
-        state.scene_id = "CH0_S3"
-        await start_random_battle(update, context, state)
-        return
+    scene_data = get_scene(state.scene_id)
+    selected_choice = find_choice_by_callback(scene_data, choice_data)
 
-    if choice_data == "BATTLE_SIAK_GATE":
-        state.scene_id = "CH1_GATE_ALERT"
-        await start_story_battle(update, context, state, "GATE_SPIRIT", "CH1_GATE_AFTER")
-        return
-
-    if choice_data == "BATTLE_UMAR_HERB":
-        state.scene_id = "SQ_UMAR_MINIDUNGEON"
-        await start_story_battle(update, context, state, "HERB_GUARDIAN", "SQ_UMAR_HEAL")
-        return
-
-    if choice_data == "BATTLE_RENGAT_GOLEM":
-        state.scene_id = "CH2_GOLEM_ALERT"
-        await start_story_battle(update, context, state, "CORRUPTED_FOREST_GOLEM", "CH2_GOLEM_AFTER")
-        return
-
-    if choice_data == "BATTLE_REZA_SEAL":
-        state.scene_id = "SQ_REZA_MASTER"
-        await start_story_battle(update, context, state, "SEAL_WARDEN", "SQ_REZA_RESOLVE")
-        return
-
-    if choice_data == "BATTLE_HOUND_OF_VOID":
-        state.scene_id = "CH5_FLOOR2"
-        await start_story_battle(update, context, state, "HOUND_OF_VOID", "CH5_FLOOR2_AFTER")
-        return
-
-    if choice_data == "BATTLE_VOID_SENTINEL":
-        state.scene_id = "CH5_FLOOR4"
-        await start_story_battle(update, context, state, "VOID_SENTINEL", "CH5_FLOOR4_AFTER")
-        return
-
-    if choice_data == "BATTLE_FEBRI":
-        state.scene_id = "CH5_FLOOR5"
-        await start_story_battle(update, context, state, "FEBRI_LORD", "CH5_FINAL_WIN", loss_scene="BAD_ENDING")
-        return
-
-    if choice_data == "BATTLE_HARSAN_SENTINEL":
-        state.scene_id = "SQ_HARSAN_SHRINE_CORE"
-        await start_story_battle(update, context, state, "LUMINAR_SENTINEL", "SQ_HARSAN_BLADE_VISION")
-        return
-    if choice_data == "BATTLE_ABYSS_SHADE":
-        state.scene_id = "SQ_HARSAN_SHRINE_PILLARS"
-        await start_story_battle(update, context, state, "ABYSS_SHADE", "SQ_HARSAN_SHRINE_CORE")
-        return
-
-    if choice_data == "GO_TO_WORLD_MAP":
-        state.main_progress = "WORLD"
-        await send_world_map(update, context, state)
-        return
-
-    if choice_data == "SIAK_CITY_MENU":
-        state.location = "SIAK"
-        await send_city_menu(update, context, state)
-        return
-
-    if choice_data == "SIAK_CITY_MENU_AFTER_UMAR":
-        state.location = "SIAK"
-        state.add_umar()
-        await send_city_menu(update, context, state, extra_text="Umar kini menjadi anggota party.")
-        return
-
-    if choice_data == "SET_MAIN_RENGAT":
-        state.main_progress = "Menuju Rengat (Lv 5+)"
-        state.flags["SIAK_GATE_EVENT_DONE"] = True
-        await send_world_map(update, context, state)
-        return
-
-    if choice_data == "SET_MAIN_PEKANBARU":
-        state.main_progress = "Menuju Pekanbaru (Lv 8+)"
-        await send_world_map(update, context, state)
-        return
-
-    if choice_data == "SET_MAIN_KAMPAR":
-        state.main_progress = "Menuju Kampar (Lv 12+)"
-        state.flags["PEKANBARU_RUMOR_DONE"] = True
-        aruna = state.party.get("ARUNA")
-        if aruna:
-            grant_skill_to_character(aruna, "ARUNA_CORE_AWAKENING")
-        await send_world_map(update, context, state)
-        return
-
-    if choice_data == "SQ_HARSAN_SHRINE":
-        state.scene_id = "SQ_HARSAN_BLADE_SHRINE"
-        await send_scene(update, context, state)
-        return
-
-    if choice_data == "ADD_REZA_PARTY":
-        state.add_reza()
-        state.scene_id = "CH2_REZA_JOINS"
-        await send_scene(update, context, state)
-        return
-
-    if choice_data == "COMPLETE_UMAR_QUEST":
-        state.flags["UMAR_QUEST_DONE"] = True
-        umar = state.party.get("UMAR")
-        if umar:
-            grant_skill_to_character(umar, "SAFIYA_GRACE")
-        state.scene_id = "SQ_UMAR_REWARD"
-        await send_scene(
-            update, context, state, extra_text="Umar mempelajari skill baru: Grace Safiya!"
+    if selected_choice:
+        if not requirements_met(selected_choice.get("requirements"), state):
+            await send_scene(
+                update,
+                context,
+                state,
+                extra_text="Pilihan ini belum bisa dipilih. Syarat belum terpenuhi.",
+            )
+            return
+        apply_flags_from_data(state, selected_choice.get("flags"))
+        battle_key = selected_choice.get("battle") or (
+            choice_data if choice_data.startswith("BATTLE_") else None
         )
-        return
+        next_scene = selected_choice.get("next_scene")
+        command = selected_choice.get("command")
 
-    if choice_data == "COMPLETE_REZA_QUEST":
-        state.flags["REZA_QUEST_DONE"] = True
-        reza = state.party.get("REZA")
-        if reza:
-            grant_skill_to_character(reza, "MASTER_LEGACY")
-        state.scene_id = "SQ_REZA_REWARD"
-        await send_scene(
-            update, context, state, extra_text="Reza mempelajari skill baru: Warisan Sang Guru!"
+        handled_battle = await handle_story_battle_trigger(
+            battle_key, update, context, state, next_scene=next_scene
         )
+        if handled_battle:
+            return
+
+        handled_command = await execute_story_command(
+            command or next_scene or choice_data, update, context, state
+        )
+        if handled_command:
+            return
+
+        target_scene = next_scene or choice_data
+        if target_scene in SCENES:
+            await render_scene(update, context, state, target_scene)
+            return
+
+        await send_scene_not_found(update, context, state)
         return
 
-    if choice_data == "RESOLVE_ENDING":
+    battle_key = choice_data if choice_data.startswith("BATTLE_") else None
+    if await handle_story_battle_trigger(battle_key, update, context, state):
+        return
+
+    if await execute_story_command(choice_data, update, context, state):
+        return
+
+    if choice_data == "TRUE_ENDING_TRIGGER":
         has_true = state.flags.get("UMAR_QUEST_DONE") and state.flags.get("REZA_QUEST_DONE")
         state.scene_id = "TRUE_ENDING" if has_true else "GOOD_ENDING"
         state.main_progress = "Epilog"
         await send_scene(update, context, state)
         return
 
-    # Default: ganti scene_id dan tampilkan scene
-    await render_scene(update, context, state, choice_data)
+    if choice_data in SCENES:
+        await render_scene(update, context, state, choice_data)
+        return
 
+    await send_scene_not_found(update, context, state)
 
 # ==========================
 # WORLD MAP & CITY MENU
@@ -3549,6 +3801,11 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if data == "RETURN_TO_CITY":
             await send_city_menu(update, context, state)
+            return
+
+        current_scene = get_scene(state.scene_id)
+        if current_scene and find_choice_by_callback(current_scene, data):
+            await handle_scene_choice(update, context, state, data)
             return
 
         # WORLD MAP / TRAVEL
