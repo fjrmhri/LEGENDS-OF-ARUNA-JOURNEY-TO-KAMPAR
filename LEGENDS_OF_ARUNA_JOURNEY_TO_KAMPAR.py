@@ -826,31 +826,46 @@ CHAR_BASE = {
     },
 }
 
+LEVEL_XP = {
+    1: 30,
+    2: 70,
+    3: 120,
+    4: 180,
+    5: 250,
+    6: 330,
+    7: 420,
+    8: 520,
+    9: 630,
+    10: 750,
+}
+
 CHAR_GROWTH = {
-    "ARUNA": {"hp": 8, "mp": 3, "atk": 3, "defense": 2, "mag": 2, "spd": 2, "luck": 1},
-    "UMAR": {"hp": 6, "mp": 6, "atk": 1, "defense": 2, "mag": 3, "spd": 2, "luck": 2},
-    "REZA": {"hp": 5, "mp": 7, "atk": 1, "defense": 2, "mag": 4, "spd": 2, "luck": 1},
+    "ARUNA": {"hp": 9, "mp": 3, "atk": 3, "defense": 2, "mag": 2, "spd": 2, "luck": 1},
+    "UMAR": {"hp": 8, "mp": 5, "atk": 2, "defense": 2, "mag": 3, "spd": 1, "luck": 2},
+    "REZA": {"hp": 8, "mp": 5, "atk": 2, "defense": 2, "mag": 4, "spd": 1, "luck": 1},
 }
 
 CHAR_SKILL_UNLOCKS = {
-    "ARUNA": {
-        3: ["LIGHT_BURST"],
-        5: ["RADIANT_SLASH"],
-        7: ["GUARDIAN_OATH"],
-        10: ["LIGHT_WAVE"],
-    },
-    "UMAR": {
-        3: ["SMALL_BARRIER"],
-        6: ["GROUP_HEAL"],
-        8: ["PURIFY"],
-        11: ["REVIVE"],
-    },
-    "REZA": {
-        3: ["MANA_SHIELD"],
-        6: ["CHAIN_LIGHTNING"],
-        8: ["ARCANE_FOCUS"],
-        11: ["ABYSS_SEAL"],
-    },
+    "ARUNA": [
+        (3, "LIGHT_BURST"),
+        (6, "RADIANT_SLASH"),
+        (9, "GUARDIAN_OATH"),
+        (12, "LIGHT_WAVE"),
+    ],
+    "UMAR": [
+        (2, "HEAL"),
+        (5, "SMALL_BARRIER"),
+        (7, "GROUP_HEAL"),
+        (10, "PURIFY"),
+        (13, "REVIVE"),
+    ],
+    "REZA": [
+        (2, "FIRE_BOLT"),
+        (5, "CHAIN_LIGHTNING"),
+        (7, "MANA_SHIELD"),
+        (10, "ARCANE_FOCUS"),
+        (14, "ABYSS_SEAL"),
+    ],
 }
 
 # Scene/story ID sesuai GDD
@@ -1973,7 +1988,12 @@ def get_user_lock(user_id: int) -> asyncio.Lock:
 
 def xp_required_for_next_level(current_level: int) -> int:
     current_level = max(1, current_level)
-    return 20 * (2 ** (current_level - 1))
+    if current_level in LEVEL_XP:
+        return LEVEL_XP[current_level]
+    max_defined_level = max(LEVEL_XP)
+    base_requirement = LEVEL_XP[max_defined_level]
+    growth_step = LEVEL_XP[max_defined_level] - LEVEL_XP.get(max_defined_level - 1, 0)
+    return base_requirement + growth_step * (current_level - max_defined_level)
 
 
 def grant_skill_to_character(character: CharacterState, skill_id: str, logs: Optional[List[str]] = None):
@@ -1986,20 +2006,30 @@ def grant_skill_to_character(character: CharacterState, skill_id: str, logs: Opt
         logs.append(f"{character.name} mempelajari skill baru: {SKILLS[skill_id]['name']}!")
 
 
-def apply_growth(character: CharacterState):
+def apply_growth(character: CharacterState) -> Optional[Dict[str, int]]:
     growth = CHAR_GROWTH.get(character.id)
     if not growth:
-        return
+        return None
     character.level += 1
-    character.max_hp += growth["hp"]
-    character.max_mp += growth["mp"]
-    character.atk += growth["atk"]
-    character.defense += growth["defense"]
-    character.mag += growth["mag"]
-    character.spd += growth["spd"]
-    character.luck += growth["luck"]
+    increments = {
+        "hp": growth["hp"],
+        "mp": growth["mp"],
+        "atk": growth["atk"],
+        "defense": growth["defense"],
+        "mag": growth["mag"],
+        "spd": growth["spd"],
+        "luck": growth["luck"],
+    }
+    character.max_hp += increments["hp"]
+    character.max_mp += increments["mp"]
+    character.atk += increments["atk"]
+    character.defense += increments["defense"]
+    character.mag += increments["mag"]
+    character.spd += increments["spd"]
+    character.luck += increments["luck"]
     character.hp = get_effective_max_hp(character)
     character.mp = get_effective_max_mp(character)
+    return increments
 
 
 def check_level_up(state: GameState) -> List[str]:
@@ -2011,12 +2041,24 @@ def check_level_up(state: GameState) -> List[str]:
         while pool >= xp_required_for_next_level(character.level):
             requirement = xp_required_for_next_level(character.level)
             pool -= requirement
-            apply_growth(character)
+            increments = apply_growth(character) or {}
             leveled = True
-            messages.append(f"{character.name} naik ke Level {character.level}!")
-            unlocks = CHAR_SKILL_UNLOCKS.get(cid, {}).get(character.level, [])
-            for skill in unlocks:
-                grant_skill_to_character(character, skill, messages)
+            inc_parts = []
+            for key, label in [
+                ("hp", "HP"),
+                ("mp", "MP"),
+                ("atk", "ATK"),
+                ("defense", "DEF"),
+                ("mag", "MAG"),
+                ("spd", "SPD"),
+            ]:
+                if increments.get(key):
+                    inc_parts.append(f"{label} +{increments[key]}")
+            inc_text = ", ".join(inc_parts) if inc_parts else "Stat meningkat."
+            messages.append(f"{character.name} naik ke Level {character.level}! {inc_text}.")
+            for req_level, skill in CHAR_SKILL_UNLOCKS.get(cid, []):
+                if character.level >= req_level:
+                    grant_skill_to_character(character, skill, messages)
         state.xp_pool[cid] = pool
         if leveled:
             effective = get_effective_combat_stats(character)
@@ -2024,6 +2066,18 @@ def check_level_up(state: GameState) -> List[str]:
                 f"Stat baru {character.name}: HP {effective['max_hp']} | MP {effective['max_mp']} | ATK {effective['atk']} | DEF {effective['defense']} | MAG {effective['mag']}"
             )
     return messages
+
+
+def handle_after_battle_xp_and_level_up(state: GameState, total_xp: int, total_gold: int) -> List[str]:
+    logs: List[str] = []
+    for cid in state.party_order:
+        state.xp_pool[cid] += total_xp
+    state.gold += total_gold
+    logs.append(f"Kamu mendapatkan {total_xp} XP dan {total_gold} Gold.")
+    level_logs = check_level_up(state)
+    if level_logs:
+        logs.extend(level_logs)
+    return logs
 
 
 def reset_battle_flags(state: GameState):
@@ -2185,15 +2239,12 @@ async def resolve_battle_outcome(
     if outcome == "WIN":
         total_xp = sum(enemy.get("xp", 0) for enemy in state.battle_enemies)
         total_gold = sum(enemy.get("gold", 0) for enemy in state.battle_enemies)
-        state.gold += total_gold
-        for cid in state.party_order:
-            state.xp_pool[cid] += total_xp
         state.in_battle = False
         state.battle_enemies = []
         state.flags["LAST_BATTLE_RESULT"] = "WIN"
-        level_msgs = check_level_up(state)
-        if level_msgs:
-            log.extend(level_msgs)
+        reward_logs = handle_after_battle_xp_and_level_up(state, total_xp, total_gold)
+        if reward_logs:
+            log.extend(reward_logs)
         drop_logs = grant_battle_drops(state)
         if drop_logs:
             log.append("Kamu mendapatkan:")
@@ -2205,8 +2256,7 @@ async def resolve_battle_outcome(
             update,
             context,
             state,
-            log_text="\n".join(log)
-            + f"\n\nKamu mendapatkan {total_xp} XP dan {total_gold} Gold.",
+            log_text="\n".join(log),
         )
         return True
     # LOSE
