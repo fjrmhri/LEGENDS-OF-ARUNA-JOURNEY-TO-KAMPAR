@@ -615,17 +615,23 @@ DROP_TABLES = {
 }
 
 
+def generate_loot_for_area(area_id: str) -> List[Tuple[str, int]]:
+    loot: List[Tuple[str, int]] = []
+    for entry in DROP_TABLES.get(area_id, []):
+        chance = entry.get("chance", 0)
+        if random.random() > chance:
+            continue
+        qty = random.randint(entry.get("min_qty", 1), entry.get("max_qty", 1))
+        loot.append((entry["item_id"], qty))
+    return loot
+
+
 def grant_battle_drops(state: GameState) -> List[str]:
     area = state.flags.get("CURRENT_BATTLE_AREA")
     if not area:
         return []
     drops = []
-    for entry in DROP_TABLES.get(area, []):
-        chance = entry.get("chance", 0)
-        if random.random() > chance:
-            continue
-        qty = random.randint(entry.get("min_qty", 1), entry.get("max_qty", 1))
-        item_id = entry["item_id"]
+    for item_id, qty in generate_loot_for_area(area):
         adjust_inventory(state, item_id, qty)
         item = ITEMS.get(item_id)
         name = item["name"] if item else item_id
@@ -2170,9 +2176,11 @@ async def resolve_battle_outcome(
             log.extend(level_msgs)
         drop_logs = grant_battle_drops(state)
         if drop_logs:
-            log.append("Kamu menemukan loot:")
+            log.append("Kamu mendapatkan:")
             for entry in drop_logs:
                 log.append(f"- {entry}")
+        else:
+            log.append("Kamu tidak menemukan apa-apa.")
         await end_battle_and_return(
             update,
             context,
@@ -3369,7 +3377,7 @@ async def send_shop_buy_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
 
 async def send_shop_sell_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
     query = update.callback_query
-    lines = ["Pilih item yang ingin dijual:"]
+    lines = ["Pilih item yang ingin dijual:", f"Gold: {state.gold}"]
     buttons: List[List[InlineKeyboardButton]] = []
     any_item = False
     for item_id, qty in sorted(state.inventory.items()):
