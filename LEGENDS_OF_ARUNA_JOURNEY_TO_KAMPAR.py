@@ -41,7 +41,7 @@ from telegram.ext import (
 # KONFIGURASI
 # ==========================
 
-TOKEN_BOT = "ISI_TOKEN_BOT_KAMU_DI_SINI"  # <--- Ganti dengan token bot dari BotFather
+TOKEN_BOT = "8565685476:AAEX1AaCELoIJkhisYSN3jJ8zapKKRL6xZc"  # <--- Ganti dengan token bot dari BotFather
 
 LOG_LEVEL = logging.INFO
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
