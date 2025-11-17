@@ -1038,17 +1038,17 @@ SCENE_DATA = {
     "CH2_RENGAT_GATE": {
         "text": (
             "Aura magis menyelimuti gerbang Rengat. Rune bercahaya mengambang di udara.\n"
-            "Penjaga: \"Selamat datang di kota para penyihir. Banyak yang datang belajar, tapi para penyihir yang menantang Kampar tidak pernah kembali.\"\n"
-            "Penjaga: \"Kalau kalian ke sini untuk main-main, pulanglah. Kampar bukan tempat manusia.\""
+            "Penjaga: \"Selamat datang di kota para penyihir. Banyak yang datang belajar, tapi mereka yang berjalan ke Kampar... tidak pernah kembali.\"\n"
+            "Penjaga: \"Kampar memakan para penyihir kami. Kalau kalian ke sini untuk main-main, pulanglah sebelum terlambat.\""
         ),
         "choices": [("Masuki kota magis", "CH2_REZA_TOWER")],
     },
     "CH2_REZA_TOWER": {
         "text": (
             "Menara batu sunyi menjulang. Reza menatapmu dari balik buku tebal.\n"
-            "Reza: \"Aku tidak menerima murid baru. Kalau kalian ke sini untuk belajar sihir, pulanglah.\"\n"
-            "Aruna: \"Kami bukan mencari guru. Kami mencari kebenaran tentang Kampar.\"\n"
-            "Kalungmu kembali berpendar terang."
+            "Reza: \"Aku tidak punya waktu mengantar petualang menuju neraka Kampar. Pulanglah sebelum kau ikut lenyap.\"\n"
+            "Aruna: \"Kami tidak mencari guru. Kami mencari kebenaran tentang Kampar.\"\n"
+            "Kalungmu kembali berpendar terang, memantulkan simbol yang pernah ia lihat."
         ),
         "choices": [("Tunjukkan kalung Aruna Core", "CH2_REZA_REVEAL")],
     },
@@ -1056,19 +1056,19 @@ SCENE_DATA = {
         "text": (
             "Reza (tertegun): \"Kalung itu... simbol Aruna Core. Dari mana kau mendapatkannya?\"\n"
             "Aruna: \"Ini satu-satunya peninggalan dari orang tuaku.\"\n"
-            "Reza: \"Kalung itu pernah dimiliki guruku. Setelah itu, ia memberikannya kepada seorang Penjaga Cahaya bernama Harsan...\"\n"
-            "Reza: \"Jika benar ini kalung yang sama... berarti kau adalah anak Harsan.\""
+            "Reza: \"Guruku menyerahkannya pada Harsan, Penjaga Cahaya terakhir. Simbol ini adalah inti Aruna Core.\"\n"
+            "Reza menatap tajam: \"Jika ini kalung yang sama... berarti kau adalah anak Harsan.\""
         ),
         "choices": [("Dengar cerita lebih jauh", "CH2_REZA_PAST")],
     },
     "CH2_REZA_PAST": {
         "text": (
-            "Reza: \"Lima belas tahun lalu, Harsan dan muridnya, Febri, pergi ke Kampar.\"\n"
-            "Reza: \"Febri adalah murid paling berbakat... dan paling haus kekuatan. Ia ingin membangkitkan Abyss untuk membalikkan waktu.\"\n"
-            "Reza: \"Harsan berusaha menghentikannya, tapi sejak itu tidak ada kabar dari mereka.\"\n"
+            "Reza: \"Lima belas tahun lalu, Harsan—ayahmu—berangkat ke Kampar mengejar muridnya sendiri, Febri.\"\n"
+            "Reza: \"Febri adalah murid berbakat, tapi ia mengkhianati guruku demi kekuatan terlarang Abyss. Ia percaya bisa membalikkan waktu dan menyelamatkan seseorang.\"\n"
+            "Reza: \"Harsan mencoba menghentikannya sebagai Penjaga Cahaya terakhir, tapi sejak itu tak ada kabar dari mereka.\"\n"
             "Umar: \"Jadi Kampar berubah karena ambisi satu orang?\"\n"
-            "Reza: \"Abyss selalu meminta harga. Dan kini segelnya melemah.\"\n"
-            "Tiba-tiba tanah bergetar. Suara berat mendekat dari hutan magis.\n"
+            "Reza: \"Ambisi dan keputusasaan. Abyss selalu meminta harga.\"\n"
+            "Tiba-tiba tanah bergetar. Suara berat mendekat dari hutan magis. Para penyihir berteriak ketakutan.\n"
         ),
         "choices": [("Apa itu?!", "CH2_GOLEM_ALERT")],
     },
@@ -1085,7 +1085,7 @@ SCENE_DATA = {
             "Corrupted Forest Golem runtuh dan kembali tenang. Cahaya Aruna Core menenangkan tanah yang retak.\n"
             "Reza: \"Kekuatan kalian... tidak buruk. Tanpa Aruna Core, segel Abyss di sini pasti jebol.\"\n"
             "Umar: \"Jadi kau akan ikut?\"\n"
-            "Reza: \"Guruku mungkin masih terjerat di Kampar. Dan hanya Aruna Core milikmu yang bisa menembus segel Abyss. Aku ikut.\""
+            "Reza: \"Guruku mungkin masih terjerat di Kampar. Hanya Aruna Core milik keturunan Harsan yang bisa menembus segel itu. Aku ikut.\""
         ),
         "choices": [("Biarkan Reza bergabung", "ADD_REZA_PARTY")],
     },
@@ -1093,7 +1093,7 @@ SCENE_DATA = {
         "text": (
             "Reza resmi bergabung dalam party. Cahaya Aruna Core terasa lebih stabil.\n"
             "Reza: \"Sebelum Kampar, kita perlu menguatkan diri di Pekanbaru. Itu kota besar terakhir sebelum neraka.\"\n"
-            "Reza: \"Di sana mungkin ada orang yang tahu kenapa Febri memilih jalan Abyss.\""
+            "Reza: \"Di sana mungkin ada orang yang tahu kenapa Febri memilih jalan Abyss, dan kenapa banyak penyihir Rengat hilang.\""
         ),
         "choices": [("Rencanakan perjalanan", "CH2_PEKANBARU_POINTER")],
     },
@@ -1110,7 +1110,7 @@ SCENE_DATA = {
         "text": (
             "Pekanbaru terlihat muram. Toko-toko tutup lebih awal dan orang-orang berbisik tentang Kampar.\n"
             "NPC: \"Kampar bukan lagi kota. Itu neraka.\"\n"
-            "NPC lain: \"Sebuah kastil muncul dari tanah, seolah dipanggil iblis. Jangan dekati!\""
+            "NPC lain: \"Kota itu memanggil siapapun yang punya cahaya... lalu menelannya. Kastil hitam muncul begitu saja.\""
         ),
         "choices": [("Cari informasi di kafe gelap", "CH3_PEKANBARU_CAFE")],
     },
@@ -1118,10 +1118,10 @@ SCENE_DATA = {
         "text": (
             "Kafe remang penuh asap. Seorang orang tua menatap kalungmu lama sekali.\n"
             "Orang Tua: \"Kalung cahaya itu... sudah lama sekali aku tak melihat simbol seperti itu.\"\n"
-            "Orang Tua: \"Dulu, aku melihat Febri sebelum ia berubah. Ia hanya manusia, murid penyihir agung dari Rengat.\"\n"
+            "Orang Tua: \"Dulu, aku melihat Febri sebelum ia berubah. Ia masih manusia, murid penyihir agung dari Rengat.\"\n"
             "Reza (terkejut): \"Itu... guruku. Jadi Febri adalah murid guruku.\"\n"
-            "Orang Tua: \"Febri ingin membalikkan waktu. Ia ingin menyelamatkan seseorang. Abyss membayar keinginannya dengan tubuh dan jiwanya.\"\n"
-            "Orang Tua: \"Kalau kau ke Kampar, jangan terjebak ambisi yang sama.\""
+            "Orang Tua: \"Febri ingin membalikkan waktu untuk menyelamatkan seseorang. Ia mengejar kekuatan Abyss dan perlahan tubuhnya berubah menjadi iblis.\"\n"
+            "Orang Tua: \"Kau membawa cahaya yang sama dengan gurunya. Kalau ke Kampar, jangan terjebak ambisi yang sama.\""
         ),
         "choices": [("Biarkan cerita mengalir", "CH3_DREAM")],
     },
@@ -1131,8 +1131,8 @@ SCENE_DATA = {
             "Harsan: \"Berhentilah, Febri! Kekuatan itu bukan milik manusia.\"\n"
             "Febri: \"Aku tidak peduli! Jika dengan ini aku bisa membalikkan waktu dan menyelamatkannya... aku akan menanggung apa pun!\"\n"
             "Cahaya dan kegelapan bertubrukan. Harsan menggunakan Aruna Core untuk menahan ledakan, sementara bayangan Febri meraung.\n"
-            "Suara Rusmini menggema lembut di kejauhan: \"Harsan... lindungi Aruna...\"\n"
-            "Cahaya menelan semua. Harsan menghilang bersama segel sementara Febri terperangkap."
+            "Suara Rusmini menggema lembut di kejauhan: \"Harsan... lindungi Aruna... jangan biarkan Abyss menyentuhnya.\"\n"
+            "Cahaya menelan semua. Harsan menghilang bersama segel sementara Febri terperangkap. Di kejauhan, bayi Aruna dibawa menjauh dari Kampar."
         ),
         "choices": [("Bangun dari mimpi", "CH3_WAKE")],
     },
@@ -1228,7 +1228,7 @@ SCENE_DATA = {
         "text": (
             "Begitu melewati perbatasan Kampar, langit kehilangan warnanya. Rumah-rumah hancur, jalan retak, tak ada suara manusia.\n"
             "Umar: \"Aku tidak merasakan satu pun kehidupan...\"\n"
-            "Reza: \"Ini adalah napas Abyss. Kota ini sudah mati, tapi segelnya memanggil kita.\""
+            "Reza: \"Ini adalah napas Abyss. Kota ini sudah mati, tapi segelnya memanggil kita. Tidak ada toko, tidak ada warga... hanya kutukan.\""
         ),
         "choices": [("Biarkan kalung memandu", "CH4_FLASHBACK")],
     },
@@ -1237,7 +1237,7 @@ SCENE_DATA = {
             "Kalung Aruna menyala menyilaukan. Kilasan masa lalu muncul seakan diproyeksikan dari Aruna Core.\n"
             "Harsan berdiri sebagai Penjaga Cahaya terakhir, sementara Febri menatapnya dengan mata yang dipenuhi iri.\n"
             "Febri: \"Kenapa kau yang selalu dipilih? Aku juga pantas merasakan kekuatan itu.\"\n"
-            "Untuk melindungi bayi Aruna, Harsan dan Rusmini memisahkan pedang warisan dan kalung Aruna Core lalu menyerahkannya pada wali di Selatpanjang."
+            "Untuk melindungi bayi Aruna, Harsan dan Rusmini memutuskan memisahkan pedang warisan dan kalung Aruna Core lalu menyerahkannya pada wali di Selatpanjang."
         ),
         "choices": [("Teruskan penglihatan", "CH4_FLASHBACK_2")],
     },
@@ -1247,7 +1247,7 @@ SCENE_DATA = {
             "Harsan: \"Rusmini... jika aku tidak kembali, lindungi Aruna.\"\n"
             "Rusmini: \"Jika dunia menuntut pengorbanan kita, jangan biarkan ia ikut terbakar.\"\n"
             "Harsan menahan ledakan kegelapan dengan Aruna Core, menyegel Febri sementara dan menghilang bersama cahaya.\n"
-            "Bayangan pendulum kalung menarikmu ke pusat kota yang kini hanya tersisa kastil hitam."
+            "Bayangan pendulum kalung menarikmu ke pusat kota yang kini hanya tersisa kastil hitam. Langkahmu otomatis menuju gerbangnya."
         ),
         "choices": [("Menuju kastil Febri", "CH4_CASTLE_APPROACH")],
     },
@@ -1263,7 +1263,7 @@ SCENE_DATA = {
     # KASTIL FEBRI
     "CH5_CASTLE_ENTRY": {
         "text": (
-            "Lantai 1 – Koridor Bayangan. Dinding hidup dan bayangan merayap mengikuti langkahmu.\n"
+            "Lantai 1 – Koridor Bayangan. Dinding hidup dan bayangan merayap mengikuti langkahmu, setiap langkah seperti menguras stamina.\n"
             "Umar: \"Monster di sini jauh lebih kuat dari luar.\"\n"
             "Reza: \"Ini baru pintu depan. Jangan lengah. Jalan kembali tidak ada.\""
         ),
@@ -1327,7 +1327,7 @@ SCENE_DATA = {
     },
 
     # ENDINGS
-    "ENDING_GOOD": {
+    "GOOD_ENDING": {
         "text": (
             "Cahaya Aruna Core menghancurkan Febri yang sudah menjadi iblis sepenuhnya. Ia lenyap tanpa kata maaf.\n"
             "Kampar perlahan pulih, tapi luka Abyss masih menganga. Aura gelap di sudut-sudut kota menunggu waktu untuk sembuh.\n"
@@ -1336,7 +1336,7 @@ SCENE_DATA = {
         ),
         "choices": [("Kembali menjelajah", "GO_TO_WORLD_MAP")],
     },
-    "ENDING_TRUE": {
+    "TRUE_ENDING": {
         "text": (
             "Aruna menggunakan Aruna Core bukan untuk membunuh, tapi untuk menyegel Febri tanpa kebencian.\n"
             "Febri kembali manusia sejenak: \"Harsan... Aruna... maafkan aku...\"\n"
@@ -1346,7 +1346,7 @@ SCENE_DATA = {
         ),
         "choices": [("Nikmati kedamaian", "GO_TO_WORLD_MAP")],
     },
-    "ENDING_BAD": {
+    "BAD_ENDING": {
         "text": (
             "Teriakan Aruna tenggelam dalam tawa Febri. Kampar tidak lagi sekadar kota terkutuk—ia menjadi pusat kegelapan yang menelan dunia.\n"
             "Kegelapan menyebar. Siak, Rengat, Pekanbaru tumbang satu per satu. Umar dan Reza gugur, Aruna Core hancur.\n"
@@ -3274,7 +3274,7 @@ async def handle_scene_choice(
 
     if choice_data == "BATTLE_FEBRI":
         state.scene_id = "CH5_FLOOR5"
-        await start_story_battle(update, context, state, "FEBRI_LORD", "CH5_FINAL_WIN", loss_scene="ENDING_BAD")
+        await start_story_battle(update, context, state, "FEBRI_LORD", "CH5_FINAL_WIN", loss_scene="BAD_ENDING")
         return
 
     if choice_data == "BATTLE_HARSAN_SENTINEL":
@@ -3357,7 +3357,7 @@ async def handle_scene_choice(
 
     if choice_data == "RESOLVE_ENDING":
         has_true = state.flags.get("UMAR_QUEST_DONE") and state.flags.get("REZA_QUEST_DONE")
-        state.scene_id = "ENDING_TRUE" if has_true else "ENDING_GOOD"
+        state.scene_id = "TRUE_ENDING" if has_true else "GOOD_ENDING"
         state.main_progress = "Epilog"
         await send_scene(update, context, state)
         return
