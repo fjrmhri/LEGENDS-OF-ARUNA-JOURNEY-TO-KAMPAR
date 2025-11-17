@@ -3250,7 +3250,7 @@ async def send_city_menu(
         text += extra_text + "\n"
     text += "Apa yang ingin kamu lakukan?"
 
-    choices = [("Lihat status party", "MENU_STATUS"), ("Kelola Equipment", "MENU_EQUIPMENT"), ("Cek inventori", "MENU_INVENTORY")]
+    choices = [("Lihat status party", "MENU_STATUS"), ("Kelola Equipment", "MENU_EQUIPMENT"), ("Inventory", "MENU_INVENTORY")]
     if loc.get("has_shop"):
         choices.append(("Pergi ke toko", "MENU_SHOP"))
     if loc.get("has_job") and features.get("jobs"):
@@ -3579,36 +3579,67 @@ async def handle_unequip_selection(
     await send_character_equipment_menu(update, context, state, char_id, extra_text=extra)
 
 
-def apply_consumable_outside_battle(
-    state: GameState, item_id: str, target_id: str
-) -> Tuple[bool, List[str]]:
+def apply_consumable_outside_battle(state: GameState, item_id: str) -> Tuple[bool, List[str]]:
     item = ITEMS.get(item_id)
     if not item or item.get("type") != "consumable":
         return False, ["Item itu tidak bisa dipakai di luar battle."]
-    target = state.party.get(target_id)
-    if not target:
-        return False, ["Target tidak ditemukan."]
-    if target.hp <= 0:
-        return False, ["Tidak bisa menggunakan item pada anggota yang tumbang."]
+    if state.inventory.get(item_id, 0) <= 0:
+        return False, ["Persediaan item itu sudah habis."]
     effects = item.get("effects", {})
-    logs: List[str] = []
     hp_restore = effects.get("hp_restore", 0)
     mp_restore = effects.get("mp_restore", 0)
-    if hp_restore:
-        before = target.hp
-        target.hp = min(get_effective_max_hp(target), target.hp + hp_restore)
-        restored = target.hp - before
-        if restored > 0:
-            logs.append(f"{target.name} memulihkan {restored} HP.")
-    if mp_restore:
-        before_mp = target.mp
-        target.mp = min(get_effective_max_mp(target), target.mp + mp_restore)
-        restored_mp = target.mp - before_mp
-        if restored_mp > 0:
-            logs.append(f"{target.name} memulihkan {restored_mp} MP.")
-    if not logs:
-        logs.append("Tidak ada efek berarti.")
+    if not hp_restore and not mp_restore:
+        return False, ["Hanya item pemulih yang bisa dipakai di luar battle."]
+
+    target_mode = effects.get("target", "single")
+    targets: List[CharacterState] = []
+    if target_mode == "party":
+        targets = [state.party[cid] for cid in state.party_order if state.party[cid].hp > 0]
+    else:
+        aruna = state.party.get("ARUNA")
+        if aruna and aruna.hp > 0:
+            targets = [aruna]
+    if not targets:
+        return False, ["Tidak ada target yang bisa menerima efek item."]
+
+    logs: List[str] = [f"Kamu menggunakan {item['name']}."]
+    effect_logs: List[str] = []
+    hp_targets: List[str] = []
+    mp_targets: List[str] = []
+
+    for target in targets:
+        if hp_restore:
+            before_hp = target.hp
+            target.hp = min(get_effective_max_hp(target), target.hp + hp_restore)
+            restored = target.hp - before_hp
+            if restored > 0:
+                hp_targets.append(target.name)
+                effect_logs.append(f"HP {target.name} pulih {restored}.")
+        if mp_restore:
+            before_mp = target.mp
+            target.mp = min(get_effective_max_mp(target), target.mp + mp_restore)
+            restored_mp = target.mp - before_mp
+            if restored_mp > 0:
+                mp_targets.append(target.name)
+                effect_logs.append(f"MP {target.name} pulih {restored_mp}.")
+
+    def _format_names(names: List[str]) -> str:
+        if len(names) <= 1:
+            return names[0] if names else ""
+        if len(names) == 2:
+            return f"{names[0]} dan {names[1]}"
+        return ", ".join(names[:-1]) + f", dan {names[-1]}"
+
+    if len(hp_targets) > 1:
+        effect_logs.append(f"HP {_format_names(hp_targets)} pulih sebagian.")
+    if len(mp_targets) > 1:
+        effect_logs.append(f"MP {_format_names(mp_targets)} pulih sebagian.")
+
+    if not effect_logs:
+        effect_logs.append("Tidak ada efek berarti.")
+
     adjust_inventory(state, item_id, -1)
+    logs.extend(effect_logs)
     return True, logs
 
 
@@ -3618,7 +3649,7 @@ async def send_inventory_menu(
     state: GameState,
     extra_text: str = "",
 ):
-    lines = ["=== INVENTORI ==="]
+    lines = ["=== INVENTORY ==="]
     if extra_text:
         lines.append(extra_text)
         lines.append("")
@@ -3652,7 +3683,7 @@ async def send_inventory_menu(
         if not effects.get("hp_restore") and not effects.get("mp_restore"):
             continue
         buttons.append(
-            [InlineKeyboardButton(f"Gunakan {item['name']}", callback_data=f"INV_USE|{item_id}")]
+            [InlineKeyboardButton(f"Gunakan {item['name']}", callback_data=f"USE_ITEM_OUTSIDE|{item_id}")]
         )
     buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="BACK_CITY_MENU")])
     markup = InlineKeyboardMarkup(buttons)
@@ -3664,46 +3695,10 @@ async def send_inventory_menu(
         await update.message.reply_text(text=text, reply_markup=markup)
 
 
-async def prompt_inventory_target_selection(
+async def handle_use_item_outside(
     update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, item_id: str
 ):
-    item = ITEMS.get(item_id)
-    if not item:
-        await update.callback_query.answer("Item tidak dikenal.", show_alert=True)
-        await send_inventory_menu(update, context, state)
-        return
-    buttons = []
-    for cid in state.party_order:
-        member = state.party[cid]
-        if member.hp <= 0:
-            continue
-        buttons.append(
-            [InlineKeyboardButton(member.name, callback_data=f"INV_APPLY|{item_id}|{cid}")]
-        )
-    if not buttons:
-        await update.callback_query.answer(
-            "Tidak ada anggota party yang bisa menerima item itu.", show_alert=True
-        )
-        await send_inventory_menu(update, context, state)
-        return
-    buttons.append([InlineKeyboardButton("Batal", callback_data="MENU_INVENTORY")])
-    text = f"Pilih target untuk {item['name']}:"
-    markup = InlineKeyboardMarkup(buttons)
-    query = update.callback_query
-    if query:
-        await query.edit_message_text(text=text, reply_markup=markup)
-    else:
-        await update.message.reply_text(text=text, reply_markup=markup)
-
-
-async def handle_inventory_item_use(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    state: GameState,
-    item_id: str,
-    target_id: str,
-):
-    success, logs = apply_consumable_outside_battle(state, item_id, target_id)
+    success, logs = apply_consumable_outside_battle(state, item_id)
     if not success:
         await update.callback_query.answer(" ".join(logs), show_alert=True)
         await send_inventory_menu(update, context, state)
@@ -3984,13 +3979,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if data == "MENU_INVENTORY":
             await send_inventory_menu(update, context, state)
             return
-        if data.startswith("INV_USE|"):
+        if data.startswith("USE_ITEM_OUTSIDE|"):
             _, item_id = data.split("|", 1)
-            await prompt_inventory_target_selection(update, context, state, item_id)
-            return
-        if data.startswith("INV_APPLY|"):
-            _, item_id, target_id = data.split("|", 2)
-            await handle_inventory_item_use(update, context, state, item_id, target_id)
+            await handle_use_item_outside(update, context, state, item_id)
             return
 
         if data == "EVENT_SIAK_GATE":
