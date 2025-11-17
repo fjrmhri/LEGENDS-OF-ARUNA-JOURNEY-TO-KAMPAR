@@ -1513,6 +1513,45 @@ class CharacterState:
     weapon_id: Optional[str] = None
     armor_id: Optional[str] = None
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "level": self.level,
+            "hp": self.hp,
+            "max_hp": self.max_hp,
+            "mp": self.mp,
+            "max_mp": self.max_mp,
+            "atk": self.atk,
+            "defense": self.defense,
+            "mag": self.mag,
+            "spd": self.spd,
+            "luck": self.luck,
+            "skills": list(self.skills),
+            "weapon_id": self.weapon_id,
+            "armor_id": self.armor_id,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "CharacterState":
+        return cls(
+            id=data.get("id", "UNKNOWN"),
+            name=data.get("name", ""),
+            level=data.get("level", 1),
+            hp=data.get("hp", 1),
+            max_hp=data.get("max_hp", 1),
+            mp=data.get("mp", 0),
+            max_mp=data.get("max_mp", 0),
+            atk=data.get("atk", 1),
+            defense=data.get("defense", 1),
+            mag=data.get("mag", 1),
+            spd=data.get("spd", 1),
+            luck=data.get("luck", 1),
+            skills=list(data.get("skills", [])),
+            weapon_id=data.get("weapon_id"),
+            armor_id=data.get("armor_id"),
+        )
+
 
 @dataclass
 class BattleTurnState:
@@ -1558,6 +1597,62 @@ class GameState:
         }
         for key, value in default_flags.items():
             self.flags.setdefault(key, value)
+
+    def to_dict(self) -> Dict[str, Any]:
+        safe_flags = {
+            k: v
+            for k, v in self.flags.items()
+            if k
+            not in {
+                "ACTIVE_BUFFS",
+                "DEFENDING",
+                "ARUNA_DEF_BUFF_TURNS",
+                "LIGHT_BUFF_TURNS",
+                "ARUNA_LIMIT_USED",
+                "CURRENT_BATTLE_AREA",
+                "MANA_SHIELD",
+            }
+        }
+        return {
+            "scene_id": self.scene_id,
+            "location": self.location,
+            "main_progress": self.main_progress,
+            "gold": self.gold,
+            "party_order": list(self.party_order),
+            "party": {cid: ch.to_dict() for cid, ch in self.party.items()},
+            "inventory": dict(self.inventory),
+            "xp_pool": dict(self.xp_pool),
+            "flags": safe_flags,
+        }
+
+    @classmethod
+    def from_dict(cls, user_id: int, data: Dict[str, Any]) -> "GameState":
+        state = cls(user_id=user_id)
+        state.scene_id = data.get("scene_id", state.scene_id)
+        state.location = data.get("location", state.location)
+        state.main_progress = data.get("main_progress", state.main_progress)
+        state.gold = data.get("gold", 0)
+        party_data = data.get("party", {})
+        state.party = {cid: CharacterState.from_dict(ch) for cid, ch in party_data.items()}
+        saved_order = data.get("party_order", [])
+        state.party_order = [cid for cid in saved_order if cid in state.party]
+        for cid in state.party:
+            if cid not in state.party_order:
+                state.party_order.append(cid)
+        if not state.party:
+            state.ensure_aruna()
+        state.inventory = data.get("inventory", {})
+        state.xp_pool = data.get("xp_pool", {})
+        for cid in state.party_order:
+            state.xp_pool.setdefault(cid, 0)
+        state.flags = data.get("flags", {})
+        state.ensure_flag_defaults()
+        state.in_battle = False
+        state.battle_enemies = []
+        state.battle_state = BattleTurnState()
+        state.return_scene_after_battle = None
+        state.loss_scene_after_battle = None
+        return state
 
     def ensure_aruna(self):
         if "ARUNA" not in self.party:
@@ -1902,77 +1997,18 @@ def get_save_path(user_id: int) -> str:
     return os.path.join(SAVE_DIR, f"{user_id}.json")
 
 
-def character_to_dict(character: CharacterState) -> Dict[str, Any]:
-    return {
-        "id": character.id,
-        "name": character.name,
-        "level": character.level,
-        "hp": character.hp,
-        "max_hp": character.max_hp,
-        "mp": character.mp,
-        "max_mp": character.max_mp,
-        "atk": character.atk,
-        "defense": character.defense,
-        "mag": character.mag,
-        "spd": character.spd,
-        "luck": character.luck,
-        "skills": character.skills,
-        "weapon_id": character.weapon_id,
-        "armor_id": character.armor_id,
-    }
-
-
-def character_from_dict(data: Dict[str, Any]) -> CharacterState:
-    return CharacterState(
-        id=data.get("id", "UNKNOWN"),
-        name=data.get("name", ""),
-        level=data.get("level", 1),
-        hp=data.get("hp", 1),
-        max_hp=data.get("max_hp", 1),
-        mp=data.get("mp", 0),
-        max_mp=data.get("max_mp", 0),
-        atk=data.get("atk", 1),
-        defense=data.get("defense", 1),
-        mag=data.get("mag", 1),
-        spd=data.get("spd", 1),
-        luck=data.get("luck", 1),
-        skills=list(data.get("skills", [])),
-        weapon_id=data.get("weapon_id"),
-        armor_id=data.get("armor_id"),
-    )
-
-
 def serialize_game_state(state: GameState) -> Dict[str, Any]:
-    safe_flags = {
-        k: v
-        for k, v in state.flags.items()
-        if k
-        not in {
-            "ACTIVE_BUFFS",
-            "DEFENDING",
-            "ARUNA_DEF_BUFF_TURNS",
-            "LIGHT_BUFF_TURNS",
-            "ARUNA_LIMIT_USED",
-            "CURRENT_BATTLE_AREA",
-            "MANA_SHIELD",
-        }
-    }
-    return {
-        "scene_id": state.scene_id,
-        "location": state.location,
-        "main_progress": state.main_progress,
-        "gold": state.gold,
-        "party_order": state.party_order,
-        "party": {cid: character_to_dict(ch) for cid, ch in state.party.items()},
-        "inventory": state.inventory,
-        "xp_pool": state.xp_pool,
-        "flags": safe_flags,
-    }
+    return state.to_dict()
 
 
-def save_game_state(state: GameState) -> bool:
-    os.makedirs(SAVE_DIR, exist_ok=True)
-    path = get_save_path(state.user_id)
+def save_game_state(user_id: int, state: GameState) -> bool:
+    try:
+        os.makedirs(SAVE_DIR, exist_ok=True)
+    except Exception:
+        logger.exception("Gagal membuat folder save saat menyimpan user %s", user_id)
+        return False
+
+    path = get_save_path(user_id)
     tmp_path = f"{path}.tmp"
     try:
         with open(tmp_path, "w", encoding="utf-8") as f:
@@ -1980,12 +2016,12 @@ def save_game_state(state: GameState) -> bool:
         os.replace(tmp_path, path)
         return True
     except Exception as exc:
-        logger.exception("Gagal menyimpan progress user %s: %s", state.user_id, exc)
+        logger.exception("Gagal menyimpan progress user %s: %s", user_id, exc)
         try:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
         except Exception:
-            logger.exception("Gagal menghapus file temporary save untuk user %s", state.user_id)
+            logger.exception("Gagal menghapus file temporary save untuk user %s", user_id)
         return False
 
 
@@ -2001,32 +2037,11 @@ def load_game_state(user_id: int) -> Optional[GameState]:
     except Exception as exc:
         logger.exception("Gagal memuat progress user %s: %s", user_id, exc)
         return None
-    state = GameState(user_id=user_id)
-    state.scene_id = data.get("scene_id", state.scene_id)
-    state.location = data.get("location", state.location)
-    state.main_progress = data.get("main_progress", state.main_progress)
-    state.gold = data.get("gold", 0)
-    party_data = data.get("party", {})
-    state.party = {cid: character_from_dict(ch) for cid, ch in party_data.items()}
-    saved_order = data.get("party_order", [])
-    state.party_order = [cid for cid in saved_order if cid in state.party]
-    for cid in state.party:
-        if cid not in state.party_order:
-            state.party_order.append(cid)
-    if not state.party:
-        state.ensure_aruna()
-    state.inventory = data.get("inventory", {})
-    state.xp_pool = data.get("xp_pool", {})
-    for cid in state.party_order:
-        state.xp_pool.setdefault(cid, 0)
-    state.flags = data.get("flags", {})
-    state.ensure_flag_defaults()
-    state.in_battle = False
-    state.battle_enemies = []
-    state.battle_state = BattleTurnState()
-    state.return_scene_after_battle = None
-    state.loss_scene_after_battle = None
-    return state
+    try:
+        return GameState.from_dict(user_id=user_id, data=data)
+    except Exception as exc:
+        logger.exception("Gagal deserialisasi save user %s: %s", user_id, exc)
+        return None
 
 
 def get_game_state(user_id: int) -> GameState:
@@ -3912,10 +3927,10 @@ async def save_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     async with get_user_lock(user_id):
         state = get_game_state(user_id)
-        success = save_game_state(state)
+        success = save_game_state(user_id, state)
     if update.message:
         if success:
-            await update.message.reply_text("Progress berhasil disimpan.")
+            await update.message.reply_text("Progress permainanmu telah disimpan.")
         else:
             await update.message.reply_text(
                 "Gagal menyimpan progress. Silakan coba lagi atau cek izin folder saves."
@@ -3934,14 +3949,23 @@ async def load_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         "Gagal memuat save. Coba lagi nanti atau periksa file di folder saves."
                     )
                 else:
-                    await update.message.reply_text("Belum ada file save untuk akun ini.")
+                    await update.message.reply_text(
+                        "Tidak ada data save yang ditemukan untuk akunmu."
+                    )
             return
         loaded.ensure_aruna()
         USER_STATES[user_id] = loaded
     if update.message:
         loc_name = LOCATIONS.get(loaded.location, {}).get("name", loaded.location)
+        aruna = loaded.party.get("ARUNA")
+        aruna_level = aruna.level if aruna else "-"
         await update.message.reply_text(
-            f"Save berhasil dimuat. Kamu berada di {loc_name}. Gunakan /status untuk mengecek party."
+            (
+                "Progress berhasil dimuat!\n"
+                f"Lokasi: {loc_name}\n"
+                f"Level Aruna: {aruna_level}\n"
+                "Gunakan /status untuk melihat detail party."
+            )
         )
 
 
