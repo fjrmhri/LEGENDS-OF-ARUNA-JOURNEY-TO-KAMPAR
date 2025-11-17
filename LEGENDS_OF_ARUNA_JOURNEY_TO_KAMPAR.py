@@ -725,6 +725,7 @@ SKILLS = {
         "mp_cost": 10,
         "type": "BUFF_DEF_SELF",
         "duration": 3,
+        "buffs": {"defense": 5},
         "description": "Aruna memperkuat pertahanan dan resistensi kegelapan sementara.",
     },
     "LIGHT_WAVE": {
@@ -1182,7 +1183,6 @@ class GameState:
             not in {
                 "ACTIVE_BUFFS",
                 "DEFENDING",
-                "ARUNA_DEF_BUFF_TURNS",
                 "LIGHT_BUFF_TURNS",
                 "ARUNA_LIMIT_USED",
                 "CURRENT_BATTLE_AREA",
@@ -1734,7 +1734,6 @@ def handle_after_battle_xp_and_level_up(state: GameState, total_xp: int, total_g
 def reset_battle_flags(state: GameState):
     clear_active_buffs(state)
     for key in [
-        "ARUNA_DEF_BUFF_TURNS",
         "LIGHT_BUFF_TURNS",
         "ARUNA_LIMIT_USED",
         "CURRENT_BATTLE_AREA",
@@ -1785,15 +1784,12 @@ def tick_buffs(state: GameState) -> List[str]:
                 logs.append(f"Mana Shield di sekitar {target.name} menghilang.")
         if not shields:
             state.flags.pop("MANA_SHIELD", None)
-    return logs
-    if state.flags.get("ARUNA_DEF_BUFF_TURNS"):
-        state.flags["ARUNA_DEF_BUFF_TURNS"] -= 1
-        if state.flags["ARUNA_DEF_BUFF_TURNS"] <= 0:
-            state.flags.pop("ARUNA_DEF_BUFF_TURNS", None)
     if state.flags.get("LIGHT_BUFF_TURNS"):
         state.flags["LIGHT_BUFF_TURNS"] -= 1
         if state.flags["LIGHT_BUFF_TURNS"] <= 0:
             state.flags.pop("LIGHT_BUFF_TURNS", None)
+            logs.append("Aura cahaya dari Aruna Core memudar.")
+    return logs
 
 
 def living_party_members(state: GameState) -> List[str]:
@@ -1950,8 +1946,6 @@ def enemy_take_turn(state: GameState, enemy_index: int) -> List[str]:
         defending.pop(target_id, None)
         if not defending:
             state.flags.pop("DEFENDING", None)
-    if state.flags.get("ARUNA_DEF_BUFF_TURNS") and target_id == "ARUNA":
-        dmg = max(1, int(dmg * 0.7))
     dmg = apply_mana_shield_absorption(state, target_id, dmg, log)
     if dmg <= 0:
         return log
@@ -2596,8 +2590,13 @@ async def process_use_skill(
             total.append(f"{member.name}+{member.hp - before}HP")
         log.append(f"{character.name} menyalurkan {skill['name']}! ({', '.join(total)})")
     elif skill_type == "BUFF_DEF_SELF":
-        state.flags["ARUNA_DEF_BUFF_TURNS"] = skill.get("duration", 3)
-        log.append(f"{character.name} memperkuat pertahanan dengan {skill['name']}! DEF naik sementara.")
+        buffs = skill.get("buffs", {"defense": 3})
+        duration = skill.get("duration", 3)
+        for stat, amount in buffs.items():
+            apply_temporary_modifier(state, make_char_buff_key(user), stat, amount, duration)
+        log.append(
+            f"{character.name} memperkuat pertahanan dengan {skill['name']}! DEF meningkat selama {duration} turn."
+        )
     elif skill_type == "BUFF_DEF_SINGLE":
         target = pick_lowest_hp_ally(state) or character
         buffs = skill.get("buffs", {"defense": 3})
