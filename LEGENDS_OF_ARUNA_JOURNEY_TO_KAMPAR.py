@@ -43,10 +43,33 @@ from telegram.ext import (
 
 TOKEN_BOT = "ISI_TOKEN_BOT_KAMU_DI_SINI"  # <--- Ganti dengan token bot dari BotFather
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-logger = logging.getLogger(__name__)
+LOG_LEVEL = logging.INFO
+LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logger = logging.getLogger("legends_of_aruna")
+logger.setLevel(LOG_LEVEL)
+logger.handlers.clear()
+
+console_handler = logging.StreamHandler()
+console_handler.setLevel(LOG_LEVEL)
+console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+logger.addHandler(console_handler)
+
+try:
+    os.makedirs("logs", exist_ok=True)
+    file_handler = logging.FileHandler(os.path.join("logs", "bot.log"))
+    file_handler.setLevel(LOG_LEVEL)
+    file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+    logger.addHandler(file_handler)
+except Exception:
+    logger.warning("File logging tidak aktif karena konfigurasi gagal.", exc_info=True)
+
+AUTOSAVE_ENABLED = False
+AUTOSAVE_BOSS_KEYS = {
+    "CORRUPTED_FOREST_GOLEM",
+    "HOUND_OF_VOID",
+    "VOID_SENTINEL",
+    "FEBRI_LORD",
+}
 
 # ==========================
 # DATA DASAR DARI GDD
@@ -1620,6 +1643,23 @@ def load_game_state(user_id: int) -> Optional[GameState]:
         return None
 
 
+def maybe_autosave(state: GameState, reason: str = "checkpoint") -> None:
+    """Hook ringan untuk autosave di titik penting.
+
+    Aktifkan dengan menyetel AUTOSAVE_ENABLED=True. Untuk saat ini, kita hanya
+    mencatat kapan checkpoint tercapai agar mudah diaktifkan nanti.
+    """
+
+    if AUTOSAVE_ENABLED:
+        success = save_game_state(state.user_id, state)
+        if success:
+            logger.info("Autosave berhasil untuk user %s (%s)", state.user_id, reason)
+        else:
+            logger.warning("Autosave gagal untuk user %s (%s)", state.user_id, reason)
+    else:
+        logger.info("Autosave checkpoint tercapai untuk user %s (%s)", state.user_id, reason)
+
+
 def get_game_state(user_id: int) -> GameState:
     state = USER_STATES.get(user_id)
     if not state:
@@ -1888,6 +1928,7 @@ async def resolve_battle_outcome(
     outcome = check_battle_outcome(state)
     if not outcome:
         return False
+    enemy_keys = [enemy.get("id") for enemy in state.battle_enemies]
     if outcome == "WIN":
         total_xp = sum(enemy.get("xp", 0) for enemy in state.battle_enemies)
         total_gold = sum(enemy.get("gold", 0) for enemy in state.battle_enemies)
@@ -1904,6 +1945,14 @@ async def resolve_battle_outcome(
                 log.append(f"- {entry}")
         else:
             log.append("Kamu tidak menemukan apa-apa.")
+        logger.info(
+            "User %s menyelesaikan battle vs %s dengan hasil WIN",
+            state.user_id,
+            ",".join([k for k in enemy_keys if k] or ["UNKNOWN"]),
+        )
+        if any(key in AUTOSAVE_BOSS_KEYS for key in enemy_keys if key):
+            boss_key = next((key for key in enemy_keys if key in AUTOSAVE_BOSS_KEYS), "boss")
+            maybe_autosave(state, f"battle_win_{boss_key}")
         await end_battle_and_return(
             update,
             context,
@@ -1919,6 +1968,11 @@ async def resolve_battle_outcome(
     state.battle_enemies = []
     log.append("Seluruh party tumbang! Kamu kalah dalam pertarungan ini...")
     state.flags["LAST_BATTLE_RESULT"] = "LOSE"
+    logger.info(
+        "User %s menyelesaikan battle vs %s dengan hasil LOSE",
+        state.user_id,
+        ",".join([k for k in enemy_keys if k] or ["UNKNOWN"]),
+    )
     await end_battle_and_return(update, context, state, log_text="\n".join(log))
     return True
 
@@ -2150,6 +2204,9 @@ async def start_story_battle(
     loss_scene: Optional[str] = None,
 ):
     enemy = create_enemy_from_key(enemy_key)
+    logger.info(
+        "User %s memulai story battle melawan %s", state.user_id, enemy.get("id", enemy_key)
+    )
     state.in_battle = True
     state.battle_enemies = [enemy]
     state.battle_turn = "PLAYER"
@@ -2321,6 +2378,12 @@ async def start_random_battle(update: Update, context: ContextTypes.DEFAULT_TYPE
     """
     area = NEAREST_DUNGEON.get(state.location, "HUTAN_SELATPANJANG")
     enemy = pick_random_monster_for_area(area)
+    logger.info(
+        "User %s memulai random battle di %s melawan %s",
+        state.user_id,
+        area,
+        enemy.get("id", enemy.get("name", "UNKNOWN")),
+    )
     state.in_battle = True
     state.battle_enemies = [enemy]
     state.battle_turn = "PLAYER"
@@ -2864,9 +2927,17 @@ def build_default_choice() -> Dict[str, Any]:
 
 
 async def send_scene_not_found(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    missing_scene_id: Optional[str] = None,
 ) -> None:
-    text = "Maaf, terjadi kesalahan pada cerita. Scene tidak ditemukan."
+    scene_id = missing_scene_id or state.scene_id
+    logger.error("Missing scene_id: %s untuk user %s", scene_id, state.user_id)
+    text = (
+        "Maaf, terjadi kesalahan pada cerita. Scene tidak ditemukan. "
+        "Kamu akan dikembalikan ke peta dunia."
+    )
     keyboard = make_keyboard([("Kembali ke map", "GO_TO_WORLD_MAP")])
     query = update.callback_query
     if query:
@@ -2938,6 +3009,7 @@ async def execute_story_command(
             state,
             extra_text=extra_text or "Umar mempelajari skill baru: Grace Safiya!",
         )
+        maybe_autosave(state, "umar_quest_completed")
         return True
     if command == "COMPLETE_REZA_QUEST":
         state.flags["REZA_QUEST_DONE"] = True
@@ -2951,6 +3023,7 @@ async def execute_story_command(
             state,
             extra_text=extra_text or "Reza mempelajari skill baru: Warisan Sang Guru!",
         )
+        maybe_autosave(state, "reza_quest_completed")
         return True
     return False
 
@@ -3006,6 +3079,7 @@ def handle_scene_side_effects(state: GameState) -> str:
             + equip_msg
             + "\nSkill baru diperoleh: Legacy Radiance."
         )
+        maybe_autosave(state, "weapon_quest_completed")
     if state.scene_id == "CH5_FLOOR5" and (
         state.flags.get("WEAPON_QUEST_DONE") or state.flags.get("QUEST_WEAPON_DONE")
     ):
@@ -3040,7 +3114,7 @@ async def send_scene(
     reward_text = handle_scene_side_effects(state)
     data = get_scene(state.scene_id)
     if not data:
-        await send_scene_not_found(update, context, state)
+        await send_scene_not_found(update, context, state, missing_scene_id=state.scene_id)
         return
 
     apply_flags_from_data(state, data.get("flags"))
@@ -3140,7 +3214,9 @@ async def handle_scene_choice(
             await render_scene(update, context, state, target_scene)
             return
 
-        await send_scene_not_found(update, context, state)
+        await send_scene_not_found(
+            update, context, state, missing_scene_id=target_scene or choice_data
+        )
         return
 
     battle_key = choice_data if choice_data.startswith("BATTLE_") else None
@@ -3161,7 +3237,7 @@ async def handle_scene_choice(
         await render_scene(update, context, state, choice_data)
         return
 
-    await send_scene_not_found(update, context, state)
+    await send_scene_not_found(update, context, state, missing_scene_id=choice_data)
 
 # ==========================
 # WORLD MAP & CITY MENU
@@ -3671,87 +3747,134 @@ async def handle_use_item_outside(
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    async with get_user_lock(user_id):
-        state = get_game_state(user_id)
-        state.scene_id = "CH0_S1"
-        state.location = "SELATPANJANG"
-        state.main_progress = "PROLOG"
-        state.ensure_aruna()
-    await send_scene(update, context, state)
+    try:
+        async with get_user_lock(user_id):
+            state = get_game_state(user_id)
+            state.scene_id = "CH0_S1"
+            state.location = "SELATPANJANG"
+            state.main_progress = "PROLOG"
+            state.ensure_aruna()
+        logger.info("User %s memulai permainan dengan /start", user_id)
+        await send_scene(update, context, state)
+    except Exception:
+        logger.exception("Error di handler /start untuk user %s", user_id)
+        if update.message:
+            await update.message.reply_text(
+                "Terjadi kesalahan tak terduga. Silakan coba lagi. Jika masalah berlanjut, hubungi admin."
+            )
 
 
 async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    async with get_user_lock(user_id):
-        state = get_game_state(user_id)
-    lines = ["=== STATUS PARTY ==="]
-    for cid in state.party_order:
-        c = state.party[cid]
-        lines.append(format_effective_stat_summary(c))
-    lines.append(f"\nGold: {state.gold}")
-    lines.append(f"Lokasi: {LOCATIONS[state.location]['name']}")
-    lines.append(f"Main Quest: {state.main_progress}")
-    await update.message.reply_text("\n".join(lines))
+    try:
+        async with get_user_lock(user_id):
+            state = get_game_state(user_id)
+        lines = ["=== STATUS PARTY ==="]
+        for cid in state.party_order:
+            c = state.party[cid]
+            lines.append(format_effective_stat_summary(c))
+        lines.append(f"\nGold: {state.gold}")
+        lines.append(f"Lokasi: {LOCATIONS[state.location]['name']}")
+        lines.append(f"Main Quest: {state.main_progress}")
+        await update.message.reply_text("\n".join(lines))
+    except Exception:
+        logger.exception("Error di handler /status untuk user %s", user_id)
+        if update.message:
+            await update.message.reply_text(
+                "Terjadi kesalahan tak terduga. Silakan coba lagi. Jika masalah berlanjut, hubungi admin."
+            )
 
 
 async def map_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    async with get_user_lock(user_id):
-        state = get_game_state(user_id)
-    await send_world_map(update, context, state)
+    try:
+        async with get_user_lock(user_id):
+            state = get_game_state(user_id)
+        await send_world_map(update, context, state)
+    except Exception:
+        logger.exception("Error di handler /map untuk user %s", user_id)
+        if update.message:
+            await update.message.reply_text(
+                "Terjadi kesalahan tak terduga. Silakan coba lagi. Jika masalah berlanjut, hubungi admin."
+            )
 
 
 async def save_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    async with get_user_lock(user_id):
-        state = get_game_state(user_id)
-        success = save_game_state(user_id, state)
-    if update.message:
-        if success:
-            await update.message.reply_text("Progress permainanmu telah disimpan.")
-        else:
+    try:
+        async with get_user_lock(user_id):
+            state = get_game_state(user_id)
+            success = save_game_state(user_id, state)
+        if update.message:
+            if success:
+                logger.info("User %s melakukan manual save (berhasil)", user_id)
+                await update.message.reply_text("Progress permainanmu telah disimpan.")
+            else:
+                logger.warning("User %s gagal manual save", user_id)
+                await update.message.reply_text(
+                    "Gagal menyimpan progress. Silakan coba lagi atau cek izin folder saves."
+                )
+    except Exception:
+        logger.exception("Error di handler /save untuk user %s", user_id)
+        if update.message:
             await update.message.reply_text(
-                "Gagal menyimpan progress. Silakan coba lagi atau cek izin folder saves."
+                "Terjadi kesalahan tak terduga. Silakan coba lagi. Jika masalah berlanjut, hubungi admin."
             )
 
 
 async def load_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    async with get_user_lock(user_id):
-        save_exists = os.path.exists(get_save_path(user_id))
-        loaded = load_game_state(user_id)
-        if not loaded:
-            if update.message:
-                if save_exists:
-                    await update.message.reply_text(
-                        "Gagal memuat save. Coba lagi nanti atau periksa file di folder saves."
-                    )
-                else:
-                    await update.message.reply_text(
-                        "Tidak ada data save yang ditemukan untuk akunmu."
-                    )
-            return
-        loaded.ensure_aruna()
-        USER_STATES[user_id] = loaded
-    if update.message:
-        loc_name = LOCATIONS.get(loaded.location, {}).get("name", loaded.location)
-        aruna = loaded.party.get("ARUNA")
-        aruna_level = aruna.level if aruna else "-"
-        await update.message.reply_text(
-            (
-                "Progress berhasil dimuat!\n"
-                f"Lokasi: {loc_name}\n"
-                f"Level Aruna: {aruna_level}\n"
-                "Gunakan /status untuk melihat detail party."
+    try:
+        async with get_user_lock(user_id):
+            save_exists = os.path.exists(get_save_path(user_id))
+            loaded = load_game_state(user_id)
+            if not loaded:
+                if update.message:
+                    if save_exists:
+                        await update.message.reply_text(
+                            "Gagal memuat save. Coba lagi nanti atau periksa file di folder saves."
+                        )
+                    else:
+                        await update.message.reply_text(
+                            "Tidak ada data save yang ditemukan untuk akunmu."
+                        )
+                logger.warning("User %s gagal /load (file ada: %s)", user_id, save_exists)
+                return
+            loaded.ensure_aruna()
+            USER_STATES[user_id] = loaded
+        if update.message:
+            loc_name = LOCATIONS.get(loaded.location, {}).get("name", loaded.location)
+            aruna = loaded.party.get("ARUNA")
+            aruna_level = aruna.level if aruna else "-"
+            await update.message.reply_text(
+                (
+                    "Progress berhasil dimuat!\n"
+                    f"Lokasi: {loc_name}\n"
+                    f"Level Aruna: {aruna_level}\n"
+                    "Gunakan /status untuk melihat detail party."
+                )
             )
-        )
+            logger.info("User %s memuat save dan kembali ke %s", user_id, loc_name)
+    except Exception:
+        logger.exception("Error di handler /load untuk user %s", user_id)
+        if update.message:
+            await update.message.reply_text(
+                "Terjadi kesalahan tak terduga. Silakan coba lagi. Jika masalah berlanjut, hubungi admin."
+            )
 
 
 async def inventory_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    async with get_user_lock(user_id):
-        state = get_game_state(user_id)
-    await send_inventory_menu(update, context, state)
+    try:
+        async with get_user_lock(user_id):
+            state = get_game_state(user_id)
+        await send_inventory_menu(update, context, state)
+    except Exception:
+        logger.exception("Error di handler /inventory untuk user %s", user_id)
+        if update.message:
+            await update.message.reply_text(
+                "Terjadi kesalahan tak terduga. Silakan coba lagi. Jika masalah berlanjut, hubungi admin."
+            )
 
 
 # ==========================
@@ -3765,244 +3888,302 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     async with get_user_lock(user_id):
         state = get_game_state(user_id)
         data = query.data
+        handled = False
 
-        # BATTLE-related
-        if data.startswith("BATTLE_"):
-            if not state.in_battle:
-                await query.edit_message_text("Kamu tidak sedang dalam battle.")
+        try:
+            # BATTLE-related
+            if data.startswith("BATTLE_"):
+                handled = True
+                if not state.in_battle:
+                    await query.edit_message_text("Kamu tidak sedang dalam battle.")
+                    return
+                if data == "BATTLE_BACK":
+                    await send_battle_state(update, context, state)
+                    return
+                await process_battle_action(update, context, state, data)
                 return
-            if data == "BATTLE_BACK":
-                await send_battle_state(update, context, state)
+
+            if data.startswith("USE_SKILL|"):
+                handled = True
+                # format: USE_SKILL|CHAR_ID|SKILL_ID
+                _, char_id, skill_id = data.split("|")
+                if not state.in_battle:
+                    await query.edit_message_text("Kamu tidak sedang dalam battle.")
+                    return
+                await process_use_skill(update, context, state, char_id, skill_id)
                 return
-            await process_battle_action(update, context, state, data)
-            return
 
-        if data.startswith("USE_SKILL|"):
-            # format: USE_SKILL|CHAR_ID|SKILL_ID
-            _, char_id, skill_id = data.split("|")
-            if not state.in_battle:
-                await query.edit_message_text("Kamu tidak sedang dalam battle.")
+            if data.startswith("USE_ITEM|"):
+                handled = True
+                _, item_id = data.split("|", 1)
+                if not state.in_battle:
+                    await query.edit_message_text("Kamu tidak sedang dalam battle.")
+                    return
+                await process_use_item(update, context, state, item_id)
                 return
-            await process_use_skill(update, context, state, char_id, skill_id)
-            return
 
-        if data.startswith("USE_ITEM|"):
-            _, item_id = data.split("|", 1)
-            if not state.in_battle:
-                await query.edit_message_text("Kamu tidak sedang dalam battle.")
+            if data == "DUNGEON_BATTLE_AGAIN":
+                handled = True
+                await start_random_battle(update, context, state)
                 return
-            await process_use_item(update, context, state, item_id)
-            return
 
-        if data == "DUNGEON_BATTLE_AGAIN":
-            await start_random_battle(update, context, state)
-            return
+            if data == "RETURN_TO_CITY":
+                handled = True
+                await send_city_menu(update, context, state)
+                return
 
-        if data == "RETURN_TO_CITY":
-            await send_city_menu(update, context, state)
-            return
+            current_scene = get_scene(state.scene_id)
+            if current_scene and find_choice_by_callback(current_scene, data):
+                handled = True
+                await handle_scene_choice(update, context, state, data)
+                return
 
-        current_scene = get_scene(state.scene_id)
-        if current_scene and find_choice_by_callback(current_scene, data):
-            await handle_scene_choice(update, context, state, data)
-            return
-
-        # WORLD MAP / TRAVEL
-        if data.startswith("GOTO_CITY|"):
-            _, loc_id = data.split("|")
-            loc_info = LOCATIONS[loc_id]
-            aruna = state.party["ARUNA"]
-            if aruna.level < loc_info["min_level"]:
-                text = (
-                    f"Level kamu ({aruna.level}) belum cukup untuk masuk ke {loc_info['name']} "
-                    f"(butuh Lv {loc_info['min_level']})."
+            # WORLD MAP / TRAVEL
+            if data.startswith("GOTO_CITY|"):
+                handled = True
+                _, loc_id = data.split("|")
+                loc_info = LOCATIONS[loc_id]
+                aruna = state.party["ARUNA"]
+                if aruna.level < loc_info["min_level"]:
+                    text = (
+                        f"Level kamu ({aruna.level}) belum cukup untuk masuk ke {loc_info['name']} "
+                        f"(butuh Lv {loc_info['min_level']})."
+                    )
+                    keyboard = make_keyboard([("Kembali ke map", "GO_TO_WORLD_MAP")])
+                    await query.edit_message_text(text=text, reply_markup=keyboard)
+                    return
+                previous_location = state.location
+                state.location = loc_id
+                logger.info(
+                    "User %s berpindah kota dari %s ke %s",
+                    user_id,
+                    previous_location,
+                    loc_id,
                 )
-                keyboard = make_keyboard([("Kembali ke map", "GO_TO_WORLD_MAP")])
+                if loc_id == "SIAK" and not state.flags.get("VISITED_SIAK"):
+                    state.flags["VISITED_SIAK"] = True
+                    await render_scene(update, context, state, "CH1_SIAK_ENTRY")
+                elif loc_id == "RENGAT" and not state.flags.get("VISITED_RENGAT"):
+                    state.flags["VISITED_RENGAT"] = True
+                    await render_scene(update, context, state, "CH2_RENGAT_GATE")
+                elif loc_id == "PEKANBARU" and not state.flags.get("VISITED_PEKANBARU"):
+                    state.flags["VISITED_PEKANBARU"] = True
+                    await render_scene(update, context, state, "CH3_PEKANBARU_ENTRY")
+                elif loc_id == "KAMPAR" and not state.flags.get("VISITED_KAMPAR"):
+                    state.flags["VISITED_KAMPAR"] = True
+                    await render_scene(update, context, state, "CH4_KAMPAR_ENTRY")
+                else:
+                    await send_city_menu(update, context, state)
+                return
+
+            if data == "ENTER_DUNGEON":
+                handled = True
+                area = NEAREST_DUNGEON.get(state.location, "HUTAN_SELATPANJANG")
+                text = f"Kamu memasuki {area}. Monster berkeliaran di sini."
+                keyboard = make_keyboard(
+                    [("Cari monster", "DUNGEON_BATTLE_AGAIN"), ("Kembali ke kota", "RETURN_TO_CITY")]
+                )
                 await query.edit_message_text(text=text, reply_markup=keyboard)
                 return
-            state.location = loc_id
-            if loc_id == "SIAK" and not state.flags.get("VISITED_SIAK"):
-                state.flags["VISITED_SIAK"] = True
-                await render_scene(update, context, state, "CH1_SIAK_ENTRY")
-            elif loc_id == "RENGAT" and not state.flags.get("VISITED_RENGAT"):
-                state.flags["VISITED_RENGAT"] = True
-                await render_scene(update, context, state, "CH2_RENGAT_GATE")
-            elif loc_id == "PEKANBARU" and not state.flags.get("VISITED_PEKANBARU"):
-                state.flags["VISITED_PEKANBARU"] = True
-                await render_scene(update, context, state, "CH3_PEKANBARU_ENTRY")
-            elif loc_id == "KAMPAR" and not state.flags.get("VISITED_KAMPAR"):
-                state.flags["VISITED_KAMPAR"] = True
-                await render_scene(update, context, state, "CH4_KAMPAR_ENTRY")
-            else:
-                await send_city_menu(update, context, state)
-            return
 
-        if data == "ENTER_DUNGEON":
-            area = NEAREST_DUNGEON.get(state.location, "HUTAN_SELATPANJANG")
-            text = f"Kamu memasuki {area}. Monster berkeliaran di sini."
-            keyboard = make_keyboard(
-                [("Cari monster", "DUNGEON_BATTLE_AGAIN"), ("Kembali ke kota", "RETURN_TO_CITY")]
-            )
-            await query.edit_message_text(text=text, reply_markup=keyboard)
-            return
-
-        # MENU KOTA
-        if data == "MENU_STATUS":
-            lines = ["=== STATUS PARTY ==="]
-            for cid in state.party_order:
-                c = state.party[cid]
-                lines.append(format_effective_stat_summary(c))
-            lines.append(f"\nGold: {state.gold}")
-            lines.append(f"Lokasi: {LOCATIONS[state.location]['name']}")
-            lines.append(f"Main Quest: {state.main_progress}")
-            text = "\n".join(lines)
-            keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
-            await query.edit_message_text(text=text, reply_markup=keyboard)
-            return
-
-        if data == "BACK_CITY_MENU":
-            await send_city_menu(update, context, state)
-            return
-
-        if data == "MENU_SHOP":
-            await send_shop_menu(update, context, state)
-            return
-        if data == "SHOP_BUY":
-            await send_shop_buy_menu(update, context, state)
-            return
-        if data == "SHOP_SELL":
-            await send_shop_sell_menu(update, context, state)
-            return
-        if data.startswith("BUY_ITEM|"):
-            _, item_id = data.split("|", 1)
-            await handle_buy_item(update, context, state, item_id)
-            return
-        if data.startswith("SELL_ITEM|"):
-            _, item_id = data.split("|", 1)
-            await handle_sell_item(update, context, state, item_id)
-            return
-
-        if data == "MENU_JOB":
-            await send_job_menu(update, context, state)
-            return
-
-        if data == "MENU_INN":
-            cost = CITY_FEATURES.get(state.location, {}).get("inn_cost", 0)
-            if cost > state.gold:
-                text = f"Biaya penginapan {cost} Gold, tapi Gold-mu tidak cukup."
-            else:
-                state.gold -= cost
+            # MENU KOTA
+            if data == "MENU_STATUS":
+                handled = True
+                lines = ["=== STATUS PARTY ==="]
                 for cid in state.party_order:
                     c = state.party[cid]
-                    c.hp = get_effective_max_hp(c)
-                    c.mp = get_effective_max_mp(c)
-                if cost == 0:
-                    text = "Kamu beristirahat gratis. HP & MP seluruh party pulih."
-                else:
-                    text = (
-                        f"Kamu membayar {cost} Gold dan beristirahat di penginapan. "
-                        "HP & MP seluruh party pulih."
-                    )
-            keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
-            await query.edit_message_text(text=text, reply_markup=keyboard)
-            return
-
-        if data == "MENU_CLINIC":
-            if state.location != "SIAK":
-                await query.edit_message_text(
-                    "Klinik hanya ada di Siak.",
-                    reply_markup=make_keyboard([("Kembali", "BACK_CITY_MENU")]),
-                )
-                return
-            if not state.flags.get("HAS_UMAR"):
-                await render_scene(update, context, state, "CH1_UMAR_CLINIC")
-            else:
-                text = "Umar: \"Jaga dirimu baik-baik, Aruna. Aku di sini kalau kau butuh bantuan.\"\n"
+                    lines.append(format_effective_stat_summary(c))
+                lines.append(f"\nGold: {state.gold}")
+                lines.append(f"Lokasi: {LOCATIONS[state.location]['name']}")
+                lines.append(f"Main Quest: {state.main_progress}")
+                text = "\n".join(lines)
                 keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
                 await query.edit_message_text(text=text, reply_markup=keyboard)
-            return
+                return
 
-        if data == "MENU_EQUIPMENT":
-            await send_equipment_menu(update, context, state)
-            return
-        if data.startswith("EQUIP_CHAR|"):
-            _, char_id = data.split("|", 1)
-            await send_character_equipment_menu(update, context, state, char_id)
-            return
-        if data.startswith("EQUIP_WEAPON|"):
-            _, char_id, item_id = data.split("|", 2)
-            await handle_equip_item_selection(
-                update, context, state, char_id, item_id, slot_type="weapon"
+            if data == "BACK_CITY_MENU":
+                handled = True
+                await send_city_menu(update, context, state)
+                return
+
+            if data == "MENU_SHOP":
+                handled = True
+                await send_shop_menu(update, context, state)
+                return
+            if data == "SHOP_BUY":
+                handled = True
+                await send_shop_buy_menu(update, context, state)
+                return
+            if data == "SHOP_SELL":
+                handled = True
+                await send_shop_sell_menu(update, context, state)
+                return
+            if data.startswith("BUY_ITEM|"):
+                handled = True
+                _, item_id = data.split("|", 1)
+                await handle_buy_item(update, context, state, item_id)
+                return
+            if data.startswith("SELL_ITEM|"):
+                handled = True
+                _, item_id = data.split("|", 1)
+                await handle_sell_item(update, context, state, item_id)
+                return
+
+            if data == "MENU_JOB":
+                handled = True
+                await send_job_menu(update, context, state)
+                return
+
+            if data == "MENU_INN":
+                handled = True
+                cost = CITY_FEATURES.get(state.location, {}).get("inn_cost", 0)
+                if cost > state.gold:
+                    text = f"Biaya penginapan {cost} Gold, tapi Gold-mu tidak cukup."
+                else:
+                    state.gold -= cost
+                    for cid in state.party_order:
+                        c = state.party[cid]
+                        c.hp = get_effective_max_hp(c)
+                        c.mp = get_effective_max_mp(c)
+                    if cost == 0:
+                        text = "Kamu beristirahat gratis. HP & MP seluruh party pulih."
+                    else:
+                        text = (
+                            f"Kamu membayar {cost} Gold dan beristirahat di penginapan. "
+                            "HP & MP seluruh party pulih."
+                        )
+                keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
+                await query.edit_message_text(text=text, reply_markup=keyboard)
+                return
+
+            if data == "MENU_CLINIC":
+                handled = True
+                if state.location != "SIAK":
+                    await query.edit_message_text(
+                        "Klinik hanya ada di Siak.",
+                        reply_markup=make_keyboard([("Kembali", "BACK_CITY_MENU")]),
+                    )
+                    return
+                if not state.flags.get("HAS_UMAR"):
+                    await render_scene(update, context, state, "CH1_UMAR_CLINIC")
+                else:
+                    text = "Umar: \"Jaga dirimu baik-baik, Aruna. Aku di sini kalau kau butuh bantuan.\"\n"
+                    keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
+                    await query.edit_message_text(text=text, reply_markup=keyboard)
+                return
+
+            if data == "MENU_EQUIPMENT":
+                handled = True
+                await send_equipment_menu(update, context, state)
+                return
+            if data.startswith("EQUIP_CHAR|"):
+                handled = True
+                _, char_id = data.split("|", 1)
+                await send_character_equipment_menu(update, context, state, char_id)
+                return
+            if data.startswith("EQUIP_WEAPON|"):
+                handled = True
+                _, char_id, item_id = data.split("|", 2)
+                await handle_equip_item_selection(
+                    update, context, state, char_id, item_id, slot_type="weapon"
+                )
+                return
+            if data.startswith("EQUIP_ARMOR|"):
+                handled = True
+                _, char_id, item_id = data.split("|", 2)
+                await handle_equip_item_selection(
+                    update, context, state, char_id, item_id, slot_type="armor"
+                )
+                return
+            if data.startswith("EQUIP_ITEM|"):
+                handled = True
+                _, char_id, item_id = data.split("|", 2)
+                item = ITEMS.get(item_id)
+                slot_type = item.get("type") if item else "weapon"
+                await handle_equip_item_selection(
+                    update, context, state, char_id, item_id, slot_type=slot_type
+                )
+                return
+            if data.startswith("UNEQUIP|"):
+                handled = True
+                _, char_id, slot = data.split("|", 2)
+                await handle_unequip_selection(update, context, state, char_id, slot)
+                return
+
+            if data == "MENU_INVENTORY":
+                handled = True
+                await send_inventory_menu(update, context, state)
+                return
+            if data.startswith("USE_ITEM_OUTSIDE|"):
+                handled = True
+                _, item_id = data.split("|", 1)
+                await handle_use_item_outside(update, context, state, item_id)
+                return
+
+            if data == "EVENT_SIAK_GATE":
+                handled = True
+                await render_scene(update, context, state, "CH1_GATE_ALERT")
+                return
+
+            if data == "EVENT_PEKANBARU_CAFE":
+                handled = True
+                state.flags["PEKANBARU_RUMOR_DONE"] = True
+                await render_scene(update, context, state, "CH3_PEKANBARU_ENTRY")
+                return
+
+            if data == "EVENT_KASTIL_ENTRY":
+                handled = True
+                await render_scene(update, context, state, "CH4_CASTLE_APPROACH")
+                return
+
+            if data == "QUEST_UMAR":
+                handled = True
+                await render_scene(update, context, state, "SQ_UMAR_INTRO")
+                return
+
+            if data == "QUEST_REZA":
+                handled = True
+                await render_scene(update, context, state, "SQ_REZA_INTRO")
+                return
+            if data == "QUEST_HARSAN_BLADE":
+                handled = True
+                state.flags["QUEST_WEAPON_STARTED"] = True
+                state.flags["WEAPON_QUEST_STARTED"] = True
+                await render_scene(update, context, state, "SQ_HARSAN_BLADE_INTRO")
+                return
+
+            if data.startswith("DO_JOB|"):
+                handled = True
+                _, job_id = data.split("|")
+                await resolve_job(update, context, state, job_id)
+                return
+
+            if data == "GO_TO_WORLD_MAP":
+                handled = True
+                await send_world_map(update, context, state)
+                return
+
+            if data in SCENES:
+                handled = True
+                await render_scene(update, context, state, data)
+                return
+
+            # SCENE / STORY CHOICE
+            handled = True
+            await handle_scene_choice(update, context, state, data)
+        except Exception:
+            logger.exception("Error di callback handler untuk user %s dengan data %s", user_id, data)
+            await query.edit_message_text(
+                "Terjadi kesalahan tak terduga. Silakan coba lagi. Jika masalah berlanjut, hubungi admin."
             )
             return
-        if data.startswith("EQUIP_ARMOR|"):
-            _, char_id, item_id = data.split("|", 2)
-            await handle_equip_item_selection(
-                update, context, state, char_id, item_id, slot_type="armor"
+
+        if not handled:
+            logger.warning("Callback tak dikenal dari user %s: %s", user_id, data)
+            await query.edit_message_text(
+                "Maaf, terjadi kesalahan saat memproses pilihanmu. Kamu akan dikembalikan ke peta dunia."
             )
-            return
-        if data.startswith("EQUIP_ITEM|"):
-            _, char_id, item_id = data.split("|", 2)
-            item = ITEMS.get(item_id)
-            slot_type = item.get("type") if item else "weapon"
-            await handle_equip_item_selection(
-                update, context, state, char_id, item_id, slot_type=slot_type
-            )
-            return
-        if data.startswith("UNEQUIP|"):
-            _, char_id, slot = data.split("|", 2)
-            await handle_unequip_selection(update, context, state, char_id, slot)
-            return
-
-        if data == "MENU_INVENTORY":
-            await send_inventory_menu(update, context, state)
-            return
-        if data.startswith("USE_ITEM_OUTSIDE|"):
-            _, item_id = data.split("|", 1)
-            await handle_use_item_outside(update, context, state, item_id)
-            return
-
-        if data == "EVENT_SIAK_GATE":
-            await render_scene(update, context, state, "CH1_GATE_ALERT")
-            return
-
-        if data == "EVENT_PEKANBARU_CAFE":
-            state.flags["PEKANBARU_RUMOR_DONE"] = True
-            await render_scene(update, context, state, "CH3_PEKANBARU_ENTRY")
-            return
-
-        if data == "EVENT_KASTIL_ENTRY":
-            await render_scene(update, context, state, "CH4_CASTLE_APPROACH")
-            return
-
-        if data == "QUEST_UMAR":
-            await render_scene(update, context, state, "SQ_UMAR_INTRO")
-            return
-
-        if data == "QUEST_REZA":
-            await render_scene(update, context, state, "SQ_REZA_INTRO")
-            return
-        if data == "QUEST_HARSAN_BLADE":
-            state.flags["QUEST_WEAPON_STARTED"] = True
-            state.flags["WEAPON_QUEST_STARTED"] = True
-            await render_scene(update, context, state, "SQ_HARSAN_BLADE_INTRO")
-            return
-
-        if data.startswith("DO_JOB|"):
-            _, job_id = data.split("|")
-            await resolve_job(update, context, state, job_id)
-            return
-
-        if data == "GO_TO_WORLD_MAP":
             await send_world_map(update, context, state)
-            return
-
-        if data in SCENES:
-            await render_scene(update, context, state, data)
-            return
-
-        # SCENE / STORY CHOICE
-        await handle_scene_choice(update, context, state, data)
 
 
 # ==========================
