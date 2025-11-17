@@ -344,6 +344,23 @@ MONSTERS = {
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
     },
+    "HERB_GUARDIAN": {
+        "name": "Herb Guardian",
+        "area": "HUTAN_SIAK",
+        "level": 6,
+        "hp": 85,
+        "mp": 15,
+        "atk": 12,
+        "defense": 9,
+        "mag": 6,
+        "spd": 6,
+        "luck": 4,
+        "xp": 36,
+        "gold": 24,
+        "element": "ALAM",
+        "weakness": ["API"],
+        "resist": ["ALAM"],
+    },
     "CORRUPTED_TREANT": {
         "name": "Corrupted Treant",
         "area": "HUTAN_RENGAT",
@@ -377,6 +394,23 @@ MONSTERS = {
         "element": "CAHAYA",
         "weakness": ["GELAP"],
         "resist": ["CAHAYA"],
+    },
+    "SEAL_WARDEN": {
+        "name": "Penjaga Segel Retak",
+        "area": "HUTAN_RENGAT",
+        "level": 9,
+        "hp": 120,
+        "mp": 28,
+        "atk": 16,
+        "defense": 12,
+        "mag": 14,
+        "spd": 7,
+        "luck": 4,
+        "xp": 55,
+        "gold": 32,
+        "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
     },
     "CORRUPTED_FOREST_GOLEM": {
         "name": "Corrupted Forest Golem",
@@ -659,11 +693,11 @@ SKILLS = {
         "description": "Menghidupkan ally yang tumbang.",
     },
     "SAFIYAS_GRACE": {
-        "name": "Safiya's Grace",
+        "name": "Grace Safiya",
         "mp_cost": 20,
         "type": "HEAL_ALL",
         "power": 0.5,
-        "description": "Ultimate Umar: heal besar + hilangkan debuff utama.",
+        "description": "Ultimate Umar: heal besar seluruh tim dan membersihkan luka batin.",
     },
     "FIRE_BOLT": {
         "name": "Fire Bolt",
@@ -714,12 +748,12 @@ SKILLS = {
         "description": "Menurunkan MAG dan SPD musuh.",
     },
     "MASTERS_LEGACY": {
-        "name": "Master's Legacy",
+        "name": "Warisan Sang Guru",
         "mp_cost": 20,
         "type": "BUFF_TEAM",
         "buffs": {"atk": 3, "mag": 3, "defense": 3},
         "duration": 3,
-        "description": "Ultimate Reza: buff ATK/MAG/DEF dan resist gelap party.",
+        "description": "Ultimate Reza: buff ATK/MAG/DEF dan tekad melindungi dari kegelapan.",
     },
 }
 
@@ -1139,7 +1173,8 @@ SCENE_DATA = {
             "Tahta Kegelapan – Febri berdiri dengan tubuh setengah manusia setengah iblis.\n"
             "Febri: \"Harsan... kau akhirnya datang kembali?\"\n"
             "Aruna: \"Aku bukan ayahku. Aku Aruna, putra Harsan. Dan aku akan mengakhiri ini!\"\n"
-            "Febri tertawa: \"Hahaha... jadi anak kecil itu masih hidup. Ayahmu mengorbankan segalanya demi kamu. Seharusnya kaulah yang mati saat itu!\""
+            "Febri tertawa: \"Hahaha... jadi anak kecil itu masih hidup. Ayahmu mengorbankan segalanya demi kamu. Seharusnya kaulah yang mati saat itu!\"\n"
+            "Detak Aruna Core mengingatkanmu pada luka Umar dan Reza; menyembuhkan mereka mungkin kunci akhir yang berbeda."
         ),
         "choices": [("Pertarungan terakhir", "BATTLE_FEBRI")],
     },
@@ -1184,40 +1219,51 @@ SCENE_DATA = {
     # SIDE QUEST UMAR
     "SQ_UMAR_INTRO": {
         "text": (
-            "Seorang warga Siak memanggil Umar.\n"
-            "NPC: \"Kau anak Safiya, kan? Di ujung kota ada keluarga yang masih menyimpan dendam pada ibumu.\"\n"
-            "Umar menggenggam tongkatnya, ragu-ragu."
+            "Desas-desus terdengar di Siak setelah Umar bergabung.\n"
+            "NPC: \"Kau tahu Safiya, kan? Ada keluarga yang masih menyalahkannya. Katanya, Safiya membiarkan anak mereka mati.\"\n"
+            "Umar terdiam, menggenggam tongkat warisan ibunya."
         ),
         "choices": [("Temui keluarga tersebut", "SQ_UMAR_FAMILY")],
     },
     "SQ_UMAR_FAMILY": {
         "text": (
-            "Keluarga itu menatap Umar dengan mata merah.\n"
-            "Keluarga: \"Anak kami mati karena kutukan Kampar. Safiya datang terlambat. Kami tak pernah bisa memaafkannya.\"\n"
-            "Umar: \"Ibu tidak pernah berhenti mencoba... bahkan hingga napas terakhirnya.\""
+            "Orang tua itu menyambut dengan tatapan tajam.\n"
+            "Orang Tua: \"Safiya... orang-orang menyebutnya penyembuh hebat. Tapi anak kami mati di tangannya.\"\n"
+            "Orang Tua: \"Sekarang kau datang sebagai pahlawan? Anak dari wanita yang meninggalkan kami?\"\n"
+            "Umar: \"Ibu tidak pernah ingin ada yang mati. Ia memaksakan diri... sampai tubuhnya hancur. Kalau ada yang harus disalahkan, itu keadaan. Bukan ibuku.\""
         ),
-        "choices": [("Tawarkan bantuan", "SQ_UMAR_FETCH")],
+        "choices": [("Apa yang sebenarnya terjadi?", "SQ_UMAR_CHILD")],
     },
-    "SQ_UMAR_FETCH": {
+    "SQ_UMAR_CHILD": {
         "text": (
-            "Anak kedua keluarga itu kini sakit karena kutukan kecil dari aura Kampar.\n"
-            "Umar: \"Biarkan aku mencoba menyembuhkannya. Kalau gagal, bencilah aku, bukan ibuku.\"\n"
-            "Untuk membuat ramuan, kalian mencari herb suci di hutan sekitar Siak."
+            "Orang Tua: \"Kami memang salah, tapi Tuhan tahu... kami takut kehilangannya juga. Anak kami yang satunya sakit sekarang.\"\n"
+            "Umar: \"Kalau aku bisa menyelamatkannya, biar kebencian kalian berhenti padaku saja.\"\n"
+            "Mereka menyebut ramuan langka di rawa Siak yang bisa memecah kutukan."
         ),
-        "choices": [("Bawa herb itu kembali", "SQ_UMAR_RETURN")],
+        "choices": [("Cari ramuan dan hadapi apa pun di rawa", "SQ_UMAR_MINIDUNGEON")],
     },
-    "SQ_UMAR_RETURN": {
+    "SQ_UMAR_MINIDUNGEON": {
         "text": (
-            "Umar meracik ramuan warisan Safiya. Cahaya lembut menyelimuti anak itu.\n"
-            "Keluarga meneteskan air mata: \"Kalau ini warisan Safiya... kami salah membenci.\""
+            "Rawa sunyi di pinggiran Siak diselimuti kabut. Herb suci bersinar, tapi dijaga monster yang merasa itu miliknya.\n"
+            "Umar: \"Ibu, bimbing aku. Ini untuk menebus luka yang kau tinggalkan.\""
+        ),
+        "choices": [("Hadapi penjaga herb", "BATTLE_UMAR_HERB")],
+    },
+    "SQ_UMAR_HEAL": {
+        "text": (
+            "Dengan herb langka, Umar meracik ramuan. Cahaya lembut menyelimuti anak yang sakit.\n"
+            "Umar: \"Ibu selalu bilang... 'Kalau bisa menyelamatkan satu nyawa lagi, lakukan.' Sekarang tugasku meneruskan langkah itu.\"\n"
+            "Orang Tua terisak melihat anak mereka bernapas lega.\n"
+            "Orang Tua: \"Kalau kau benar-benar anak Safiya... kau baru saja membuktikannya. Maafkan kami... sudah menyimpan kebencian begitu lama.\"\n"
+            "Umar: \"Tidak perlu minta maaf. Aku senang ibu masih diingat.\""
         ),
         "choices": [("Wariskan berkah Safiya", "COMPLETE_UMAR_QUEST")],
     },
     "SQ_UMAR_REWARD": {
         "text": (
-            "Umar meraih tongkat ibunya.\n"
-            "Umar: \"Aku akan membawa Safiya's Grace ke mana pun aku pergi. Terima kasih sudah mempercayaiku.\"\n"
-            "(Umar mempelajari ultimate: Safiya's Grace.)"
+            "Umar memejamkan mata, mengingat Safiya di malam-malam panjang klinik.\n"
+            "Umar: \"Warisan Safiya bukan sekadar ramuan. Ini tekad untuk tidak berhenti menyelamatkan.\"\n"
+            "(Umar mempelajari ultimate: Grace Safiya.)"
         ),
         "choices": [("Kembali ke kota", "BACK_CITY_MENU")],
     },
@@ -1225,33 +1271,49 @@ SCENE_DATA = {
     # SIDE QUEST REZA
     "SQ_REZA_INTRO": {
         "text": (
-            "Seorang tetua Rengat berbisik pada Reza.\n"
-            "Tetua: \"Kadang aku mendengar suara dari hutan, memanggil namamu. Suara itu terdengar seperti gurumu.\"\n"
-            "Reza menatapmu dan mengangguk."
+            "Seorang NPC tua di Rengat menepuk bahu Reza.\n"
+            "NPC Tua: \"Kadang... aku mendengar suara memanggil dari hutan. Menyebut nama 'Reza'.\"\n"
+            "Reza menatap hutan dengan murung, lalu mengangguk."
         ),
         "choices": [("Ikuti suara hutan", "SQ_REZA_FOREST")],
     },
     "SQ_REZA_FOREST": {
         "text": (
-            "Di hutan khusus, fragment segel bercahaya berdenyut.\n"
-            "Suara Guru: \"Reza... jangan biarkan balas dendam memandumu.\"\n"
-            "Reza: \"Guru...? Febri menghancurkanmu. Aku tidak bisa memaafkannya.\""
+            "Hutan magis di pinggir Rengat terasa lebih sunyi dari biasanya. Rune bekas segel retak berpendar lemah.\n"
+            "Reza: \"Febri... bahkan di sini kau meninggalkan luka.\""
         ),
-        "choices": [("Sentuh fragmen segel", "SQ_REZA_FRAGMENT")],
+        "choices": [("Dekati segel yang retak", "SQ_REZA_SEAL")],
     },
-    "SQ_REZA_FRAGMENT": {
+    "SQ_REZA_SEAL": {
         "text": (
-            "Suara Guru: \"Balas dendam melahirkan tragedi baru. Lindungi cahaya, lindungi Aruna.\"\n"
-            "Reza menunduk, menyadari luka batinnya sendiri.\n"
-            "Reza: \"Aku mengerti sekarang. Aku tidak akan melawan kegelapan dengan kegelapan.\""
+            "Di tengah hutan, ada segel patah yang menggaungkan suara samar.\n"
+            "Suara Guru: \"Reza... kau sudah sejauh ini.\"\n"
+            "Reza: \"Guru...? Di mana Anda? Febri... mengambil segalanya dari saya. Bahkan Anda.\""
+        ),
+        "choices": [("Dengarkan gema guru", "SQ_REZA_MASTER")],
+    },
+    "SQ_REZA_MASTER": {
+        "text": (
+            "Suara Guru: \"Jangan biarkan kebencian memandumu.\"\n"
+            "Suara Guru: \"Tugas kita bukan menghancurkan dunia karena luka kita... tetapi melindunginya.\"\n"
+            "Reza: \"Aku ingin membenci Febri. Aku ingin menghabisinya. Tapi kalau itu hanya membuatku jadi seperti dia...\"\n"
+            "Suara Guru: \"Jaga Aruna. Jaga cahaya yang ia bawa. Itu warisan Harsan... dan tugasku kini ada di tanganmu.\""
+        ),
+        "choices": [("Bersihkan segel yang retak", "BATTLE_REZA_SEAL")],
+    },
+    "SQ_REZA_RESOLVE": {
+        "text": (
+            "Segel patah itu perlahan luruh setelah pertempuran, meninggalkan ketenangan.\n"
+            "Reza menatap Aruna Core yang berpendar di dadamu.\n"
+            "Reza: \"Jika aku membiarkan kebencian menuntunku, aku sama saja dengan Febri. Warisan guruku adalah melindungi dunia, bukan menghukumnya.\""
         ),
         "choices": [("Terima warisan guru", "COMPLETE_REZA_QUEST")],
     },
     "SQ_REZA_REWARD": {
         "text": (
-            "Energi arcane melingkupi party.\n"
-            "Reza: \"Master's Legacy akan melindungi kita. Aku tidak sendiri lagi.\"\n"
-            "(Reza mempelajari ultimate: Master's Legacy.)"
+            "Cahaya biru lembut menyelimuti party, seperti pelukan guru yang lama hilang.\n"
+            "Reza: \"Warisan Sang Guru akan menjaga kita. Aku tidak akan jatuh dalam kebencian lagi.\"\n"
+            "(Reza mempelajari ultimate: Warisan Sang Guru.)"
         ),
         "choices": [("Kembali ke kota", "BACK_CITY_MENU")],
     },
@@ -1336,6 +1398,19 @@ class GameState:
     flags: Dict[str, Any] = field(default_factory=dict)
     return_scene_after_battle: Optional[str] = None
     loss_scene_after_battle: Optional[str] = None
+
+    def __post_init__(self):
+        self.ensure_flag_defaults()
+
+    def ensure_flag_defaults(self):
+        default_flags = {
+            "HAS_UMAR": False,
+            "HAS_REZA": False,
+            "UMAR_QUEST_DONE": False,
+            "REZA_QUEST_DONE": False,
+        }
+        for key, value in default_flags.items():
+            self.flags.setdefault(key, value)
 
     def ensure_aruna(self):
         if "ARUNA" not in self.party:
@@ -1750,6 +1825,7 @@ def load_game_state(user_id: int) -> Optional[GameState]:
     for cid in state.party_order:
         state.xp_pool.setdefault(cid, 0)
     state.flags = data.get("flags", {})
+    state.ensure_flag_defaults()
     state.in_battle = False
     state.battle_enemies = []
     state.battle_state = BattleTurnState()
@@ -2774,7 +2850,7 @@ async def end_battle_and_return(
 # ==========================
 
 def handle_scene_side_effects(state: GameState) -> str:
-    extra = ""
+    extras: List[str] = []
     if state.scene_id == "SQ_HARSAN_BLADE_VISION" and not state.flags.get("QUEST_WEAPON_DONE"):
         state.flags["QUEST_WEAPON_DONE"] = True
         state.flags["QUEST_WEAPON_STARTED"] = True
@@ -2785,12 +2861,21 @@ def handle_scene_side_effects(state: GameState) -> str:
         aruna = state.party.get("ARUNA")
         if aruna:
             grant_skill_to_character(aruna, "LEGACY_RADIANCE")
-        extra = (
+        extras.append(
             "Pedang Warisan Harsan meresap ke dalam Aruna Core!\n"
             + equip_msg
             + "\nSkill baru diperoleh: Legacy Radiance."
         )
-    return extra
+    if state.scene_id == "CH5_FINAL_WIN":
+        if state.flags.get("UMAR_QUEST_DONE") and state.flags.get("REZA_QUEST_DONE"):
+            extras.append(
+                "Cahaya Aruna Core beresonansi dengan niat Umar dan Reza yang sudah pulih. Jalan menuju TRUE ENDING terbuka."
+            )
+        else:
+            extras.append(
+                "Ada gema yang belum tuntas. Selesaikan Warisan Safiya dan Suara dari Segel untuk menemukan akhir sejati."
+            )
+    return "\n\n".join(extras)
 
 
 async def send_scene(
@@ -2843,9 +2928,19 @@ async def handle_scene_choice(
         await start_story_battle(update, context, state, "GATE_SPIRIT", "CH1_GATE_AFTER")
         return
 
+    if choice_data == "BATTLE_UMAR_HERB":
+        state.scene_id = "SQ_UMAR_MINIDUNGEON"
+        await start_story_battle(update, context, state, "HERB_GUARDIAN", "SQ_UMAR_HEAL")
+        return
+
     if choice_data == "BATTLE_RENGAT_GOLEM":
         state.scene_id = "CH2_GOLEM_ALERT"
         await start_story_battle(update, context, state, "CORRUPTED_FOREST_GOLEM", "CH2_GOLEM_AFTER")
+        return
+
+    if choice_data == "BATTLE_REZA_SEAL":
+        state.scene_id = "SQ_REZA_MASTER"
+        await start_story_battle(update, context, state, "SEAL_WARDEN", "SQ_REZA_RESOLVE")
         return
 
     if choice_data == "BATTLE_HOUND_OF_VOID":
@@ -2921,7 +3016,9 @@ async def handle_scene_choice(
         if umar:
             grant_skill_to_character(umar, "SAFIYAS_GRACE")
         state.scene_id = "SQ_UMAR_REWARD"
-        await send_scene(update, context, state)
+        await send_scene(
+            update, context, state, extra_text="Umar mempelajari skill baru: Grace Safiya!"
+        )
         return
 
     if choice_data == "COMPLETE_REZA_QUEST":
@@ -2930,7 +3027,9 @@ async def handle_scene_choice(
         if reza:
             grant_skill_to_character(reza, "MASTERS_LEGACY")
         state.scene_id = "SQ_REZA_REWARD"
-        await send_scene(update, context, state)
+        await send_scene(
+            update, context, state, extra_text="Reza mempelajari skill baru: Warisan Sang Guru!"
+        )
         return
 
     if choice_data == "RESOLVE_ENDING":
