@@ -305,7 +305,7 @@ ITEMS = {
     "HARSAN_LEGACY_BLADE": {
         "id": "HARSAN_LEGACY_BLADE",
         "name": "Pedang Warisan Harsan",
-        "description": "Senjata legendaris ayah Aruna yang beresonansi dengan Aruna Core.",
+        "description": "Pedang warisan keluarga Harsan yang bangkit kembali saat bersatu dengan Aruna Core; dulu dipisahkan dari kalung untuk menahan Abyss.",
         "type": "weapon",
         "buy_price": 0,
         "sell_price": 0,
@@ -3002,7 +3002,7 @@ def handle_scene_side_effects(state: GameState) -> str:
         if aruna:
             grant_skill_to_character(aruna, "LEGACY_RADIANCE")
         extras.append(
-            "Pedang Warisan Harsan meresap ke dalam Aruna Core!\n"
+            "Pedang warisan keluarga Harsan bangkit kembali saat bersatu dengan Aruna Core!\n"
             + equip_msg
             + "\nSkill baru diperoleh: Legacy Radiance."
         )
