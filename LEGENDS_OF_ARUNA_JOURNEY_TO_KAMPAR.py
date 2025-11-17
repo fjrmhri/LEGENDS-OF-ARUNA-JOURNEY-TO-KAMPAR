@@ -259,8 +259,12 @@ ITEMS = {
         "sell_price": 0,
         "allowed_users": ["ARUNA"],
         "effects": {
-            "atk_bonus": 12,
-            "passives": {"element_boost": {"CAHAYA": 0.25}},
+            "atk_bonus": 16,
+            "passives": {
+                "element_boost": {"CAHAYA": 0.35},
+                "bonus_vs_element": {"GELAP": 0.3, "ABYSS": 0.3},
+                "light_skill_amp": 0.15,
+            },
         },
     },
 }
@@ -547,6 +551,23 @@ MONSTERS = {
         "element": "CAHAYA",
         "weakness": ["GELAP"],
         "resist": ["CAHAYA"],
+    },
+    "ABYSS_SHADE": {
+        "name": "Abyss Shade",
+        "area": "HARSAN_SHRINE",
+        "level": 10,
+        "hp": 130,
+        "mp": 30,
+        "atk": 17,
+        "defense": 12,
+        "mag": 16,
+        "spd": 12,
+        "luck": 6,
+        "xp": 70,
+        "gold": 70,
+        "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
     },
     "FEBRI_LORD": {
         "name": "Febri, Lord of Abyss",
@@ -1054,32 +1075,71 @@ SCENE_DATA = {
 
     "SQ_HARSAN_BLADE_INTRO": {
         "text": (
-            "Di sudut perpustakaan Pekanbaru, seorang arsiparis tua memandangi kalungmu.\n"
-            "Arsiparis: \"Lambang itu... milik Harsan dan Rusmini. Pedang mereka dipisah dari Aruna Core agar Febri tak bisa menemukannya.\"\n"
+            "Di perpustakaan senyap Pekanbaru, seorang arsiparis menatap kalungmu.\n"
+            "Arsiparis: \"Kalung itu... aku pernah melihat simbol yang sama di relief tua.\"\n"
+            "Arsiparis: \"Konon, ada pedang cahaya yang dipisahkan dari kalung itu untuk menyegel kekuatan tertentu.\"\n"
             "Aruna: \"Kau tahu di mana pedang itu disembunyikan?\"\n"
-            "Arsiparis: \"Di sebuah shrine yang hanya merespons cahaya warisanmu. Jika ingin menjemputnya, ikuti aliran sungai ke arah Kampar dan cari gerbang batu bertuliskan nama Harsan.\""
+            "Arsiparis: \"Gerbangnya terletak di antara Rengat dan Kampar. Kuil Cahaya Terlupakan—hanya Aruna Core yang bisa membangunkan jalur masuknya.\""
         ),
         "choices": [
-            ("Menuju shrine tersembunyi", "SQ_HARSAN_SHRINE"),
+            ("Menuju kuil cahaya terlupakan", "SQ_HARSAN_SHRINE_TRAVEL"),
+            ("Kembali ke Pekanbaru", "BACK_CITY_MENU"),
+        ],
+    },
+    "SQ_HARSAN_SHRINE_TRAVEL": {
+        "text": (
+            "Perjalanan mengikuti sungai berkabut membawamu ke celah batu bertanda simbol Harsan.\n"
+            "Reza: \"Ini di luar rute biasa antara Rengat dan Kampar. Tidak ada pedagang yang lewat.\"\n"
+            "Umar: \"Kalau ini jebakan Abyss, kita siap?\"\n"
+            "Aruna: \"Aku harus tahu kebenarannya. Pedang itu milik keluargaku.\""
+        ),
+        "choices": [
+            ("Masuki Kuil Cahaya Terlupakan", "SQ_HARSAN_BLADE_SHRINE"),
             ("Kembali ke Pekanbaru", "BACK_CITY_MENU"),
         ],
     },
     "SQ_HARSAN_BLADE_SHRINE": {
         "text": (
-            "Malam turun saat kalian tiba di shrine kuno. Pilar bercahaya menampilkan relief Harsan dan Rusmini memisahkan pedang dari kalung.\n"
-            "Reza: \"Segel ini hanya membuka diri pada darah mereka. Beranikah kita?\"\n"
-            "Aruna: \"Aku harus melakukannya. Pedang itu bagian dari keluarga kami.\""
+            "Kuil Cahaya Terlupakan sunyi. Pilar berlumut menampilkan relief Harsan dan Rusmini memisahkan pedang dari kalung.\n"
+            "Di tengah aula ada empat tumpuan batu yang redup. Kalung Aruna berpendar seolah bereaksi."
         ),
         "choices": [
-            ("Sentuh rune dan hadapi penjaga", "BATTLE_HARSAN_SENTINEL"),
+            ("Tempelkan Aruna Core pada tumpuan", "SQ_HARSAN_SHRINE_PILLARS"),
+            ("Keluar dari kuil", "BACK_CITY_MENU"),
+        ],
+    },
+    "SQ_HARSAN_SHRINE_PILLARS": {
+        "text": (
+            "Saat Aruna menyentuhkan kalungnya, setiap tumpuan memancarkan pola cahaya yang menyusun gerbang altar.\n"
+            "Narasi: \"Kalung Aruna memancarkan cahaya yang sama dengan simbol pada pedang itu.\"\n"
+            "Aruna: \"Seolah-olah... mereka saling memanggil.\"\n"
+            "Namun bayangan Abyss merembes dari sela batu, membentuk sosok gelap."
+        ),
+        "choices": [
+            ("Hadapi bayangan penjaga", "BATTLE_ABYSS_SHADE"),
+            ("Tarik napas dan mundur", "SQ_HARSAN_BLADE_SHRINE"),
+        ],
+    },
+    "SQ_HARSAN_SHRINE_CORE": {
+        "text": (
+            "Cahaya tumpuan menyatu membuka jalan ke ruang terdalam. Di sana, sebuah pedang kusam tergeletak di altar berdebu.\n"
+            "Umar: \"Tidak ada jebakan lain? Seakan pedang itu menunggu.\"\n"
+            "Reza: \"Energi cahaya dan Abyss bercampur di sini. Jangan ragu, Aruna.\""
+        ),
+        "choices": [
+            ("Bangunkan penjaga cahaya", "BATTLE_HARSAN_SENTINEL"),
+            ("Sentuhkan kalung ke pedang", "SQ_HARSAN_BLADE_VISION"),
             ("Kembali ke Pekanbaru", "BACK_CITY_MENU"),
         ],
     },
     "SQ_HARSAN_BLADE_VISION": {
         "text": (
-            "Penjaga cahaya runtuh. Saat Aruna menyentuh pedang kusam itu dengan Aruna Core, cahaya menyala dan suara Harsan menggema.\n"
-            "Harsan: \"Jika kau mendengar ini, berarti kau siap menanggung warisan kami. Rusmini percaya kau akan memilih cahaya, anakku.\"\n"
-            "Pedang Warisan Harsan bangkit, melengkung bersama energi Aruna Core."
+            "Begitu Aruna menyentuh pedang, ruangan dipenuhi kilatan. Kalung dan pedang saling memanggil, membentuk pola kuno di udara.\n"
+            "Harsan: \"Jika Febri atau Abyss menemukan keduanya dalam satu tempat, dunia akan berakhir.\"\n"
+            "Rusmini: \"Pisahkan pedang dan kalung. Kalau takdir menuntunnya kembali bersatu... berarti saat itu dunia siap menghadapi kebenarannya.\"\n"
+            "Narasi: \"Cahaya dari kalung dan pedang menyatu, membentuk pola kuno di udara.\"\n"
+            "Narasi: \"Dalam sekejap, pedang itu tampak baru ditempa, memancarkan aura hangat.\"\n"
+            "Sistem: \">> Kamu memperoleh: Pedang Warisan Harsan!\""
         ),
         "choices": [("Kembali ke Pekanbaru", "BACK_CITY_MENU")],
     },
@@ -1408,6 +1468,10 @@ class GameState:
             "HAS_REZA": False,
             "UMAR_QUEST_DONE": False,
             "REZA_QUEST_DONE": False,
+            "QUEST_WEAPON_STARTED": False,
+            "QUEST_WEAPON_DONE": False,
+            "WEAPON_QUEST_STARTED": False,
+            "WEAPON_QUEST_DONE": False,
         }
         for key, value in default_flags.items():
             self.flags.setdefault(key, value)
@@ -2388,6 +2452,20 @@ def compute_elemental_multiplier(
     return multiplier
 
 
+def compute_passive_damage_bonus(
+    passives: Dict[str, Any], target_element: Optional[str], used_element: str
+) -> float:
+    multiplier = 1.0
+    if not passives:
+        return multiplier
+    bonus_vs = passives.get("bonus_vs_element", {})
+    if target_element and target_element in bonus_vs:
+        multiplier *= 1 + bonus_vs[target_element]
+    if used_element == "CAHAYA":
+        multiplier *= 1 + passives.get("light_skill_amp", 0)
+    return multiplier
+
+
 def calc_physical_damage(
     attacker: CharacterState,
     target_def: int,
@@ -2395,6 +2473,7 @@ def calc_physical_damage(
     element: str = "NETRAL",
     target_weakness: Optional[List[str]] = None,
     target_resist: Optional[List[str]] = None,
+    target_element: Optional[str] = None,
 ) -> int:
     base = attacker.atk - target_def // 2
     if base < 1:
@@ -2405,7 +2484,8 @@ def calc_physical_damage(
     element_multiplier = compute_elemental_multiplier(
         element, target_weakness, target_resist, passives
     )
-    base = int(base * power * element_multiplier)
+    passive_bonus = compute_passive_damage_bonus(passives, target_element, element)
+    base = int(base * power * element_multiplier * passive_bonus)
     return max(1, base)
 
 
@@ -2416,6 +2496,7 @@ def calc_magic_damage(
     element: str = "NETRAL",
     target_weakness: Optional[List[str]] = None,
     target_resist: Optional[List[str]] = None,
+    target_element: Optional[str] = None,
 ) -> int:
     base = int((attacker.mag - target_def / 3) * power)
     if base < 1:
@@ -2425,7 +2506,8 @@ def calc_magic_damage(
     element_multiplier = compute_elemental_multiplier(
         element, target_weakness, target_resist, passives
     )
-    base = int(base * element_multiplier)
+    passive_bonus = compute_passive_damage_bonus(passives, target_element, element)
+    base = int(base * element_multiplier * passive_bonus)
     return max(1, base)
 
 
@@ -2569,6 +2651,7 @@ async def process_battle_action(
                 element=weapon_element,
                 target_weakness=enemy.get("weakness"),
                 target_resist=enemy.get("resist"),
+                target_element=enemy.get("element"),
             )
             enemy["hp"] -= dmg
             log.append(
@@ -2659,6 +2742,7 @@ async def process_use_skill(
                     element,
                     enemy.get("weakness"),
                     enemy.get("resist"),
+                    enemy.get("element"),
                 )
             else:
                 dmg = calc_magic_damage(
@@ -2668,6 +2752,7 @@ async def process_use_skill(
                     element,
                     enemy.get("weakness"),
                     enemy.get("resist"),
+                    enemy.get("element"),
                 )
             if element == "CAHAYA" and state.flags.get("LIGHT_BUFF_TURNS"):
                 dmg = int(dmg * 1.2)
@@ -2851,9 +2936,11 @@ async def end_battle_and_return(
 
 def handle_scene_side_effects(state: GameState) -> str:
     extras: List[str] = []
-    if state.scene_id == "SQ_HARSAN_BLADE_VISION" and not state.flags.get("QUEST_WEAPON_DONE"):
+    if state.scene_id == "SQ_HARSAN_BLADE_VISION" and not state.flags.get("WEAPON_QUEST_DONE"):
         state.flags["QUEST_WEAPON_DONE"] = True
+        state.flags["WEAPON_QUEST_DONE"] = True
         state.flags["QUEST_WEAPON_STARTED"] = True
+        state.flags["WEAPON_QUEST_STARTED"] = True
         adjust_inventory(state, "PEDANG_WARISAN_HARSAN", 1)
         success, equip_msg = equip_item(state, "ARUNA", "PEDANG_WARISAN_HARSAN")
         if not success:
@@ -2866,6 +2953,19 @@ def handle_scene_side_effects(state: GameState) -> str:
             + equip_msg
             + "\nSkill baru diperoleh: Legacy Radiance."
         )
+    if state.scene_id == "CH5_FLOOR5" and (
+        state.flags.get("WEAPON_QUEST_DONE") or state.flags.get("QUEST_WEAPON_DONE")
+    ):
+        aruna = state.party.get("ARUNA")
+        wielding = aruna and aruna.weapon_id == "PEDANG_WARISAN_HARSAN"
+        if wielding:
+            extras.append(
+                "Febri menatap pedangmu: \"Itu bilah Harsan... cahaya yang pernah mengkhianatiku.\" Aura Abyss-nya bergolak."
+            )
+        else:
+            extras.append(
+                "Aura pedang warisan dalam tasmu membuat Febri gelisah, seolah ia merasakan tatapan Harsan dari kejauhan."
+            )
     if state.scene_id == "CH5_FINAL_WIN":
         if state.flags.get("UMAR_QUEST_DONE") and state.flags.get("REZA_QUEST_DONE"):
             extras.append(
@@ -2959,8 +3059,12 @@ async def handle_scene_choice(
         return
 
     if choice_data == "BATTLE_HARSAN_SENTINEL":
-        state.scene_id = "SQ_HARSAN_BLADE_SHRINE"
+        state.scene_id = "SQ_HARSAN_SHRINE_CORE"
         await start_story_battle(update, context, state, "LUMINAR_SENTINEL", "SQ_HARSAN_BLADE_VISION")
+        return
+    if choice_data == "BATTLE_ABYSS_SHADE":
+        state.scene_id = "SQ_HARSAN_SHRINE_PILLARS"
+        await start_story_battle(update, context, state, "ABYSS_SHADE", "SQ_HARSAN_SHRINE_CORE")
         return
 
     if choice_data == "GO_TO_WORLD_MAP":
@@ -3112,13 +3216,10 @@ async def send_city_menu(
     if (
         state.location == "PEKANBARU"
         and state.flags.get("VISITED_PEKANBARU")
-        and not state.flags.get("QUEST_WEAPON_DONE")
+        and not (state.flags.get("WEAPON_QUEST_DONE") or state.flags.get("QUEST_WEAPON_DONE"))
     ):
-        label = (
-            "Lanjutkan pencarian pedang Harsan"
-            if state.flags.get("QUEST_WEAPON_STARTED")
-            else "Jejak pedang warisan Harsan"
-        )
+        started = state.flags.get("QUEST_WEAPON_STARTED") or state.flags.get("WEAPON_QUEST_STARTED")
+        label = "Lanjutkan pencarian pedang Harsan" if started else "Jejak pedang warisan Harsan"
         choices.append((label, "QUEST_HARSAN_BLADE"))
     if state.location == "KAMPAR":
         choices.append(("Menuju Kastil Febri", "EVENT_KASTIL_ENTRY"))
@@ -3837,6 +3938,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         if data == "QUEST_HARSAN_BLADE":
             state.flags["QUEST_WEAPON_STARTED"] = True
+            state.flags["WEAPON_QUEST_STARTED"] = True
             state.scene_id = "SQ_HARSAN_BLADE_INTRO"
             await send_scene(update, context, state)
             return
