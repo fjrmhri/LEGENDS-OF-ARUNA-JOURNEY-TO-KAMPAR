@@ -1820,7 +1820,11 @@ def clear_active_buffs(state: GameState):
 USER_STATES: Dict[int, GameState] = {}
 USER_LOCKS: Dict[int, asyncio.Lock] = {}
 
-SAVE_DIR = "saves"
+SAVE_DIR = "saves"  # Untuk VPS, pastikan folder ini ada & bisa ditulis (chmod/chown sesuai user bot)
+
+
+def get_save_path(user_id: int) -> str:
+    return os.path.join(SAVE_DIR, f"{user_id}.json")
 
 
 def character_to_dict(character: CharacterState) -> Dict[str, Any]:
@@ -1891,21 +1895,37 @@ def serialize_game_state(state: GameState) -> Dict[str, Any]:
     }
 
 
-def save_game_state(state: GameState):
+def save_game_state(state: GameState) -> bool:
     os.makedirs(SAVE_DIR, exist_ok=True)
-    path = os.path.join(SAVE_DIR, f"{state.user_id}.json")
+    path = get_save_path(state.user_id)
     tmp_path = f"{path}.tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(serialize_game_state(state), f, ensure_ascii=False, indent=2)
-    os.replace(tmp_path, path)
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(serialize_game_state(state), f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, path)
+        return True
+    except Exception as exc:
+        logger.exception("Gagal menyimpan progress user %s: %s", state.user_id, exc)
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except Exception:
+            logger.exception("Gagal menghapus file temporary save untuk user %s", state.user_id)
+        return False
 
 
 def load_game_state(user_id: int) -> Optional[GameState]:
-    path = os.path.join(SAVE_DIR, f"{user_id}.json")
+    path = get_save_path(user_id)
     if not os.path.exists(path):
         return None
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        return None
+    except Exception as exc:
+        logger.exception("Gagal memuat progress user %s: %s", user_id, exc)
+        return None
     state = GameState(user_id=user_id)
     state.scene_id = data.get("scene_id", state.scene_id)
     state.location = data.get("location", state.location)
@@ -3747,18 +3767,29 @@ async def save_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     async with get_user_lock(user_id):
         state = get_game_state(user_id)
-        save_game_state(state)
+        success = save_game_state(state)
     if update.message:
-        await update.message.reply_text("Progress berhasil disimpan.")
+        if success:
+            await update.message.reply_text("Progress berhasil disimpan.")
+        else:
+            await update.message.reply_text(
+                "Gagal menyimpan progress. Silakan coba lagi atau cek izin folder saves."
+            )
 
 
 async def load_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     async with get_user_lock(user_id):
+        save_exists = os.path.exists(get_save_path(user_id))
         loaded = load_game_state(user_id)
         if not loaded:
             if update.message:
-                await update.message.reply_text("Belum ada file save untuk akun ini.")
+                if save_exists:
+                    await update.message.reply_text(
+                        "Gagal memuat save. Coba lagi nanti atau periksa file di folder saves."
+                    )
+                else:
+                    await update.message.reply_text("Belum ada file save untuk akun ini.")
             return
         loaded.ensure_aruna()
         USER_STATES[user_id] = loaded
