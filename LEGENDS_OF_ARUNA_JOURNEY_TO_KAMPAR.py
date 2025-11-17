@@ -302,8 +302,8 @@ ITEMS = {
             "passives": {"element_boost": {"CAHAYA": 0.05}},
         },
     },
-    "PEDANG_WARISAN_HARSAN": {
-        "id": "PEDANG_WARISAN_HARSAN",
+    "HARSAN_LEGACY_BLADE": {
+        "id": "HARSAN_LEGACY_BLADE",
         "name": "Pedang Warisan Harsan",
         "description": "Senjata legendaris ayah Aruna yang beresonansi dengan Aruna Core.",
         "type": "weapon",
@@ -777,7 +777,7 @@ SKILLS = {
         "revive_ratio": 0.4,
         "description": "Menghidupkan ally yang tumbang.",
     },
-    "SAFIYAS_GRACE": {
+    "SAFIYA_GRACE": {
         "name": "Grace Safiya",
         "mp_cost": 20,
         "type": "HEAL_ALL",
@@ -832,7 +832,7 @@ SKILLS = {
         "duration": 3,
         "description": "Menurunkan MAG dan SPD musuh.",
     },
-    "MASTERS_LEGACY": {
+    "MASTER_LEGACY": {
         "name": "Warisan Sang Guru",
         "mp_cost": 20,
         "type": "BUFF_TEAM",
@@ -1154,11 +1154,11 @@ SCENE_DATA = {
 
     "SQ_HARSAN_BLADE_INTRO": {
         "text": (
-            "Di perpustakaan senyap Pekanbaru, seorang arsiparis menatap kalungmu.\n"
-            "Arsiparis: \"Kalung itu... aku pernah melihat simbol yang sama di relief tua.\"\n"
-            "Arsiparis: \"Konon, ada pedang cahaya yang dipisahkan dari kalung itu untuk menyegel kekuatan tertentu.\"\n"
+            "Di perpustakaan senyap Pekanbaru, seorang arsiparis menatap kalungmu lama sekali.\n"
+            "Arsiparis: \"Kalungmu itu... aku pernah melihat simbol yang sama di relief tua.\"\n"
+            "Arsiparis: \"Konon, simbol itu pernah terukir di sebuah pedang cahaya yang kini hilang.\"\n"
             "Aruna: \"Kau tahu di mana pedang itu disembunyikan?\"\n"
-            "Arsiparis: \"Gerbangnya terletak di antara Rengat dan Kampar. Kuil Cahaya Terlupakan—hanya Aruna Core yang bisa membangunkan jalur masuknya.\""
+            "Arsiparis: \"Antara Rengat dan Kampar ada Kuil Cahaya Terlupakan. Hanya Aruna Core yang bisa membuka jalur masuknya.\""
         ),
         "choices": [
             ("Menuju kuil cahaya terlupakan", "SQ_HARSAN_SHRINE_TRAVEL"),
@@ -1170,7 +1170,7 @@ SCENE_DATA = {
             "Perjalanan mengikuti sungai berkabut membawamu ke celah batu bertanda simbol Harsan.\n"
             "Reza: \"Ini di luar rute biasa antara Rengat dan Kampar. Tidak ada pedagang yang lewat.\"\n"
             "Umar: \"Kalau ini jebakan Abyss, kita siap?\"\n"
-            "Aruna: \"Aku harus tahu kebenarannya. Pedang itu milik keluargaku.\""
+            "Aruna: \"Kuil itu memanggil kalungku. Pedang itu harus kembali ke tuannya.\""
         ),
         "choices": [
             ("Masuki Kuil Cahaya Terlupakan", "SQ_HARSAN_BLADE_SHRINE"),
@@ -1180,7 +1180,7 @@ SCENE_DATA = {
     "SQ_HARSAN_BLADE_SHRINE": {
         "text": (
             "Kuil Cahaya Terlupakan sunyi. Pilar berlumut menampilkan relief Harsan dan Rusmini memisahkan pedang dari kalung.\n"
-            "Di tengah aula ada empat tumpuan batu yang redup. Kalung Aruna berpendar seolah bereaksi."
+            "Di tengah aula ada empat tumpuan batu yang redup. Kalung Aruna berpendar seolah bereaksi, memanggil jalan tersembunyi."
         ),
         "choices": [
             ("Tempelkan Aruna Core pada tumpuan", "SQ_HARSAN_SHRINE_PILLARS"),
@@ -1190,7 +1190,7 @@ SCENE_DATA = {
     "SQ_HARSAN_SHRINE_PILLARS": {
         "text": (
             "Saat Aruna menyentuhkan kalungnya, setiap tumpuan memancarkan pola cahaya yang menyusun gerbang altar.\n"
-            "Narasi: \"Kalung Aruna memancarkan cahaya yang sama dengan simbol pada pedang itu.\"\n"
+            "Narasi: \"Kalung Aruna memancarkan cahaya yang sama dengan simbol di gagang pedang.\"\n"
             "Aruna: \"Seolah-olah... mereka saling memanggil.\"\n"
             "Namun bayangan Abyss merembes dari sela batu, membentuk sosok gelap."
         ),
@@ -1213,11 +1213,11 @@ SCENE_DATA = {
     },
     "SQ_HARSAN_BLADE_VISION": {
         "text": (
-            "Begitu Aruna menyentuh pedang, ruangan dipenuhi kilatan. Kalung dan pedang saling memanggil, membentuk pola kuno di udara.\n"
-            "Harsan: \"Jika Febri atau Abyss menemukan keduanya dalam satu tempat, dunia akan berakhir.\"\n"
-            "Rusmini: \"Pisahkan pedang dan kalung. Kalau takdir menuntunnya kembali bersatu... berarti saat itu dunia siap menghadapi kebenarannya.\"\n"
-            "Narasi: \"Cahaya dari kalung dan pedang menyatu, membentuk pola kuno di udara.\"\n"
-            "Narasi: \"Dalam sekejap, pedang itu tampak baru ditempa, memancarkan aura hangat.\"\n"
+            "Begitu Aruna menyentuhkan kalung ke pedang, Aruna Core memancarkan cahaya yang menyelimuti altar.\n"
+            "Harsan: \"Jika Febri atau Abyss mendapatkan pedang dan kalung dalam satu tempat, dunia akan runtuh.\"\n"
+            "Rusmini: \"Kalau suatu hari keduanya bersatu kembali... biarlah itu terjadi karena takdir, bukan karena kerakusan.\"\n"
+            "Narasi: \"Cahaya dari kalung dan pedang menyatu, menghapus karat dan retakan.\"\n"
+            "Narasi: \"Pedang itu tampak baru ditempa, memancarkan aura lembut namun tajam.\"\n"
             "Sistem: \">> Kamu memperoleh: Pedang Warisan Harsan!\""
         ),
         "choices": [("Kembali ke Pekanbaru", "BACK_CITY_MENU")],
@@ -1358,50 +1358,53 @@ SCENE_DATA = {
     # SIDE QUEST UMAR
     "SQ_UMAR_INTRO": {
         "text": (
-            "Desas-desus terdengar di Siak setelah Umar bergabung.\n"
-            "NPC: \"Kau tahu Safiya, kan? Ada keluarga yang masih menyalahkannya. Katanya, Safiya membiarkan anak mereka mati.\"\n"
-            "Umar terdiam, menggenggam tongkat warisan ibunya."
+            "Begitu Umar bergabung, rumor baru terdengar di Siak.\n"
+            "NPC: \"Kau anak Safiya, bukan? Ada keluarga di ujung kota yang masih menyalahkannya atas kematian anak mereka.\"\n"
+            "Umar menunduk sejenak, menggenggam tongkat warisan Safiya."
         ),
         "choices": [("Temui keluarga tersebut", "SQ_UMAR_FAMILY")],
     },
     "SQ_UMAR_FAMILY": {
         "text": (
-            "Orang tua itu menyambut dengan tatapan tajam.\n"
-            "Orang Tua: \"Safiya... orang-orang menyebutnya penyembuh hebat. Tapi anak kami mati di tangannya.\"\n"
-            "Orang Tua: \"Sekarang kau datang sebagai pahlawan? Anak dari wanita yang meninggalkan kami?\"\n"
-            "Umar: \"Ibu tidak pernah ingin ada yang mati. Ia memaksakan diri... sampai tubuhnya hancur. Kalau ada yang harus disalahkan, itu keadaan. Bukan ibuku.\""
+            "Rumah panggung di ujung kota terasa dingin. Tatapan keluarga itu menusuk.\n"
+            "Orang Tua: \"Safiya... mereka memujanya sebagai penyembuh hebat. Tapi anak kami mati di tangannya.\"\n"
+            "Orang Tua: \"Sekarang kau datang membawa namanya?\"\n"
+            "Umar: \"Ibu tidak pernah memilih siapa yang diselamatkan. Ia hanya punya satu tubuh, satu jiwa...\"\n"
+            "Umar: \"Jika seseorang mati di pelukannya, itu bukan karena ia tidak peduli. Tapi karena dunia terlalu kejam.\""
         ),
         "choices": [("Apa yang sebenarnya terjadi?", "SQ_UMAR_CHILD")],
     },
     "SQ_UMAR_CHILD": {
         "text": (
-            "Orang Tua: \"Kami memang salah, tapi Tuhan tahu... kami takut kehilangannya juga. Anak kami yang satunya sakit sekarang.\"\n"
-            "Umar: \"Kalau aku bisa menyelamatkannya, biar kebencian kalian berhenti padaku saja.\"\n"
-            "Mereka menyebut ramuan langka di rawa Siak yang bisa memecah kutukan."
+            "Dari balik pintu terdengar batuk kecil. Ada anak lain yang terbaring pucat.\n"
+            "Orang Tua: \"Kami sudah lama takut... Anak kami yang tersisa kini demam aneh.\"\n"
+            "Umar: \"Biarkan aku mencoba menolong. Kalau aku gagal, kebencian itu cukup padaku.\"\n"
+            "Untuk meracik obat, Umar butuh herb langka di rawa Siak. Kabarnya, rawa itu kini dikuasai monster yang melindungi tanaman suci."
         ),
         "choices": [("Cari ramuan dan hadapi apa pun di rawa", "SQ_UMAR_MINIDUNGEON")],
     },
     "SQ_UMAR_MINIDUNGEON": {
         "text": (
-            "Rawa sunyi di pinggiran Siak diselimuti kabut. Herb suci bersinar, tapi dijaga monster yang merasa itu miliknya.\n"
-            "Umar: \"Ibu, bimbing aku. Ini untuk menebus luka yang kau tinggalkan.\""
+            "Rawa berkabut di pinggir Siak terasa berat. Cahaya samar dari herb suci terhalang akar hitam dan monster yang berpatroli.\n"
+            "Umar: \"Ibu, bimbing aku. Aku harus membuka jalan pengobatan ini.\""
         ),
         "choices": [("Hadapi penjaga herb", "BATTLE_UMAR_HERB")],
     },
     "SQ_UMAR_HEAL": {
         "text": (
-            "Dengan herb langka, Umar meracik ramuan. Cahaya lembut menyelimuti anak yang sakit.\n"
-            "Umar: \"Ibu selalu bilang... 'Kalau bisa menyelamatkan satu nyawa lagi, lakukan.' Sekarang tugasku meneruskan langkah itu.\"\n"
-            "Orang Tua terisak melihat anak mereka bernapas lega.\n"
-            "Orang Tua: \"Kalau kau benar-benar anak Safiya... kau baru saja membuktikannya. Maafkan kami... sudah menyimpan kebencian begitu lama.\"\n"
-            "Umar: \"Tidak perlu minta maaf. Aku senang ibu masih diingat.\""
+            "Herb suci berubah menjadi ramuan hangat di tangan Umar. Cahaya lembut menyelimuti anak yang sakit.\n"
+            "Umar: \"Ibu selalu bilang, 'Kalau bisa menyelamatkan satu nyawa lagi, lakukan.' Ini warisan yang ingin kubawa.\"\n"
+            "Orang Tua terisak melihat napas anaknya stabil.\n"
+            "Orang Tua: \"Kalau kau benar-benar anak Safiya... kau baru saja membuktikan bahwa hatinya hidup di dalam dirimu.\"\n"
+            "Orang Tua: \"Maafkan kami... sudah membenci orang yang hanya ingin menolong.\"\n"
+            "Umar: \"Ibu akan senang mendengar kalian memaafkannya. Meski... ia sudah tidak di sini lagi.\""
         ),
         "choices": [("Wariskan berkah Safiya", "COMPLETE_UMAR_QUEST")],
     },
     "SQ_UMAR_REWARD": {
         "text": (
-            "Umar memejamkan mata, mengingat Safiya di malam-malam panjang klinik.\n"
-            "Umar: \"Warisan Safiya bukan sekadar ramuan. Ini tekad untuk tidak berhenti menyelamatkan.\"\n"
+            "Umar menatap langit Siak, membayangkan Safiya tersenyum.\n"
+            "Umar: \"Warisan Safiya bukan hanya ramuan—ini keberanian menolong meski disalahpahami.\"\n"
             "(Umar mempelajari ultimate: Grace Safiya.)"
         ),
         "choices": [("Kembali ke kota", "BACK_CITY_MENU")],
@@ -1410,41 +1413,41 @@ SCENE_DATA = {
     # SIDE QUEST REZA
     "SQ_REZA_INTRO": {
         "text": (
-            "Seorang NPC tua di Rengat menepuk bahu Reza.\n"
-            "NPC Tua: \"Kadang... aku mendengar suara memanggil dari hutan. Menyebut nama 'Reza'.\"\n"
-            "Reza menatap hutan dengan murung, lalu mengangguk."
+            "Seorang NPC tua di Rengat menepuk bahu Reza dengan gugup.\n"
+            "NPC Tua: \"Kadang... di malam hari, aku mendengar suara dari hutan. Pelan, memanggil nama 'Reza'...\"\n"
+            "Reza menatap hutan gelap yang membatasi kota, rahangnya mengeras."
         ),
         "choices": [("Ikuti suara hutan", "SQ_REZA_FOREST")],
     },
     "SQ_REZA_FOREST": {
         "text": (
             "Hutan magis di pinggir Rengat terasa lebih sunyi dari biasanya. Rune bekas segel retak berpendar lemah.\n"
-            "Reza: \"Febri... bahkan di sini kau meninggalkan luka.\""
+            "Reza: \"Ada gema sihir yang tertahan. Febri meninggalkan luka bahkan di sini.\""
         ),
         "choices": [("Dekati segel yang retak", "SQ_REZA_SEAL")],
     },
     "SQ_REZA_SEAL": {
         "text": (
             "Di tengah hutan, ada segel patah yang menggaungkan suara samar.\n"
-            "Suara Guru: \"Reza... kau sudah sejauh ini.\"\n"
-            "Reza: \"Guru...? Di mana Anda? Febri... mengambil segalanya dari saya. Bahkan Anda.\""
+            "Suara Guru: \"Reza... kau masih hidup.\"\n"
+            "Reza: \"Guru...? Di mana Anda? Febri mengambil semuanya dariku... bahkan Anda.\""
         ),
         "choices": [("Dengarkan gema guru", "SQ_REZA_MASTER")],
     },
     "SQ_REZA_MASTER": {
         "text": (
-            "Suara Guru: \"Jangan biarkan kebencian memandumu.\"\n"
-            "Suara Guru: \"Tugas kita bukan menghancurkan dunia karena luka kita... tetapi melindunginya.\"\n"
-            "Reza: \"Aku ingin membenci Febri. Aku ingin menghabisinya. Tapi kalau itu hanya membuatku jadi seperti dia...\"\n"
-            "Suara Guru: \"Jaga Aruna. Jaga cahaya yang ia bawa. Itu warisan Harsan... dan tugasku kini ada di tanganmu.\""
+            "Suara Guru: \"Aku tidak butuh balas dendam. Aku hanya ingin kau tidak menghancurkan dirimu sendiri.\"\n"
+            "Suara Guru: \"Jaga Aruna. Jaga cahaya yang ia bawa. Harsan mempercayakan dunia padanya... dan padamu.\"\n"
+            "Reza: \"Aku ingin membenci Febri. Aku ingin melihatnya hancur. Tapi kalau aku hanya hidup untuk kebencian... apa bedanya aku dengan dia?\"\n"
+            "Suara Guru: \"Kebencianmu tidak akan mengembalikanku. Tapi pilihanmu bisa menyelamatkan mereka yang masih hidup.\""
         ),
         "choices": [("Bersihkan segel yang retak", "BATTLE_REZA_SEAL")],
     },
     "SQ_REZA_RESOLVE": {
         "text": (
             "Segel patah itu perlahan luruh setelah pertempuran, meninggalkan ketenangan.\n"
-            "Reza menatap Aruna Core yang berpendar di dadamu.\n"
-            "Reza: \"Jika aku membiarkan kebencian menuntunku, aku sama saja dengan Febri. Warisan guruku adalah melindungi dunia, bukan menghukumnya.\""
+            "Reza menatap Aruna Core yang berpendar di dadamu, wajahnya melunak.\n"
+            "Reza: \"Guruku tidak ingin aku dikendalikan dendam. Aku akan melindungi Aruna sampai akhir, bukan karena benci Febri, tapi karena aku memilih jalan berbeda.\""
         ),
         "choices": [("Terima warisan guru", "COMPLETE_REZA_QUEST")],
     },
@@ -3160,8 +3163,8 @@ def handle_scene_side_effects(state: GameState) -> str:
         state.flags["WEAPON_QUEST_DONE"] = True
         state.flags["QUEST_WEAPON_STARTED"] = True
         state.flags["WEAPON_QUEST_STARTED"] = True
-        adjust_inventory(state, "PEDANG_WARISAN_HARSAN", 1)
-        success, equip_msg = equip_item(state, "ARUNA", "PEDANG_WARISAN_HARSAN")
+        adjust_inventory(state, "HARSAN_LEGACY_BLADE", 1)
+        success, equip_msg = equip_item(state, "ARUNA", "HARSAN_LEGACY_BLADE")
         if not success:
             equip_msg = "Pedang baru tersimpan di tas."
         aruna = state.party.get("ARUNA")
@@ -3176,7 +3179,7 @@ def handle_scene_side_effects(state: GameState) -> str:
         state.flags.get("WEAPON_QUEST_DONE") or state.flags.get("QUEST_WEAPON_DONE")
     ):
         aruna = state.party.get("ARUNA")
-        wielding = aruna and aruna.weapon_id == "PEDANG_WARISAN_HARSAN"
+        wielding = aruna and aruna.weapon_id == "HARSAN_LEGACY_BLADE"
         if wielding:
             extras.append(
                 "Febri menatap pedangmu: \"Itu bilah Harsan... cahaya yang pernah mengkhianatiku.\" Aura Abyss-nya bergolak."
@@ -3337,7 +3340,7 @@ async def handle_scene_choice(
         state.flags["UMAR_QUEST_DONE"] = True
         umar = state.party.get("UMAR")
         if umar:
-            grant_skill_to_character(umar, "SAFIYAS_GRACE")
+            grant_skill_to_character(umar, "SAFIYA_GRACE")
         state.scene_id = "SQ_UMAR_REWARD"
         await send_scene(
             update, context, state, extra_text="Umar mempelajari skill baru: Grace Safiya!"
@@ -3348,7 +3351,7 @@ async def handle_scene_choice(
         state.flags["REZA_QUEST_DONE"] = True
         reza = state.party.get("REZA")
         if reza:
-            grant_skill_to_character(reza, "MASTERS_LEGACY")
+            grant_skill_to_character(reza, "MASTER_LEGACY")
         state.scene_id = "SQ_REZA_REWARD"
         await send_scene(
             update, context, state, extra_text="Reza mempelajari skill baru: Warisan Sang Guru!"
