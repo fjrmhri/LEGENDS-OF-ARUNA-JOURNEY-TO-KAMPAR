@@ -1553,6 +1553,60 @@ EQUIP_BONUS_MAP = {
 }
 
 
+def get_equipment_stat_bonuses(character: CharacterState) -> Dict[str, int]:
+    bonuses: Dict[str, int] = {attr: 0 for attr in EQUIP_BONUS_MAP.values()}
+    for slot in [character.weapon_id, character.armor_id]:
+        if not slot:
+            continue
+        item = ITEMS.get(slot)
+        if not item:
+            continue
+        effects = item.get("effects", {})
+        for effect_key, attr in EQUIP_BONUS_MAP.items():
+            bonus = effects.get(effect_key, 0)
+            if bonus:
+                bonuses[attr] = bonuses.get(attr, 0) + bonus
+    return bonuses
+
+
+def get_effective_stat(character: CharacterState, attr: str) -> int:
+    bonuses = get_equipment_stat_bonuses(character)
+    return getattr(character, attr, 0) + bonuses.get(attr, 0)
+
+
+def get_effective_max_hp(character: CharacterState) -> int:
+    return get_effective_stat(character, "max_hp")
+
+
+def get_effective_max_mp(character: CharacterState) -> int:
+    return get_effective_stat(character, "max_mp")
+
+
+def get_effective_combat_stats(character: CharacterState) -> Dict[str, int]:
+    bonuses = get_equipment_stat_bonuses(character)
+    stats: Dict[str, int] = {}
+    for attr in ["atk", "defense", "mag", "spd", "luck", "max_hp", "max_mp"]:
+        stats[attr] = getattr(character, attr, 0) + bonuses.get(attr, 0)
+    return stats
+
+
+def clamp_resource_to_effective_cap(character: CharacterState):
+    effective_max_hp = get_effective_max_hp(character)
+    effective_max_mp = get_effective_max_mp(character)
+    if character.hp > effective_max_hp:
+        character.hp = effective_max_hp
+    if character.mp > effective_max_mp:
+        character.mp = effective_max_mp
+
+
+def format_effective_stat_summary(character: CharacterState) -> str:
+    stats = get_effective_combat_stats(character)
+    return (
+        f"{character.name} Lv {character.level} | HP {character.hp}/{stats['max_hp']} | "
+        f"MP {character.mp}/{stats['max_mp']} | ATK {stats['atk']} DEF {stats['defense']} MAG {stats['mag']}"
+    )
+
+
 def adjust_inventory(state: GameState, item_id: str, delta: int) -> int:
     if delta == 0:
         return state.inventory.get(item_id, 0)
@@ -1564,35 +1618,6 @@ def adjust_inventory(state: GameState, item_id: str, delta: int) -> int:
     return new_value
 
 
-def apply_equipment_stat_changes(character: CharacterState, item: Dict[str, Any], direction: int):
-    effects = item.get("effects", {})
-    for effect_key, attr in EQUIP_BONUS_MAP.items():
-        bonus = effects.get(effect_key, 0)
-        if not bonus:
-            continue
-        amount = bonus * direction
-        if attr == "max_hp":
-            character.max_hp += amount
-            if direction > 0:
-                character.hp = min(character.max_hp, character.hp + bonus)
-            else:
-                character.hp = min(character.hp, character.max_hp)
-                if character.hp < 0:
-                    character.hp = 0
-        elif attr == "max_mp":
-            character.max_mp += amount
-            if direction > 0:
-                character.mp = min(character.max_mp, character.mp + bonus)
-            else:
-                character.mp = min(character.mp, character.max_mp)
-                if character.mp < 0:
-                    character.mp = 0
-        else:
-            current = getattr(character, attr, None)
-            if current is not None:
-                setattr(character, attr, current + amount)
-
-
 def unequip_item(state: GameState, char_id: str, slot: str) -> Tuple[bool, str]:
     character = state.party.get(char_id)
     if not character:
@@ -1602,15 +1627,16 @@ def unequip_item(state: GameState, char_id: str, slot: str) -> Tuple[bool, str]:
     if not equipped_id:
         return False, "Tidak ada equipment yang terpasang."
     item = ITEMS.get(equipped_id)
-    if item:
-        apply_equipment_stat_changes(character, item, -1)
     adjust_inventory(state, equipped_id, 1)
     setattr(character, slot_attr, None)
+    clamp_resource_to_effective_cap(character)
     message = f"{character.name} melepas {item['name']}." if item else "Equipment dilepas."
     return True, message
 
 
-def equip_item(state: GameState, char_id: str, item_id: str) -> Tuple[bool, str]:
+def equip_item(
+    state: GameState, char_id: str, item_id: str, expected_type: Optional[str] = None
+) -> Tuple[bool, str]:
     character = state.party.get(char_id)
     if not character:
         return False, "Karakter tidak ditemukan."
@@ -1619,6 +1645,8 @@ def equip_item(state: GameState, char_id: str, item_id: str) -> Tuple[bool, str]
         return False, "Item tidak dikenal."
     if item.get("type") not in {"weapon", "armor"}:
         return False, "Item itu bukan equipment."
+    if expected_type and item.get("type") != expected_type:
+        return False, "Item tidak cocok dengan slot."
     allowed = item.get("allowed_users")
     if allowed and char_id not in allowed:
         return False, f"{item['name']} tidak cocok untuk {character.name}."
@@ -1631,7 +1659,7 @@ def equip_item(state: GameState, char_id: str, item_id: str) -> Tuple[bool, str]
         unequip_item(state, char_id, item["type"])
     adjust_inventory(state, item_id, -1)
     setattr(character, slot_attr, item_id)
-    apply_equipment_stat_changes(character, item, 1)
+    clamp_resource_to_effective_cap(character)
     return True, f"{character.name} memasang {item['name']}."
 
 
@@ -1942,8 +1970,8 @@ def apply_growth(character: CharacterState):
     character.mag += growth["mag"]
     character.spd += growth["spd"]
     character.luck += growth["luck"]
-    character.hp = character.max_hp
-    character.mp = character.max_mp
+    character.hp = get_effective_max_hp(character)
+    character.mp = get_effective_max_mp(character)
 
 
 def check_level_up(state: GameState) -> List[str]:
@@ -1963,8 +1991,9 @@ def check_level_up(state: GameState) -> List[str]:
                 grant_skill_to_character(character, skill, messages)
         state.xp_pool[cid] = pool
         if leveled:
+            effective = get_effective_combat_stats(character)
             messages.append(
-                f"Stat baru {character.name}: HP {character.max_hp} | MP {character.max_mp} | ATK {character.atk} | DEF {character.defense} | MAG {character.mag}"
+                f"Stat baru {character.name}: HP {effective['max_hp']} | MP {effective['max_mp']} | ATK {effective['atk']} | DEF {effective['defense']} | MAG {effective['mag']}"
             )
     return messages
 
@@ -2062,7 +2091,7 @@ def pick_lowest_hp_ally(state: GameState) -> Optional[CharacterState]:
     candidates = [state.party[cid] for cid in state.party_order if state.party[cid].hp > 0]
     if not candidates:
         return None
-    return min(candidates, key=lambda c: c.hp / max(1, c.max_hp))
+    return min(candidates, key=lambda c: c.hp / max(1, get_effective_max_hp(c)))
 
 
 def find_revive_target(state: GameState) -> Optional[CharacterState]:
@@ -2153,7 +2182,7 @@ async def resolve_battle_outcome(
     # LOSE
     for cid in state.party_order:
         member = state.party[cid]
-        member.hp = max(1, member.max_hp // 3)
+        member.hp = max(1, get_effective_max_hp(member) // 3)
     state.in_battle = False
     state.battle_enemies = []
     log.append("Seluruh party tumbang! Kamu kalah dalam pertarungan ini...")
@@ -2173,7 +2202,11 @@ def enemy_take_turn(state: GameState, enemy_index: int) -> List[str]:
     if not target_id:
         return log
     target = state.party[target_id]
-    dmg = max(1, int(enemy["atk"] * random.uniform(0.8, 1.1)))
+    target_def = get_effective_stat(target, "defense")
+    base = enemy["atk"] - target_def // 2
+    if base < 1:
+        base = 1
+    dmg = max(1, int(base * random.uniform(0.8, 1.1)))
     defending = state.flags.get("DEFENDING", {})
     if defending.get(target_id):
         dmg = max(1, dmg // 2)
@@ -2306,11 +2339,11 @@ def apply_item_effects_in_battle(
     for target in targets:
         if hp_restore:
             before = target.hp
-            target.hp = min(target.max_hp, target.hp + hp_restore)
+            target.hp = min(get_effective_max_hp(target), target.hp + hp_restore)
             logs.append(f"{target.name} memulihkan {target.hp - before} HP.")
         if mp_restore:
             before_mp = target.mp
-            target.mp = min(target.max_mp, target.mp + mp_restore)
+            target.mp = min(get_effective_max_mp(target), target.mp + mp_restore)
             logs.append(f"{target.name} memulihkan {target.mp - before_mp} MP.")
     if not logs:
         logs.append("Tidak ada efek yang terlihat.")
@@ -2475,7 +2508,8 @@ def calc_physical_damage(
     target_resist: Optional[List[str]] = None,
     target_element: Optional[str] = None,
 ) -> int:
-    base = attacker.atk - target_def // 2
+    attacker_atk = get_effective_stat(attacker, "atk")
+    base = attacker_atk - target_def // 2
     if base < 1:
         base = 1
     # variasi kecil
@@ -2498,7 +2532,8 @@ def calc_magic_damage(
     target_resist: Optional[List[str]] = None,
     target_element: Optional[str] = None,
 ) -> int:
-    base = int((attacker.mag - target_def / 3) * power)
+    attacker_mag = get_effective_stat(attacker, "mag")
+    base = int((attacker_mag - target_def / 3) * power)
     if base < 1:
         base = 1
     base = int(base * random.uniform(0.9, 1.1))
@@ -2512,7 +2547,7 @@ def calc_magic_damage(
 
 
 def calc_heal_amount(caster: CharacterState, power: float) -> int:
-    base = int(caster.mag * power)
+    base = int(get_effective_stat(caster, "mag") * power)
     if base < 1:
         base = 1
     return base
@@ -2562,7 +2597,9 @@ def battle_status_text(state: GameState) -> str:
     lines.append("Party:")
     for cid in state.party_order:
         c = state.party[cid]
-        lines.append(f"- {c.name} Lv{c.level} HP {c.hp}/{c.max_hp} MP {c.mp}/{c.max_mp}")
+        effective_hp = get_effective_max_hp(c)
+        effective_mp = get_effective_max_mp(c)
+        lines.append(f"- {c.name} Lv{c.level} HP {c.hp}/{effective_hp} MP {c.mp}/{effective_mp}")
     token = state.battle_state.active_token
     if token:
         if token.startswith("CHAR:"):
@@ -2767,7 +2804,7 @@ async def process_use_skill(
             return
         heal_amount = calc_heal_amount(character, skill.get("power", 0.3))
         before = target.hp
-        target.hp = min(target.max_hp, target.hp + heal_amount)
+        target.hp = min(get_effective_max_hp(target), target.hp + heal_amount)
         log.append(
             f"{character.name} menyembuhkan {target.name} sebanyak {target.hp - before} HP dengan {skill['name']}!"
         )
@@ -2779,7 +2816,7 @@ async def process_use_skill(
                 continue
             heal_amount = calc_heal_amount(character, skill.get("power", 0.25))
             before = member.hp
-            member.hp = min(member.max_hp, member.hp + heal_amount)
+            member.hp = min(get_effective_max_hp(member), member.hp + heal_amount)
             total.append(f"{member.name}+{member.hp - before}HP")
         log.append(f"{character.name} menyalurkan {skill['name']}! ({', '.join(total)})")
     elif skill_type == "BUFF_DEF_SELF":
@@ -2802,9 +2839,9 @@ async def process_use_skill(
         total = []
         for cid in state.party_order:
             member = state.party[cid]
-            heal_amount = max(1, int(member.max_hp * 0.4))
+            heal_amount = max(1, int(get_effective_max_hp(member) * 0.4))
             before = member.hp
-            member.hp = min(member.max_hp, member.hp + heal_amount)
+            member.hp = min(get_effective_max_hp(member), member.hp + heal_amount)
             total.append(f"{member.name}+{member.hp - before}HP")
         log.append(
             "Aruna Core Awakening memulihkan party dan meningkatkan serangan cahaya! ("
@@ -2875,7 +2912,7 @@ async def process_use_skill(
             await send_battle_state(update, context, state, extra_text="\n".join(log))
             return
         ratio = skill.get("revive_ratio", 0.4)
-        target.hp = max(1, int(target.max_hp * ratio))
+        target.hp = max(1, int(get_effective_max_hp(target) * ratio))
         log.append(f"{character.name} menghidupkan {target.name} dengan {skill['name']}! HP pulih {target.hp}.")
     else:
         log.append(f"{skill['name']} belum bisa digunakan di sistem battle sederhana ini.")
@@ -3193,7 +3230,7 @@ async def send_city_menu(
         text += extra_text + "\n"
     text += "Apa yang ingin kamu lakukan?"
 
-    choices = [("Lihat status party", "MENU_STATUS"), ("Kelola equipment", "MENU_EQUIPMENT"), ("Cek inventori", "MENU_INVENTORY")]
+    choices = [("Lihat status party", "MENU_STATUS"), ("Kelola Equipment", "MENU_EQUIPMENT"), ("Cek inventori", "MENU_INVENTORY")]
     if loc.get("has_shop"):
         choices.append(("Pergi ke toko", "MENU_SHOP"))
     if loc.get("has_job") and features.get("jobs"):
@@ -3416,6 +3453,7 @@ async def send_equipment_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
         weapon = ITEMS.get(c.weapon_id, {}).get("name") if c.weapon_id else "(Kosong)"
         armor = ITEMS.get(c.armor_id, {}).get("name") if c.armor_id else "(Kosong)"
         lines.append(f"- {c.name}: Senjata {weapon} | Armor {armor}")
+        lines.append(f"  {format_effective_stat_summary(c)}")
         buttons.append([InlineKeyboardButton(c.name, callback_data=f"EQUIP_CHAR|{cid}")])
     buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="BACK_CITY_MENU")])
     markup = InlineKeyboardMarkup(buttons)
@@ -3440,7 +3478,12 @@ async def send_character_equipment_menu(
         return
     weapon = ITEMS.get(character.weapon_id, {}).get("name") if character.weapon_id else "(Kosong)"
     armor = ITEMS.get(character.armor_id, {}).get("name") if character.armor_id else "(Kosong)"
-    lines = [f"Kelola gear untuk {character.name}:", f"Senjata saat ini: {weapon}", f"Armor saat ini: {armor}"]
+    lines = [
+        f"Kelola gear untuk {character.name}:",
+        f"Senjata saat ini: {weapon}",
+        f"Armor saat ini: {armor}",
+        f"Stat efektif: {format_effective_stat_summary(character)}",
+    ]
     if extra_text:
         lines.append("")
         lines.append(extra_text)
@@ -3453,7 +3496,7 @@ async def send_character_equipment_menu(
                 [
                     InlineKeyboardButton(
                         f"Pasang {item['name']} (x{qty})",
-                        callback_data=f"EQUIP_ITEM|{char_id}|{item_id}",
+                        callback_data=f"EQUIP_WEAPON|{char_id}|{item_id}",
                     )
                 ]
             )
@@ -3469,7 +3512,7 @@ async def send_character_equipment_menu(
                 [
                     InlineKeyboardButton(
                         f"Pasang {item['name']} (x{qty})",
-                        callback_data=f"EQUIP_ITEM|{char_id}|{item_id}",
+                        callback_data=f"EQUIP_ARMOR|{char_id}|{item_id}",
                     )
                 ]
             )
@@ -3488,25 +3531,32 @@ async def send_character_equipment_menu(
 
 
 async def handle_equip_item_selection(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, char_id: str, item_id: str
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    char_id: str,
+    item_id: str,
+    slot_type: str,
 ):
-    success, message = equip_item(state, char_id, item_id)
-    if not success:
-        await update.callback_query.answer(message, show_alert=True)
-    else:
-        await update.callback_query.answer(message, show_alert=False)
-    await send_character_equipment_menu(update, context, state, char_id)
+    success, message = equip_item(state, char_id, item_id, expected_type=slot_type)
+    await update.callback_query.answer(message, show_alert=not success)
+    extra = message
+    character = state.party.get(char_id)
+    if character:
+        extra += "\n" + format_effective_stat_summary(character)
+    await send_character_equipment_menu(update, context, state, char_id, extra_text=extra)
 
 
 async def handle_unequip_selection(
     update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, char_id: str, slot: str
 ):
     success, message = unequip_item(state, char_id, slot)
-    if not success:
-        await update.callback_query.answer(message, show_alert=True)
-    else:
-        await update.callback_query.answer(message, show_alert=False)
-    await send_character_equipment_menu(update, context, state, char_id)
+    await update.callback_query.answer(message, show_alert=not success)
+    extra = message
+    character = state.party.get(char_id)
+    if character:
+        extra += "\n" + format_effective_stat_summary(character)
+    await send_character_equipment_menu(update, context, state, char_id, extra_text=extra)
 
 
 def apply_consumable_outside_battle(
@@ -3526,13 +3576,13 @@ def apply_consumable_outside_battle(
     mp_restore = effects.get("mp_restore", 0)
     if hp_restore:
         before = target.hp
-        target.hp = min(target.max_hp, target.hp + hp_restore)
+        target.hp = min(get_effective_max_hp(target), target.hp + hp_restore)
         restored = target.hp - before
         if restored > 0:
             logs.append(f"{target.name} memulihkan {restored} HP.")
     if mp_restore:
         before_mp = target.mp
-        target.mp = min(target.max_mp, target.mp + mp_restore)
+        target.mp = min(get_effective_max_mp(target), target.mp + mp_restore)
         restored_mp = target.mp - before_mp
         if restored_mp > 0:
             logs.append(f"{target.name} memulihkan {restored_mp} MP.")
@@ -3664,9 +3714,7 @@ async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines = ["=== STATUS PARTY ==="]
     for cid in state.party_order:
         c = state.party[cid]
-        lines.append(
-            f"{c.name} Lv {c.level} | HP {c.hp}/{c.max_hp} | MP {c.mp}/{c.max_mp} | ATK {c.atk} DEF {c.defense} MAG {c.mag}"
-        )
+        lines.append(format_effective_stat_summary(c))
     lines.append(f"\nGold: {state.gold}")
     lines.append(f"Lokasi: {LOCATIONS[state.location]['name']}")
     lines.append(f"Main Quest: {state.main_progress}")
@@ -3809,9 +3857,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             lines = ["=== STATUS PARTY ==="]
             for cid in state.party_order:
                 c = state.party[cid]
-                lines.append(
-                    f"{c.name} Lv {c.level} | HP {c.hp}/{c.max_hp} | MP {c.mp}/{c.max_mp}"
-                )
+                lines.append(format_effective_stat_summary(c))
             lines.append(f"\nGold: {state.gold}")
             lines.append(f"Lokasi: {LOCATIONS[state.location]['name']}")
             lines.append(f"Main Quest: {state.main_progress}")
@@ -3854,8 +3900,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 state.gold -= cost
                 for cid in state.party_order:
                     c = state.party[cid]
-                    c.hp = c.max_hp
-                    c.mp = c.max_mp
+                    c.hp = get_effective_max_hp(c)
+                    c.mp = get_effective_max_mp(c)
                 if cost == 0:
                     text = "Kamu beristirahat gratis. HP & MP seluruh party pulih."
                 else:
@@ -3890,9 +3936,25 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             _, char_id = data.split("|", 1)
             await send_character_equipment_menu(update, context, state, char_id)
             return
+        if data.startswith("EQUIP_WEAPON|"):
+            _, char_id, item_id = data.split("|", 2)
+            await handle_equip_item_selection(
+                update, context, state, char_id, item_id, slot_type="weapon"
+            )
+            return
+        if data.startswith("EQUIP_ARMOR|"):
+            _, char_id, item_id = data.split("|", 2)
+            await handle_equip_item_selection(
+                update, context, state, char_id, item_id, slot_type="armor"
+            )
+            return
         if data.startswith("EQUIP_ITEM|"):
             _, char_id, item_id = data.split("|", 2)
-            await handle_equip_item_selection(update, context, state, char_id, item_id)
+            item = ITEMS.get(item_id)
+            slot_type = item.get("type") if item else "weapon"
+            await handle_equip_item_selection(
+                update, context, state, char_id, item_id, slot_type=slot_type
+            )
             return
         if data.startswith("UNEQUIP|"):
             _, char_id, slot = data.split("|", 2)
