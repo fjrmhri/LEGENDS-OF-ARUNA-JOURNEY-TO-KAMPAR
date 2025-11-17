@@ -1458,7 +1458,8 @@ class CharacterState:
 @dataclass
 class BattleTurnState:
     turn_order: List[str] = field(default_factory=list)
-    current_index: int = -1
+    current_turn_index: int = -1
+    enemies: List[Dict[str, Any]] = field(default_factory=list)
     awaiting_player_input: bool = False
     active_token: Optional[str] = None
 
@@ -2150,9 +2151,10 @@ def living_party_members(state: GameState) -> List[str]:
 
 
 def living_enemies(state: GameState) -> List[tuple]:
+    enemies = state.battle_state.enemies or state.battle_enemies
     return [
         (idx, enemy)
-        for idx, enemy in enumerate(state.battle_enemies)
+        for idx, enemy in enumerate(enemies)
         if enemy.get("hp", 0) > 0
     ]
 
@@ -2187,7 +2189,9 @@ def find_revive_target(state: GameState) -> Optional[CharacterState]:
 def initialize_battle_turn_state(state: GameState):
     order = [f"CHAR:{cid}" for cid in state.party_order]
     order += [f"ENEMY:{idx}" for idx in range(len(state.battle_enemies))]
-    state.battle_state = BattleTurnState(turn_order=order, current_index=-1)
+    state.battle_state = BattleTurnState(
+        turn_order=order, current_turn_index=-1, enemies=state.battle_enemies
+    )
     advance_to_next_actor(state)
 
 
@@ -2197,8 +2201,10 @@ def advance_to_next_actor(state: GameState) -> Optional[str]:
         return None
     total = len(order)
     for _ in range(total):
-        state.battle_state.current_index = (state.battle_state.current_index + 1) % total
-        token = order[state.battle_state.current_index]
+        state.battle_state.current_turn_index = (
+            state.battle_state.current_turn_index + 1
+        ) % total
+        token = order[state.battle_state.current_turn_index]
         if token.startswith("CHAR:"):
             cid = token.split(":", 1)[1]
             character = state.party.get(cid)
@@ -2273,9 +2279,10 @@ async def resolve_battle_outcome(
 
 def enemy_take_turn(state: GameState, enemy_index: int) -> List[str]:
     log: List[str] = []
-    if enemy_index < 0 or enemy_index >= len(state.battle_enemies):
+    enemies = state.battle_state.enemies or state.battle_enemies
+    if enemy_index < 0 or enemy_index >= len(enemies):
         return log
-    enemy = state.battle_enemies[enemy_index]
+    enemy = enemies[enemy_index]
     if enemy.get("hp", 0) <= 0:
         return log
     target_id = choose_random_party_target(state)
@@ -2347,7 +2354,7 @@ async def send_skill_menu(
         )
         return
     choices = [(SKILLS[s]["name"], f"USE_SKILL|{character.id}|{s}") for s in skills]
-    choices.append(("Kembali", "BATTLE_BACK"))
+    choices.append(("Kembali", f"BATTLE_MENU|{character.id}"))
     keyboard = make_keyboard(choices)
     text = battle_status_text(state) + f"\n\nPilih skill {character.name}:"
     query = update.callback_query
@@ -2357,7 +2364,13 @@ async def send_skill_menu(
         await update.message.reply_text(text=text, reply_markup=keyboard)
 
 
-async def send_battle_item_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
+async def send_battle_item_menu(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, char_id: Optional[str] = None
+):
+    if not char_id:
+        token = state.battle_state.active_token
+        if token and token.startswith("CHAR:"):
+            char_id = token.split(":", 1)[1]
     consumables = [
         (item_id, qty)
         for item_id, qty in state.inventory.items()
@@ -2384,7 +2397,8 @@ async def send_battle_item_menu(update: Update, context: ContextTypes.DEFAULT_TY
                 )
             ]
         )
-    buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="BATTLE_BACK")])
+    back_target = f"BATTLE_MENU|{char_id}" if char_id else "BATTLE_BACK"
+    buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data=back_target)])
     query = update.callback_query
     if query:
         await query.edit_message_text(
@@ -2718,15 +2732,19 @@ async def send_battle_state(
     if extra_text:
         text = extra_text + "\n\n" + text
 
-    keyboard = make_keyboard(
-        [
-            ("⚔ Serang", "BATTLE_ATTACK"),
-            ("✨ Skill", "BATTLE_SKILL_MENU"),
-            ("🎒 Item", "BATTLE_ITEM"),
-            ("🛡 Bertahan", "BATTLE_DEFEND"),
-            ("🏃 Kabur", "BATTLE_RUN"),
-        ]
-    )
+    keyboard = None
+    token = state.battle_state.active_token
+    if token and token.startswith("CHAR:"):
+        cid = token.split(":", 1)[1]
+        keyboard = make_keyboard(
+            [
+                ("⚔ Serang", f"BATTLE_ATTACK|{cid}"),
+                ("✨ Skill", f"BATTLE_SKILL_MENU|{cid}"),
+                ("🎒 Item", f"BATTLE_ITEM|{cid}"),
+                ("🛡 Bertahan", f"BATTLE_DEFEND|{cid}"),
+                ("🏃 Kabur", f"BATTLE_RUN|{cid}"),
+            ]
+        )
 
     query = update.callback_query
     if query:
@@ -2738,25 +2756,38 @@ async def send_battle_state(
 async def process_battle_action(
     update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, action: str
 ):
+    action_parts = action.split("|")
+    action_key = action_parts[0]
+    requested_char = action_parts[1] if len(action_parts) > 1 else None
+
     token = state.battle_state.active_token
     if not token or not token.startswith("CHAR:"):
         token = advance_to_next_actor(state)
-        if not token or not token.startswith("CHAR:"):
-            await send_battle_state(update, context, state)
-            return
-    char_id = token.split(":", 1)[1]
-    character = state.party[char_id]
+    if not token or not token.startswith("CHAR:"):
+        await send_battle_state(update, context, state)
+        return
 
-    if action == "BATTLE_SKILL_MENU":
+    active_char_id = token.split(":", 1)[1]
+    if requested_char and requested_char != active_char_id:
+        await send_battle_state(update, context, state)
+        return
+
+    character = state.party[active_char_id]
+
+    if action_key in {"BATTLE_MENU", "BATTLE_BACK"}:
+        await send_battle_state(update, context, state)
+        return
+
+    if action_key == "BATTLE_SKILL_MENU":
         await send_skill_menu(update, context, state, character)
         return
-    if action == "BATTLE_ITEM":
-        await send_battle_item_menu(update, context, state)
+    if action_key == "BATTLE_ITEM":
+        await send_battle_item_menu(update, context, state, active_char_id)
         return
 
     log: List[str] = []
 
-    if action == "BATTLE_ATTACK":
+    if action_key == "BATTLE_ATTACK":
         target_info = get_first_alive_enemy(state)
         if not target_info:
             if await resolve_battle_outcome(update, context, state, log):
@@ -2781,14 +2812,23 @@ async def process_battle_action(
             if hit_resist:
                 log.append("Musuh tampaknya menahan serangan itu.")
 
-    elif action == "BATTLE_DEFEND":
+    elif action_key == "BATTLE_DEFEND":
         defend_flags = state.flags.setdefault("DEFENDING", {})
-        defend_flags[char_id] = True
+        defend_flags[active_char_id] = True
         log.append(
             f"{character.name} mengambil posisi bertahan untuk mengurangi damage sementara."
         )
 
-    elif action == "BATTLE_RUN":
+    elif action_key == "BATTLE_RUN":
+        if active_char_id != "ARUNA":
+            await send_battle_state(
+                update,
+                context,
+                state,
+                intro=False,
+                extra_text="Hanya Aruna yang bisa memutuskan untuk kabur!",
+            )
+            return
         chance = 0.5 + character.luck * 0.01
         if random.random() < chance:
             log.append("Kamu berhasil kabur dari pertarungan.")
@@ -2798,10 +2838,6 @@ async def process_battle_action(
             await end_battle_and_return(update, context, state, log_text="\n".join(log))
             return
         log.append("Kamu gagal kabur!")
-
-    elif action == "BATTLE_BACK":
-        await send_battle_state(update, context, state)
-        return
 
     else:
         log.append("Aksi belum dikenal dalam sistem battle ini.")
