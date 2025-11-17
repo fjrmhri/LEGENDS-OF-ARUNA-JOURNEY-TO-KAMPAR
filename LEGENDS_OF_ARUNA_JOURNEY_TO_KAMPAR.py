@@ -24,7 +24,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import random
 
 from telegram import (
@@ -756,30 +756,6 @@ DROP_TABLES = {
     ],
 }
 
-
-def generate_loot_for_area(area_id: str) -> List[Tuple[str, int]]:
-    loot: List[Tuple[str, int]] = []
-    for entry in DROP_TABLES.get(area_id, []):
-        chance = entry.get("chance", 0)
-        if random.random() > chance:
-            continue
-        qty = random.randint(entry.get("min_qty", 1), entry.get("max_qty", 1))
-        loot.append((entry["item_id"], qty))
-    return loot
-
-
-def grant_battle_drops(state: GameState) -> List[str]:
-    area = state.flags.get("CURRENT_BATTLE_AREA")
-    if not area:
-        return []
-    drops = []
-    for item_id, qty in generate_loot_for_area(area):
-        adjust_inventory(state, item_id, qty)
-        item = ITEMS.get(item_id)
-        name = item["name"] if item else item_id
-        drops.append(f"{name} x{qty}")
-    return drops
-
 # Skill dasar lengkap
 SKILLS = {
     "SLASH": {
@@ -1402,6 +1378,98 @@ class GameState:
             self.flags["HAS_REZA"] = True
 
 
+# Storage in-memory
+USER_STATES: Dict[int, "GameState"] = {}
+USER_LOCKS: Dict[int, asyncio.Lock] = {}
+
+SAVE_DIR = "saves"  # Untuk VPS, pastikan folder ini ada & bisa ditulis (chmod/chown sesuai user bot)
+
+
+def get_save_path(user_id: int) -> str:
+    return os.path.join(SAVE_DIR, f"{user_id}.json")
+
+
+def serialize_game_state(state: "GameState") -> Dict[str, Any]:
+    return state.to_dict()
+
+
+def save_game_state(user_id: int, state: "GameState") -> bool:
+    try:
+        os.makedirs(SAVE_DIR, exist_ok=True)
+    except Exception:
+        logger.exception("Gagal membuat folder save saat menyimpan user %s", user_id)
+        return False
+
+    path = get_save_path(user_id)
+    tmp_path = f"{path}.tmp"
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(serialize_game_state(state), f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, path)
+        return True
+    except Exception as exc:
+        logger.exception("Gagal menyimpan progress user %s: %s", user_id, exc)
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except Exception:
+            logger.exception("Gagal menghapus file temporary save untuk user %s", user_id)
+        return False
+
+
+def load_game_state(user_id: int) -> Optional["GameState"]:
+    path = get_save_path(user_id)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        return None
+    except Exception as exc:
+        logger.exception("Gagal memuat progress user %s: %s", user_id, exc)
+        return None
+    try:
+        return GameState.from_dict(user_id=user_id, data=data)
+    except Exception as exc:
+        logger.exception("Gagal deserialisasi save user %s: %s", user_id, exc)
+        return None
+
+
+def maybe_autosave(state: "GameState", reason: str = "checkpoint") -> None:
+    """Hook ringan untuk autosave di titik penting.
+
+    Aktifkan dengan menyetel AUTOSAVE_ENABLED=True. Untuk saat ini, kita hanya
+    mencatat kapan checkpoint tercapai agar mudah diaktifkan nanti.
+    """
+
+    if AUTOSAVE_ENABLED:
+        success = save_game_state(state.user_id, state)
+        if success:
+            logger.info("Autosave berhasil untuk user %s (%s)", state.user_id, reason)
+        else:
+            logger.warning("Autosave gagal untuk user %s (%s)", state.user_id, reason)
+    else:
+        logger.info("Autosave checkpoint tercapai untuk user %s (%s)", state.user_id, reason)
+
+
+def get_game_state(user_id: int) -> "GameState":
+    state = USER_STATES.get(user_id)
+    if not state:
+        state = GameState(user_id=user_id)
+        state.ensure_aruna()
+        USER_STATES[user_id] = state
+    return state
+
+
+def get_user_lock(user_id: int) -> asyncio.Lock:
+    lock = USER_LOCKS.get(user_id)
+    if not lock:
+        lock = asyncio.Lock()
+        USER_LOCKS[user_id] = lock
+    return lock
+
+
 EQUIP_BONUS_MAP = {
     "atk_bonus": "atk",
     "def_bonus": "defense",
@@ -1476,6 +1544,30 @@ def adjust_inventory(state: GameState, item_id: str, delta: int) -> int:
         return 0
     state.inventory[item_id] = new_value
     return new_value
+
+
+def generate_loot_for_area(area_id: str) -> List[Tuple[str, int]]:
+    loot: List[Tuple[str, int]] = []
+    for entry in DROP_TABLES.get(area_id, []):
+        chance = entry.get("chance", 0)
+        if random.random() > chance:
+            continue
+        qty = random.randint(entry.get("min_qty", 1), entry.get("max_qty", 1))
+        loot.append((entry["item_id"], qty))
+    return loot
+
+
+def grant_battle_drops(state: GameState) -> List[str]:
+    area = state.flags.get("CURRENT_BATTLE_AREA")
+    if not area:
+        return []
+    drops = []
+    for item_id, qty in generate_loot_for_area(area):
+        adjust_inventory(state, item_id, qty)
+        item = ITEMS.get(item_id)
+        name = item["name"] if item else item_id
+        drops.append(f"{name} x{qty}")
+    return drops
 
 
 def unequip_item(state: GameState, char_id: str, slot: str) -> Tuple[bool, str]:
@@ -1573,193 +1665,6 @@ def list_equippable_items(state: GameState, char_id: str, slot_type: str) -> Lis
     return results
 
 
-def manual_targeting_enabled(state: GameState) -> bool:
-    """Placeholder to toggle manual target selection in the future."""
-    return bool(state.flags.get("MANUAL_TARGETING"))
-
-
-def clear_manual_target_request(state: GameState):
-    state.flags.pop("PENDING_TARGET", None)
-
-
-def make_char_buff_key(char_id: str) -> str:
-    return f"CHAR:{char_id}"
-
-
-def make_enemy_buff_key(index: int) -> str:
-    return f"ENEMY:{index}"
-
-
-def get_buff_target(state: GameState, key: str):
-    if not key:
-        return None
-    if key.startswith("CHAR:"):
-        cid = key.split(":", 1)[1]
-        return state.party.get(cid)
-    if key.startswith("ENEMY:"):
-        try:
-            idx = int(key.split(":", 1)[1])
-        except ValueError:
-            return None
-        if 0 <= idx < len(state.battle_enemies):
-            return state.battle_enemies[idx]
-    return None
-
-
-def adjust_stat_value(target: Any, stat: str, amount: int):
-    if target is None or amount == 0:
-        return
-    if isinstance(target, CharacterState):
-        current = getattr(target, stat, None)
-        if current is not None:
-            setattr(target, stat, current + amount)
-    elif isinstance(target, dict):
-        target[stat] = target.get(stat, 0) + amount
-
-
-def apply_temporary_modifier(
-    state: GameState, target_key: str, stat: str, amount: int, duration: int
-):
-    if amount == 0 or duration <= 0:
-        return
-    target = get_buff_target(state, target_key)
-    if target is None:
-        return
-    adjust_stat_value(target, stat, amount)
-    buffs = state.flags.setdefault("ACTIVE_BUFFS", {})
-    buffs.setdefault(target_key, []).append({
-        "stat": stat,
-        "amount": amount,
-        "turns": duration,
-    })
-
-
-def cleanse_character(state: GameState, char_id: str) -> int:
-    key = make_char_buff_key(char_id)
-    buffs = state.flags.get("ACTIVE_BUFFS", {}).get(key, [])
-    if not buffs:
-        return 0
-    target = state.party.get(char_id)
-    kept = []
-    removed = 0
-    for buff in buffs:
-        if buff["amount"] < 0:
-            adjust_stat_value(target, buff["stat"], -buff["amount"])
-            removed += 1
-        else:
-            kept.append(buff)
-    active = state.flags.get("ACTIVE_BUFFS", {})
-    if kept:
-        active[key] = kept
-    else:
-        active.pop(key, None)
-    return removed
-
-
-def clear_active_buffs(state: GameState):
-    active = state.flags.pop("ACTIVE_BUFFS", None)
-    if not active:
-        return
-    for key, buffs in active.items():
-        target = get_buff_target(state, key)
-        if target is None:
-            continue
-        for buff in buffs:
-            adjust_stat_value(target, buff["stat"], -buff["amount"])
-
-
-# Storage in-memory
-USER_STATES: Dict[int, GameState] = {}
-USER_LOCKS: Dict[int, asyncio.Lock] = {}
-
-SAVE_DIR = "saves"  # Untuk VPS, pastikan folder ini ada & bisa ditulis (chmod/chown sesuai user bot)
-
-
-def get_save_path(user_id: int) -> str:
-    return os.path.join(SAVE_DIR, f"{user_id}.json")
-
-
-def serialize_game_state(state: GameState) -> Dict[str, Any]:
-    return state.to_dict()
-
-
-def save_game_state(user_id: int, state: GameState) -> bool:
-    try:
-        os.makedirs(SAVE_DIR, exist_ok=True)
-    except Exception:
-        logger.exception("Gagal membuat folder save saat menyimpan user %s", user_id)
-        return False
-
-    path = get_save_path(user_id)
-    tmp_path = f"{path}.tmp"
-    try:
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(serialize_game_state(state), f, ensure_ascii=False, indent=2)
-        os.replace(tmp_path, path)
-        return True
-    except Exception as exc:
-        logger.exception("Gagal menyimpan progress user %s: %s", user_id, exc)
-        try:
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
-        except Exception:
-            logger.exception("Gagal menghapus file temporary save untuk user %s", user_id)
-        return False
-
-
-def load_game_state(user_id: int) -> Optional[GameState]:
-    path = get_save_path(user_id)
-    if not os.path.exists(path):
-        return None
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except FileNotFoundError:
-        return None
-    except Exception as exc:
-        logger.exception("Gagal memuat progress user %s: %s", user_id, exc)
-        return None
-    try:
-        return GameState.from_dict(user_id=user_id, data=data)
-    except Exception as exc:
-        logger.exception("Gagal deserialisasi save user %s: %s", user_id, exc)
-        return None
-
-
-def maybe_autosave(state: GameState, reason: str = "checkpoint") -> None:
-    """Hook ringan untuk autosave di titik penting.
-
-    Aktifkan dengan menyetel AUTOSAVE_ENABLED=True. Untuk saat ini, kita hanya
-    mencatat kapan checkpoint tercapai agar mudah diaktifkan nanti.
-    """
-
-    if AUTOSAVE_ENABLED:
-        success = save_game_state(state.user_id, state)
-        if success:
-            logger.info("Autosave berhasil untuk user %s (%s)", state.user_id, reason)
-        else:
-            logger.warning("Autosave gagal untuk user %s (%s)", state.user_id, reason)
-    else:
-        logger.info("Autosave checkpoint tercapai untuk user %s (%s)", state.user_id, reason)
-
-
-def get_game_state(user_id: int) -> GameState:
-    state = USER_STATES.get(user_id)
-    if not state:
-        state = GameState(user_id=user_id)
-        state.ensure_aruna()
-        USER_STATES[user_id] = state
-    return state
-
-
-def get_user_lock(user_id: int) -> asyncio.Lock:
-    lock = USER_LOCKS.get(user_id)
-    if not lock:
-        lock = asyncio.Lock()
-        USER_LOCKS[user_id] = lock
-    return lock
-
-
 def xp_required_for_next_level(current_level: int) -> int:
     current_level = max(1, current_level)
     if current_level in LEVEL_XP:
@@ -1854,6 +1759,103 @@ def handle_after_battle_xp_and_level_up(state: GameState, total_xp: int, total_g
     if level_logs:
         logs.extend(level_logs)
     return logs
+
+
+def manual_targeting_enabled(state: GameState) -> bool:
+    """Placeholder to toggle manual target selection in the future."""
+    return bool(state.flags.get("MANUAL_TARGETING"))
+
+
+def clear_manual_target_request(state: GameState):
+    state.flags.pop("PENDING_TARGET", None)
+
+
+def make_char_buff_key(char_id: str) -> str:
+    return f"CHAR:{char_id}"
+
+
+def make_enemy_buff_key(index: int) -> str:
+    return f"ENEMY:{index}"
+
+
+def get_buff_target(state: GameState, key: str):
+    if not key:
+        return None
+    if key.startswith("CHAR:"):
+        cid = key.split(":", 1)[1]
+        return state.party.get(cid)
+    if key.startswith("ENEMY:"):
+        try:
+            idx = int(key.split(":", 1)[1])
+        except ValueError:
+            return None
+        if 0 <= idx < len(state.battle_enemies):
+            return state.battle_enemies[idx]
+    return None
+
+
+def adjust_stat_value(target: Any, stat: str, amount: int):
+    if target is None or amount == 0:
+        return
+    if isinstance(target, CharacterState):
+        current = getattr(target, stat, None)
+        if current is not None:
+            setattr(target, stat, current + amount)
+    elif isinstance(target, dict):
+        target[stat] = target.get(stat, 0) + amount
+
+
+def apply_temporary_modifier(
+    state: GameState, target_key: str, stat: str, amount: int, duration: int
+):
+    if amount == 0 or duration <= 0:
+        return
+    target = get_buff_target(state, target_key)
+    if target is None:
+        return
+    adjust_stat_value(target, stat, amount)
+    buffs = state.flags.setdefault("ACTIVE_BUFFS", {})
+    buffs.setdefault(target_key, []).append(
+        {
+            "stat": stat,
+            "amount": amount,
+            "turns": duration,
+        }
+    )
+
+
+def cleanse_character(state: GameState, char_id: str) -> int:
+    key = make_char_buff_key(char_id)
+    buffs = state.flags.get("ACTIVE_BUFFS", {}).get(key, [])
+    if not buffs:
+        return 0
+    target = state.party.get(char_id)
+    kept = []
+    removed = 0
+    for buff in buffs:
+        if buff["amount"] < 0:
+            adjust_stat_value(target, buff["stat"], -buff["amount"])
+            removed += 1
+        else:
+            kept.append(buff)
+    active = state.flags.get("ACTIVE_BUFFS", {})
+    if kept:
+        active[key] = kept
+    else:
+        active.pop(key, None)
+    return removed
+
+
+def clear_active_buffs(state: GameState):
+    active = state.flags.pop("ACTIVE_BUFFS", None)
+    if not active:
+        return
+    for key, buffs in active.items():
+        target = get_buff_target(state, key)
+        if target is None:
+            continue
+        for buff in buffs:
+            adjust_stat_value(target, buff["stat"], -buff["amount"])
 
 
 def reset_battle_flags(state: GameState):
