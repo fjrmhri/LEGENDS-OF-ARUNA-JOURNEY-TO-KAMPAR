@@ -3894,13 +3894,20 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         try:
             # BATTLE-related
-            if data.startswith("BATTLE_"):
+            battle_action_keys = {
+                "BATTLE_ATTACK",
+                "BATTLE_DEFEND",
+                "BATTLE_RUN",
+                "BATTLE_ITEM",
+                "BATTLE_SKILL_MENU",
+                "BATTLE_MENU",
+                "BATTLE_BACK",
+            }
+            action_key = data.split("|", 1)[0]
+            if action_key in battle_action_keys:
                 handled = True
                 if not state.in_battle:
                     await query.edit_message_text("Kamu tidak sedang dalam battle.")
-                    return
-                if data == "BATTLE_BACK":
-                    await send_battle_state(update, context, state)
                     return
                 await process_battle_action(update, context, state, data)
                 return
