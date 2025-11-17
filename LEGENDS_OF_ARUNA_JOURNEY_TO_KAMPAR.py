@@ -17,6 +17,8 @@ Cara pakai (singkat):
 NB: Untuk produksi, sebaiknya simpan state di database, bukan di memory seperti contoh ini.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
