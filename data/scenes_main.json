@@ -312,7 +312,7 @@
       "Febri: \"Aku tidak peduli! Jika dengan ini aku bisa membalikkan waktu dan menyelamatkannya... aku akan menanggung apa pun!\"",
       "Cahaya dan kegelapan bertubrukan. Harsan menggunakan Aruna Core untuk menahan ledakan, sementara bayangan Febri meraung.",
       "Suara Rusmini menggema lembut di kejauhan: \"Harsan... lindungi Aruna... jangan biarkan Abyss menyentuhnya.\"",
-      "Cahaya menelan semua. Harsan menghilang bersama segel sementara Febri terperangkap. Di kejauhan, bayi Aruna dibawa menjauh dari Kampar."
+      "Cahaya menelan semua. Harsan menghilang bersama segel sementara Febri terperangkap. Di kejauhan, Rusmini membawa bayi Aruna menuju perahu ke Selatpanjang, menyelipkan kalung Aruna Core dan meninggalkan petunjuk untuk menyatukan pedang keluarga kelak."
     ],
     "choices": [
       {
@@ -351,6 +351,7 @@
       "Di perpustakaan senyap Pekanbaru, seorang arsiparis menatap kalungmu lama sekali.",
       "Arsiparis: \"Kalungmu itu... aku pernah melihat simbol yang sama di relief tua.\"",
       "Arsiparis: \"Konon, simbol itu pernah terukir di sebuah pedang cahaya yang kini hilang.\"",
+      "Arsiparis: \"Itu bilah warisan keluarga Harsan. Mereka memisahkannya dari Aruna Core agar Abyss tidak melahap dunia; pedang itu tidak pernah diperjualbelikan di toko mana pun.\"",
       "Aruna: \"Kau tahu di mana pedang itu disembunyikan?\"",
       "Arsiparis: \"Antara Rengat dan Kampar ada Kuil Cahaya Terlupakan. Hanya Aruna Core yang bisa membuka jalur masuknya.\""
     ],
@@ -441,11 +442,12 @@
   "SQ_HARSAN_BLADE_VISION": {
     "text": [
       "Begitu Aruna menyentuhkan kalung ke pedang, Aruna Core memancarkan cahaya yang menyelimuti altar.",
-      "Harsan: \"Jika Febri atau Abyss mendapatkan pedang dan kalung dalam satu tempat, dunia akan runtuh.\"",
+      "Harsan: \"Jika Febri atau Abyss mendapatkan pedang dan kalung dalam satu tempat, dunia akan runtuh; kami memisahkannya demi menunda bencana.\"",
       "Rusmini: \"Kalau suatu hari keduanya bersatu kembali... biarlah itu terjadi karena takdir, bukan karena kerakusan.\"",
+      "Narasi: \"Kilatan memperlihatkan Rusmini menggendong bayi Aruna menuju Selatpanjang, sementara Harsan menyembunyikan pedang ini di altar jauh dari Aruna Core.\"",
       "Narasi: \"Cahaya dari kalung dan pedang menyatu, menghapus karat dan retakan.\"",
       "Narasi: \"Pedang itu tampak baru ditempa, memancarkan aura lembut namun tajam.\"",
-      "Sistem: \">> Kamu memperoleh: Pedang Warisan Harsan!\""
+      "Sistem: \">> Kamu memperoleh: Pedang Warisan Harsan — pedang warisan keluarga Harsan yang bangkit kembali saat bersatu dengan Aruna Core!\""
     ],
     "choices": [
       {
@@ -472,7 +474,7 @@
       "Kalung Aruna menyala menyilaukan. Kilasan masa lalu muncul seakan diproyeksikan dari Aruna Core.",
       "Harsan berdiri sebagai Penjaga Cahaya terakhir, sementara Febri menatapnya dengan mata yang dipenuhi iri.",
       "Febri: \"Kenapa kau yang selalu dipilih? Aku juga pantas merasakan kekuatan itu.\"",
-      "Untuk melindungi bayi Aruna, Harsan dan Rusmini memutuskan memisahkan pedang warisan dan kalung Aruna Core lalu menyerahkannya pada wali di Selatpanjang."
+      "Untuk melindungi bayi Aruna dan mencegah Abyss meledakkan dunia, Harsan dan Rusmini memutuskan memisahkan pedang warisan dan kalung Aruna Core lalu menyerahkannya pada wali di Selatpanjang."
     ],
     "choices": [
       {
@@ -591,6 +593,7 @@
       "Febri: \"Harsan... kau akhirnya datang kembali?\"",
       "Aruna: \"Aku bukan ayahku. Aku Aruna, putra Harsan. Dan aku akan mengakhiri ini!\"",
       "Febri tertawa: \"Hahaha... jadi anak kecil itu masih hidup. Ayahmu mengorbankan segalanya demi kamu. Seharusnya kaulah yang mati saat itu!\"",
+      "Febri: \"Aku hanya ingin memutar waktu dan menyelamatkannya... tapi Harsan dan guruku menutup jalannya, memaksaku merengkuh Abyss!\"",
       "Detak Aruna Core mengingatkanmu pada luka Umar dan Reza; menyembuhkan mereka mungkin kunci akhir yang berbeda."
     ],
     "choices": [
@@ -610,6 +613,19 @@
       {
         "label": "Gunakan cahaya untuk menentukan akhir",
         "next_scene": "RESOLVE_ENDING"
+      }
+    ]
+  },
+  "RESOLVE_ENDING": {
+    "text": [
+      "Aruna Core bergetar di tanganmu, mengingatkanmu pada sumpah Harsan untuk melindungi dunia tanpa kebencian.",
+      "Jika Warisan Safiya dan Suara dari Segel telah tuntas, niat Umar dan Reza beresonansi, membuka celah bagi Febri menemukan kembali kemanusiaannya.",
+      "Jika belum, cahaya hanya mampu menghancurkan iblis yang lahir dari keputusasaannya."
+    ],
+    "choices": [
+      {
+        "label": "Biarkan Aruna Core memilih jalannya",
+        "callback_data": "TRUE_ENDING_TRIGGER"
       }
     ]
   },
