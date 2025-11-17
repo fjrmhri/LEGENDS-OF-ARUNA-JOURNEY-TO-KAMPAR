@@ -924,542 +924,54 @@ CHAR_SKILL_UNLOCKS = {
     ],
 }
 
-# Scene/story ID sesuai GDD
-SCENE_DATA = {
-    # PROLOG SELATPANJANG
-    "CH0_S1": {
-        "text": (
-            "Selatpanjang, kota pelabuhan kecil di selatan.\n"
-            "Di sebuah rumah kayu sederhana, seorang pemuda bernama Aruna memandang laut yang memerah oleh senja.\n\n"
-            "Paman: \"Aruna, sudah waktunya makan. Jangan bengong terus di depan jendela.\"\n"
-            "Aruna: \"Iya, Paman. Entah kenapa... hari ini terasa berbeda.\"\n"
-            "Paman: \"Kalau berbeda, berarti sesuatu akan berubah. Nikmati saja makan malammu.\""
-        ),
-        "choices": [("Lanjut", "CH0_S2")],
-    },
-    "CH0_S2": {
-        "text": (
-            "Malam turun. Aruna duduk di ranjang, memegang kalung bercahaya lembut yang selalu menggantung di lehernya.\n"
-            "Paman: \"Suatu hari, kau akan mengerti kenapa kalung itu penting. Tapi belum sekarang.\"\n"
-            "Kalung berpendar lemah.\n"
-            "Aruna: \"Kalung ini... satu-satunya peninggalan Harsan dan Rusmini. Siapa kalian sebenarnya?\"\n"
-            "Paman hanya tersenyum getir.\n"
-        ),
-        "choices": [("Kalung itu menyala...", "CH0_S3")],
-    },
-    "CH0_S3": {
-        "text": (
-            "Jeritan memecah malam. Tanah bergetar dan udara dipenuhi bau belerang.\n"
-            "Penduduk: \"MONSTER!! LARI!!\"\n"
-            "Aruna berlari keluar dan melihat bayangan besar di kejauhan: Shadow Fiend.\n"
-            "Paman: \"Aruna! Mundur! Itu bukan monster biasa!\"\n"
-            "Aruna: \"Aku tidak bisa diam saja! Mereka butuh bantuan!\"\n"
-            "Paman: \"Mulai dari minion-nya! Habisi Shadow Slime itu!\"\n\n"
-            ">> Battle tutorial melawan Shadow Slime."
-        ),
-        "choices": [("Hadapi Shadow Slime", "BATTLE_TUTORIAL_1")],
-    },
-    "CH0_S4_POST_BATTLE": {
-        "text": (
-            "Setelah mengalahkan Shadow Slime, kamu kembali ke rumah. Dinding runtuh dan paman tergeletak, napasnya tersengal.\n"
-            "Paman: \"Dengarkan aku... pergilah ke barat, ke Siak. Di sana kebenaranmu menunggu. Kau keturunan Penjaga Cahaya...\"\n"
-            "Kalung menyala terang.\n"
-            "Paman: \"Teruslah berjalan sampai Kampar... di sanalah takdirmu...\"\n"
-            "Tangannya terkulai. Di luar, suara monster memudar."
-        ),
-        "choices": [("Pegang janji terakhirnya", "CH0_S5")],
-    },
-    "CH0_S5": {
-        "text": (
-            "Fajar menyingsing. Dengan tas kecil dan kalung bercahaya di dada, Aruna berdiri di tepi pelabuhan.\n"
-            "Aruna: \"Paman... aku janji. Aku akan ke Siak. Aku akan cari kebenaran, dan aku akan mengakhiri kegelapan ini.\"\n\n"
-            ">> MAIN QUEST: Pergi ke Siak (Lv 2)."
-        ),
-        "choices": [("Buka world map", "GO_TO_WORLD_MAP")],
-    },
+# STORY DATA LOADER
+# Story/story data diambil dari file eksternal
+SCENE_FILES = [os.path.join("data", "scenes_main.json")]
+SCENES: Dict[str, Dict[str, Any]] = {}
 
-    # SIAK & UMAR
-    "CH1_SIAK_ENTRY": {
-        "text": (
-            "Kamu tiba di gerbang Siak. Sungai tenang membelah kota panggung kayu.\n"
-            "Penjaga: \"Selamat datang di Kota Siak. Di dalam kota tidak ada monster, jadi manfaatkan untuk istirahat dan bekerja.\""
-        ),
-        "choices": [("Masuk kota", "SIAK_CITY_MENU")],
-    },
-    "CH1_UMAR_CLINIC": {
-        "text": (
-            "Klinik sederhana itu dipenuhi aroma herbal. Seorang pemuda healer menyambutmu.\n"
-            "Umar: \"Selamat datang di klinik Safiya. Kau tampak babak belur. Monster di jalan, ya?\"\n"
-            "Kalungmu tiba-tiba berpendar dan Umar menatap serius."
-        ),
-        "choices": [
-            ("Tanya tentang simbol itu", "CH1_UMAR_CORE"),
-            ("Tetap diam", "CH1_UMAR_CORE"),
-        ],
-    },
-    "CH1_UMAR_CORE": {
-        "text": (
-            "Umar: \"Kalung itu simbol Aruna Core. Ibuku, Safiya, pernah menolong Penjaga Cahaya yang membawa simbol yang sama.\"\n"
-            "Aruna: \"Kampar... lagi-lagi nama itu.\"\n"
-            "Umar: \"Ibu meninggalkan pesan: 'Jika pembawa cahaya datang, bantu dia apapun yang terjadi.' Aku yakin orang itu adalah kamu.\"\n\n"
-            ">> Umar bergabung sebagai healer party."
-        ),
-        "choices": [("Lanjut", "SIAK_CITY_MENU_AFTER_UMAR")],
-    },
-    "CH1_GATE_ALERT": {
-        "text": (
-            "Alarm kota meraung. Para penjaga berlari menuju gerbang kayu.\n"
-            "Penjaga: \"Monster bayangan menyerang gerbang! Siapapun yang bisa bertarung, ikut kami!\"\n"
-            "Umar: \"Aruna! Ini kesempatan membuktikan kenapa aku harus ikut kamu.\""
-        ),
-        "choices": [("Bantu penjaga Siak", "BATTLE_SIAK_GATE")],
-    },
-    "CH1_GATE_AFTER": {
-        "text": (
-            "Shadow Bandit terakhir jatuh. Para penjaga bersorak lega.\n"
-            "Penjaga: \"Kalian menyelamatkan kami. Terima kasih!\"\n"
-            "Umar: \"Keputusan sudah jelas. Aku akan ikutmu sampai Kampar.\"\n"
-            "Aruna: \"Kenapa sejauh itu?\"\n"
-            "Umar: \"Ibu meninggal dengan penyesalan. Aku tidak akan membiarkan warisan Safiya hilang.\""
-        ),
-        "choices": [("Bicara dengan Umar", "CH1_POINTER_RENGAT")],
-    },
-    "CH1_POINTER_RENGAT": {
-        "text": (
-            "Umar: \"Kalau soal Kampar dan Penjaga Cahaya, hanya ada satu nama di kepalaku: Reza, penyihir agung dari Rengat.\"\n"
-            "Aruna: \"Penyihir?\"\n"
-            "Umar: \"Katanya ia punya hubungan langsung dengan Kampar. Jika ada yang tahu masa lalumu, itu dia.\"\n\n"
-            ">> MAIN QUEST diperbarui: Pergi ke Rengat (Lv 5)."
-        ),
-        "choices": [("Buka world map", "SET_MAIN_RENGAT")],
-    },
 
-    # RENGAT & REZA
-    "CH2_RENGAT_GATE": {
-        "text": (
-            "Aura magis menyelimuti gerbang Rengat. Rune bercahaya mengambang di udara.\n"
-            "Penjaga: \"Selamat datang di kota para penyihir. Banyak yang datang belajar, tapi mereka yang berjalan ke Kampar... tidak pernah kembali.\"\n"
-            "Penjaga: \"Kampar memakan para penyihir kami. Kalau kalian ke sini untuk main-main, pulanglah sebelum terlambat.\""
-        ),
-        "choices": [("Masuki kota magis", "CH2_REZA_TOWER")],
-    },
-    "CH2_REZA_TOWER": {
-        "text": (
-            "Menara batu sunyi menjulang. Reza menatapmu dari balik buku tebal.\n"
-            "Reza: \"Aku tidak punya waktu mengantar petualang menuju neraka Kampar. Pulanglah sebelum kau ikut lenyap.\"\n"
-            "Aruna: \"Kami tidak mencari guru. Kami mencari kebenaran tentang Kampar.\"\n"
-            "Kalungmu kembali berpendar terang, memantulkan simbol yang pernah ia lihat."
-        ),
-        "choices": [("Tunjukkan kalung Aruna Core", "CH2_REZA_REVEAL")],
-    },
-    "CH2_REZA_REVEAL": {
-        "text": (
-            "Reza (tertegun): \"Kalung itu... simbol Aruna Core. Dari mana kau mendapatkannya?\"\n"
-            "Aruna: \"Ini satu-satunya peninggalan dari orang tuaku.\"\n"
-            "Reza: \"Guruku menyerahkannya pada Harsan, Penjaga Cahaya terakhir. Simbol ini adalah inti Aruna Core.\"\n"
-            "Reza menatap tajam: \"Jika ini kalung yang sama... berarti kau adalah anak Harsan.\""
-        ),
-        "choices": [("Dengar cerita lebih jauh", "CH2_REZA_PAST")],
-    },
-    "CH2_REZA_PAST": {
-        "text": (
-            "Reza: \"Lima belas tahun lalu, Harsan—ayahmu—berangkat ke Kampar mengejar muridnya sendiri, Febri.\"\n"
-            "Reza: \"Febri adalah murid berbakat, tapi ia mengkhianati guruku demi kekuatan terlarang Abyss. Ia percaya bisa membalikkan waktu dan menyelamatkan seseorang.\"\n"
-            "Reza: \"Harsan mencoba menghentikannya sebagai Penjaga Cahaya terakhir, tapi sejak itu tak ada kabar dari mereka.\"\n"
-            "Umar: \"Jadi Kampar berubah karena ambisi satu orang?\"\n"
-            "Reza: \"Ambisi dan keputusasaan. Abyss selalu meminta harga.\"\n"
-            "Tiba-tiba tanah bergetar. Suara berat mendekat dari hutan magis. Para penyihir berteriak ketakutan.\n"
-        ),
-        "choices": [("Apa itu?!", "CH2_GOLEM_ALERT")],
-    },
-    "CH2_GOLEM_ALERT": {
-        "text": (
-            "NPC: \"Golem hutan datang lagi!\"\n"
-            "Reza: \"Dia dulu penjaga rimba Rengat. Aura Kampar membuatnya gila.\"\n"
-            "Umar: \"Kalau begitu kita bebaskan dia dari kutukan Abyss.\""
-        ),
-        "choices": [("Lindungi Rengat", "BATTLE_RENGAT_GOLEM")],
-    },
-    "CH2_GOLEM_AFTER": {
-        "text": (
-            "Corrupted Forest Golem runtuh dan kembali tenang. Cahaya Aruna Core menenangkan tanah yang retak.\n"
-            "Reza: \"Kekuatan kalian... tidak buruk. Tanpa Aruna Core, segel Abyss di sini pasti jebol.\"\n"
-            "Umar: \"Jadi kau akan ikut?\"\n"
-            "Reza: \"Guruku mungkin masih terjerat di Kampar. Hanya Aruna Core milik keturunan Harsan yang bisa menembus segel itu. Aku ikut.\""
-        ),
-        "choices": [("Biarkan Reza bergabung", "ADD_REZA_PARTY")],
-    },
-    "CH2_REZA_JOINS": {
-        "text": (
-            "Reza resmi bergabung dalam party. Cahaya Aruna Core terasa lebih stabil.\n"
-            "Reza: \"Sebelum Kampar, kita perlu menguatkan diri di Pekanbaru. Itu kota besar terakhir sebelum neraka.\"\n"
-            "Reza: \"Di sana mungkin ada orang yang tahu kenapa Febri memilih jalan Abyss, dan kenapa banyak penyihir Rengat hilang.\""
-        ),
-        "choices": [("Rencanakan perjalanan", "CH2_PEKANBARU_POINTER")],
-    },
-    "CH2_PEKANBARU_POINTER": {
-        "text": (
-            "Reza: \"Kumpulkan gear terbaik di Pekanbaru. Dengarkan rumor tentang Febri di sana.\"\n\n"
-            ">> MAIN QUEST: Pergi ke Pekanbaru (Lv 8)."
-        ),
-        "choices": [("Buka world map", "SET_MAIN_PEKANBARU")],
-    },
+def load_scenes(paths: Optional[List[str]] = None) -> None:
+    """Muat semua file scene eksternal ke dalam kamus global SCENES."""
 
-    # PEKANBARU
-    "CH3_PEKANBARU_ENTRY": {
-        "text": (
-            "Pekanbaru terlihat muram. Toko-toko tutup lebih awal dan orang-orang berbisik tentang Kampar.\n"
-            "NPC: \"Kampar bukan lagi kota. Itu neraka.\"\n"
-            "NPC lain: \"Kota itu memanggil siapapun yang punya cahaya... lalu menelannya. Kastil hitam muncul begitu saja.\""
-        ),
-        "choices": [("Cari informasi di kafe gelap", "CH3_PEKANBARU_CAFE")],
-    },
-    "CH3_PEKANBARU_CAFE": {
-        "text": (
-            "Kafe remang penuh asap. Seorang orang tua menatap kalungmu lama sekali.\n"
-            "Orang Tua: \"Kalung cahaya itu... sudah lama sekali aku tak melihat simbol seperti itu.\"\n"
-            "Orang Tua: \"Dulu, aku melihat Febri sebelum ia berubah. Ia masih manusia, murid penyihir agung dari Rengat.\"\n"
-            "Reza (terkejut): \"Itu... guruku. Jadi Febri adalah murid guruku.\"\n"
-            "Orang Tua: \"Febri ingin membalikkan waktu untuk menyelamatkan seseorang. Ia mengejar kekuatan Abyss dan perlahan tubuhnya berubah menjadi iblis.\"\n"
-            "Orang Tua: \"Kau membawa cahaya yang sama dengan gurunya. Kalau ke Kampar, jangan terjebak ambisi yang sama.\""
-        ),
-        "choices": [("Biarkan cerita mengalir", "CH3_DREAM")],
-    },
-    "CH3_DREAM": {
-        "text": (
-            "Malam itu Aruna bermimpi. Harsan berdiri di hadapan Febri muda di tengah ritual Abyss.\n"
-            "Harsan: \"Berhentilah, Febri! Kekuatan itu bukan milik manusia.\"\n"
-            "Febri: \"Aku tidak peduli! Jika dengan ini aku bisa membalikkan waktu dan menyelamatkannya... aku akan menanggung apa pun!\"\n"
-            "Cahaya dan kegelapan bertubrukan. Harsan menggunakan Aruna Core untuk menahan ledakan, sementara bayangan Febri meraung.\n"
-            "Suara Rusmini menggema lembut di kejauhan: \"Harsan... lindungi Aruna... jangan biarkan Abyss menyentuhnya.\"\n"
-            "Cahaya menelan semua. Harsan menghilang bersama segel sementara Febri terperangkap. Di kejauhan, bayi Aruna dibawa menjauh dari Kampar."
-        ),
-        "choices": [("Bangun dari mimpi", "CH3_WAKE")],
-    },
-    "CH3_WAKE": {
-        "text": (
-            "Aruna terbangun berkeringat, kalungnya berpendar kuat.\n"
-            "Aruna: \"Aku melihat ayahku. Dia menyegel Febri dengan Aruna Core... lalu lenyap.\"\n"
-            "Reza: \"Seal itu melemah. Kampar memanggilmu. Jika kita terlambat, Abyss akan bangkit penuh.\""
-        ),
-        "choices": [("Terima panggilan Kampar", "CH3_KAMPAR_POINTER")],
-    },
-    "CH3_KAMPAR_POINTER": {
-        "text": (
-            ">> MAIN QUEST: Pergi ke Kampar – Kota Terkutuk (Lv 12).\n"
-            "Umar: \"Apapun yang menunggu di sana, kita hadapi bersama.\""
-        ),
-        "choices": [("Buka world map", "SET_MAIN_KAMPAR")],
-    },
+    global SCENES
+    paths = paths or SCENE_FILES
+    loaded: Dict[str, Dict[str, Any]] = {}
+    for path in paths:
+        if not os.path.exists(path):
+            logger.warning("Scene file tidak ditemukan: %s", path)
+            continue
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.error("Gagal memuat scene file %s: %s", path, exc)
+            continue
+        if not isinstance(data, dict):
+            logger.warning("Format scene file tidak valid (harus dict): %s", path)
+            continue
+        for scene_id, scene_data in data.items():
+            text_lines = scene_data.get("text", [])
+            if isinstance(text_lines, str):
+                text_lines = text_lines.split("\n")
+            choices_raw = scene_data.get("choices", [])
+            choices: List[Dict[str, str]] = []
+            for choice in choices_raw:
+                if not isinstance(choice, dict):
+                    continue
+                label = choice.get("label")
+                next_scene = choice.get("next_scene")
+                if label and next_scene:
+                    choices.append({"label": label, "next_scene": next_scene})
+            loaded[scene_id] = {"text": text_lines, "choices": choices}
+    SCENES = loaded
 
-    "SQ_HARSAN_BLADE_INTRO": {
-        "text": (
-            "Di perpustakaan senyap Pekanbaru, seorang arsiparis menatap kalungmu lama sekali.\n"
-            "Arsiparis: \"Kalungmu itu... aku pernah melihat simbol yang sama di relief tua.\"\n"
-            "Arsiparis: \"Konon, simbol itu pernah terukir di sebuah pedang cahaya yang kini hilang.\"\n"
-            "Aruna: \"Kau tahu di mana pedang itu disembunyikan?\"\n"
-            "Arsiparis: \"Antara Rengat dan Kampar ada Kuil Cahaya Terlupakan. Hanya Aruna Core yang bisa membuka jalur masuknya.\""
-        ),
-        "choices": [
-            ("Menuju kuil cahaya terlupakan", "SQ_HARSAN_SHRINE_TRAVEL"),
-            ("Kembali ke Pekanbaru", "BACK_CITY_MENU"),
-        ],
-    },
-    "SQ_HARSAN_SHRINE_TRAVEL": {
-        "text": (
-            "Perjalanan mengikuti sungai berkabut membawamu ke celah batu bertanda simbol Harsan.\n"
-            "Reza: \"Ini di luar rute biasa antara Rengat dan Kampar. Tidak ada pedagang yang lewat.\"\n"
-            "Umar: \"Kalau ini jebakan Abyss, kita siap?\"\n"
-            "Aruna: \"Kuil itu memanggil kalungku. Pedang itu harus kembali ke tuannya.\""
-        ),
-        "choices": [
-            ("Masuki Kuil Cahaya Terlupakan", "SQ_HARSAN_BLADE_SHRINE"),
-            ("Kembali ke Pekanbaru", "BACK_CITY_MENU"),
-        ],
-    },
-    "SQ_HARSAN_BLADE_SHRINE": {
-        "text": (
-            "Kuil Cahaya Terlupakan sunyi. Pilar berlumut menampilkan relief Harsan dan Rusmini memisahkan pedang dari kalung.\n"
-            "Di tengah aula ada empat tumpuan batu yang redup. Kalung Aruna berpendar seolah bereaksi, memanggil jalan tersembunyi."
-        ),
-        "choices": [
-            ("Tempelkan Aruna Core pada tumpuan", "SQ_HARSAN_SHRINE_PILLARS"),
-            ("Keluar dari kuil", "BACK_CITY_MENU"),
-        ],
-    },
-    "SQ_HARSAN_SHRINE_PILLARS": {
-        "text": (
-            "Saat Aruna menyentuhkan kalungnya, setiap tumpuan memancarkan pola cahaya yang menyusun gerbang altar.\n"
-            "Narasi: \"Kalung Aruna memancarkan cahaya yang sama dengan simbol di gagang pedang.\"\n"
-            "Aruna: \"Seolah-olah... mereka saling memanggil.\"\n"
-            "Namun bayangan Abyss merembes dari sela batu, membentuk sosok gelap."
-        ),
-        "choices": [
-            ("Hadapi bayangan penjaga", "BATTLE_ABYSS_SHADE"),
-            ("Tarik napas dan mundur", "SQ_HARSAN_BLADE_SHRINE"),
-        ],
-    },
-    "SQ_HARSAN_SHRINE_CORE": {
-        "text": (
-            "Cahaya tumpuan menyatu membuka jalan ke ruang terdalam. Di sana, sebuah pedang kusam tergeletak di altar berdebu.\n"
-            "Umar: \"Tidak ada jebakan lain? Seakan pedang itu menunggu.\"\n"
-            "Reza: \"Energi cahaya dan Abyss bercampur di sini. Jangan ragu, Aruna.\""
-        ),
-        "choices": [
-            ("Bangunkan penjaga cahaya", "BATTLE_HARSAN_SENTINEL"),
-            ("Sentuhkan kalung ke pedang", "SQ_HARSAN_BLADE_VISION"),
-            ("Kembali ke Pekanbaru", "BACK_CITY_MENU"),
-        ],
-    },
-    "SQ_HARSAN_BLADE_VISION": {
-        "text": (
-            "Begitu Aruna menyentuhkan kalung ke pedang, Aruna Core memancarkan cahaya yang menyelimuti altar.\n"
-            "Harsan: \"Jika Febri atau Abyss mendapatkan pedang dan kalung dalam satu tempat, dunia akan runtuh.\"\n"
-            "Rusmini: \"Kalau suatu hari keduanya bersatu kembali... biarlah itu terjadi karena takdir, bukan karena kerakusan.\"\n"
-            "Narasi: \"Cahaya dari kalung dan pedang menyatu, menghapus karat dan retakan.\"\n"
-            "Narasi: \"Pedang itu tampak baru ditempa, memancarkan aura lembut namun tajam.\"\n"
-            "Sistem: \">> Kamu memperoleh: Pedang Warisan Harsan!\""
-        ),
-        "choices": [("Kembali ke Pekanbaru", "BACK_CITY_MENU")],
-    },
 
-    # KAMPAR
-    "CH4_KAMPAR_ENTRY": {
-        "text": (
-            "Begitu melewati perbatasan Kampar, langit kehilangan warnanya. Rumah-rumah hancur, jalan retak, tak ada suara manusia.\n"
-            "Umar: \"Aku tidak merasakan satu pun kehidupan...\"\n"
-            "Reza: \"Ini adalah napas Abyss. Kota ini sudah mati, tapi segelnya memanggil kita. Tidak ada toko, tidak ada warga... hanya kutukan.\""
-        ),
-        "choices": [("Biarkan kalung memandu", "CH4_FLASHBACK")],
-    },
-    "CH4_FLASHBACK": {
-        "text": (
-            "Kalung Aruna menyala menyilaukan. Kilasan masa lalu muncul seakan diproyeksikan dari Aruna Core.\n"
-            "Harsan berdiri sebagai Penjaga Cahaya terakhir, sementara Febri menatapnya dengan mata yang dipenuhi iri.\n"
-            "Febri: \"Kenapa kau yang selalu dipilih? Aku juga pantas merasakan kekuatan itu.\"\n"
-            "Untuk melindungi bayi Aruna, Harsan dan Rusmini memutuskan memisahkan pedang warisan dan kalung Aruna Core lalu menyerahkannya pada wali di Selatpanjang."
-        ),
-        "choices": [("Teruskan penglihatan", "CH4_FLASHBACK_2")],
-    },
-    "CH4_FLASHBACK_2": {
-        "text": (
-            "Flashback berlanjut. Febri membuat perjanjian dengan Abyss, memanggil kastil hitam dari tanah Kampar.\n"
-            "Harsan: \"Rusmini... jika aku tidak kembali, lindungi Aruna.\"\n"
-            "Rusmini: \"Jika dunia menuntut pengorbanan kita, jangan biarkan ia ikut terbakar.\"\n"
-            "Harsan menahan ledakan kegelapan dengan Aruna Core, menyegel Febri sementara dan menghilang bersama cahaya.\n"
-            "Bayangan pendulum kalung menarikmu ke pusat kota yang kini hanya tersisa kastil hitam. Langkahmu otomatis menuju gerbangnya."
-        ),
-        "choices": [("Menuju kastil Febri", "CH4_CASTLE_APPROACH")],
-    },
-    "CH4_CASTLE_APPROACH": {
-        "text": (
-            "Kastil hitam menjulang di tengah Kampar, seolah mencakar langit. Pintu gerbangnya terbuka seperti undangan.\n"
-            "Umar: \"Di sanalah semuanya akan berakhir.\"\n"
-            "Reza: \"Atau dimulai lagi dari awal.\""
-        ),
-        "choices": [("Masuk ke Kastil Febri", "CH5_CASTLE_ENTRY")],
-    },
+def get_scene(scene_id: str) -> Optional[Dict[str, Any]]:
+    return SCENES.get(scene_id)
 
-    # KASTIL FEBRI
-    "CH5_CASTLE_ENTRY": {
-        "text": (
-            "Lantai 1 – Koridor Bayangan. Dinding hidup dan bayangan merayap mengikuti langkahmu, setiap langkah seperti menguras stamina.\n"
-            "Umar: \"Monster di sini jauh lebih kuat dari luar.\"\n"
-            "Reza: \"Ini baru pintu depan. Jangan lengah. Jalan kembali tidak ada.\""
-        ),
-        "choices": [("Terus ke Balai Kekosongan", "CH5_FLOOR2")],
-    },
-    "CH5_FLOOR2": {
-        "text": (
-            "Lantai 2 – Balai Kekosongan. Hound of Void menatap dengan mata ungu menyala dan taring meneteskan kabut hitam.\n"
-            "Umar: \"Aura kegelapannya membuat napasku sesak!\"\n"
-            "Reza: \"Ini penjaga pertama Abyss. Jangan biarkan dia memisahkan kita.\""
-        ),
-        "choices": [("Hadapi Hound of Void", "BATTLE_HOUND_OF_VOID")],
-    },
-    "CH5_FLOOR2_AFTER": {
-        "text": (
-            "Hound of Void runtuh. Cakar terakhirnya hampir merobek Umar, tapi Aruna Core memancarkan cahaya dan menyembuhkannya.\n"
-            "Umar: \"Aku... tidak boleh mati di sini. Aku masih punya janji pada ibuku...\"\n"
-            "Sistem: \"Aruna Core bereaksi! Umar dipulihkan oleh Cahaya Aruna.\""
-        ),
-        "choices": [("Naik ke Ruang Segel Lama", "CH5_FLOOR3")],
-    },
-    "CH5_FLOOR3": {
-        "text": (
-            "Ruang segel lama dipenuhi rune retak. Di tengahnya hanya tersisa jubah tua dan lingkaran rune yang patah.\n"
-            "Reza: \"...Ini jubah guruku. Febri... kau bahkan memakan jiwanya.\"\n"
-            "Reza menatap Aruna: \"Mulai sekarang, aku bersumpah melindungimu sampai akhir.\""
-        ),
-        "choices": [("Buka Gerbang Takdir", "CH5_FLOOR4")],
-    },
-    "CH5_FLOOR4": {
-        "text": (
-            "Void Sentinel, armor besar tanpa tubuh, melayang di depan gerbang terakhir.\n"
-            "Febri (suara bergema): \"Kalian benar-benar datang sejauh ini hanya untuk mati di hadapanku?\""
-        ),
-        "choices": [("Hancurkan Void Sentinel", "BATTLE_VOID_SENTINEL")],
-    },
-    "CH5_FLOOR4_AFTER": {
-        "text": (
-            "Sentinel runtuh. Energi gelap berputar membuka jalan menuju tahta.\n"
-            "Umar: \"Itu dia... akhir segala mimpi buruk.\""
-        ),
-        "choices": [("Masuki Tahta Kegelapan", "CH5_FLOOR5")],
-    },
-    "CH5_FLOOR5": {
-        "text": (
-            "Tahta Kegelapan – Febri berdiri dengan tubuh setengah manusia setengah iblis.\n"
-            "Febri: \"Harsan... kau akhirnya datang kembali?\"\n"
-            "Aruna: \"Aku bukan ayahku. Aku Aruna, putra Harsan. Dan aku akan mengakhiri ini!\"\n"
-            "Febri tertawa: \"Hahaha... jadi anak kecil itu masih hidup. Ayahmu mengorbankan segalanya demi kamu. Seharusnya kaulah yang mati saat itu!\"\n"
-            "Detak Aruna Core mengingatkanmu pada luka Umar dan Reza; menyembuhkan mereka mungkin kunci akhir yang berbeda."
-        ),
-        "choices": [("Pertarungan terakhir", "BATTLE_FEBRI")],
-    },
-    "CH5_FINAL_WIN": {
-        "text": (
-            "Febri jatuh berlutut. Aura Abyss goyah.\n"
-            "Febri: \"Harsan... maafkan aku...\"\n"
-            "Aruna memegang Aruna Core yang menyala hebat. Saatnya menentukan akhir perang ini."
-        ),
-        "choices": [("Gunakan cahaya untuk menentukan akhir", "RESOLVE_ENDING")],
-    },
 
-    # ENDINGS
-    "GOOD_ENDING": {
-        "text": (
-            "Cahaya Aruna Core menghancurkan Febri yang sudah menjadi iblis sepenuhnya. Ia lenyap tanpa kata maaf.\n"
-            "Kampar perlahan pulih, tapi luka Abyss masih menganga. Aura gelap di sudut-sudut kota menunggu waktu untuk sembuh.\n"
-            "Aruna kembali ke Selatpanjang sebagai Penjaga Cahaya baru. Umar membuka klinik besar di Siak, Reza memimpin akademi sihir Rengat.\n"
-            "Namun jauh di dalam hati, kau tahu ada cara yang lebih damai... jika saja luka lama bisa disembuhkan."
-        ),
-        "choices": [("Kembali menjelajah", "GO_TO_WORLD_MAP")],
-    },
-    "TRUE_ENDING": {
-        "text": (
-            "Aruna menggunakan Aruna Core bukan untuk membunuh, tapi untuk menyegel Febri tanpa kebencian.\n"
-            "Febri kembali manusia sejenak: \"Harsan... Aruna... maafkan aku...\"\n"
-            "Aruna: \"Ayahku tidak ingin kau mati. Dia ingin kau berhenti tenggelam dalam kebencian.\"\n"
-            "Segel cahaya menenangkan Abyss. Kampar pulih sepenuhnya; kastil hitam runtuh menjadi serpihan cahaya.\n"
-            "Umar dan Reza menutup penyesalan masa lalu, dan dunia memiliki Penjaga Cahaya yang memilih belas kasih."
-        ),
-        "choices": [("Nikmati kedamaian", "GO_TO_WORLD_MAP")],
-    },
-    "BAD_ENDING": {
-        "text": (
-            "Teriakan Aruna tenggelam dalam tawa Febri. Kampar tidak lagi sekadar kota terkutuk—ia menjadi pusat kegelapan yang menelan dunia.\n"
-            "Kegelapan menyebar. Siak, Rengat, Pekanbaru tumbang satu per satu. Umar dan Reza gugur, Aruna Core hancur.\n"
-            "Febri menjadi dewa Abyss, dan hanya kenangan tentang cahaya yang tersisa di dunia yang runtuh."
-        ),
-        "choices": [("Bangkit dari kegagalan", "GO_TO_WORLD_MAP")],
-    },
-
-    # SIDE QUEST UMAR
-    "SQ_UMAR_INTRO": {
-        "text": (
-            "Begitu Umar bergabung, rumor baru terdengar di Siak.\n"
-            "NPC: \"Kau anak Safiya, bukan? Ada keluarga di ujung kota yang masih menyalahkannya atas kematian anak mereka.\"\n"
-            "Umar menunduk sejenak, menggenggam tongkat warisan Safiya."
-        ),
-        "choices": [("Temui keluarga tersebut", "SQ_UMAR_FAMILY")],
-    },
-    "SQ_UMAR_FAMILY": {
-        "text": (
-            "Rumah panggung di ujung kota terasa dingin. Tatapan keluarga itu menusuk.\n"
-            "Orang Tua: \"Safiya... mereka memujanya sebagai penyembuh hebat. Tapi anak kami mati di tangannya.\"\n"
-            "Orang Tua: \"Sekarang kau datang membawa namanya?\"\n"
-            "Umar: \"Ibu tidak pernah memilih siapa yang diselamatkan. Ia hanya punya satu tubuh, satu jiwa...\"\n"
-            "Umar: \"Jika seseorang mati di pelukannya, itu bukan karena ia tidak peduli. Tapi karena dunia terlalu kejam.\""
-        ),
-        "choices": [("Apa yang sebenarnya terjadi?", "SQ_UMAR_CHILD")],
-    },
-    "SQ_UMAR_CHILD": {
-        "text": (
-            "Dari balik pintu terdengar batuk kecil. Ada anak lain yang terbaring pucat.\n"
-            "Orang Tua: \"Kami sudah lama takut... Anak kami yang tersisa kini demam aneh.\"\n"
-            "Umar: \"Biarkan aku mencoba menolong. Kalau aku gagal, kebencian itu cukup padaku.\"\n"
-            "Untuk meracik obat, Umar butuh herb langka di rawa Siak. Kabarnya, rawa itu kini dikuasai monster yang melindungi tanaman suci."
-        ),
-        "choices": [("Cari ramuan dan hadapi apa pun di rawa", "SQ_UMAR_MINIDUNGEON")],
-    },
-    "SQ_UMAR_MINIDUNGEON": {
-        "text": (
-            "Rawa berkabut di pinggir Siak terasa berat. Cahaya samar dari herb suci terhalang akar hitam dan monster yang berpatroli.\n"
-            "Umar: \"Ibu, bimbing aku. Aku harus membuka jalan pengobatan ini.\""
-        ),
-        "choices": [("Hadapi penjaga herb", "BATTLE_UMAR_HERB")],
-    },
-    "SQ_UMAR_HEAL": {
-        "text": (
-            "Herb suci berubah menjadi ramuan hangat di tangan Umar. Cahaya lembut menyelimuti anak yang sakit.\n"
-            "Umar: \"Ibu selalu bilang, 'Kalau bisa menyelamatkan satu nyawa lagi, lakukan.' Ini warisan yang ingin kubawa.\"\n"
-            "Orang Tua terisak melihat napas anaknya stabil.\n"
-            "Orang Tua: \"Kalau kau benar-benar anak Safiya... kau baru saja membuktikan bahwa hatinya hidup di dalam dirimu.\"\n"
-            "Orang Tua: \"Maafkan kami... sudah membenci orang yang hanya ingin menolong.\"\n"
-            "Umar: \"Ibu akan senang mendengar kalian memaafkannya. Meski... ia sudah tidak di sini lagi.\""
-        ),
-        "choices": [("Wariskan berkah Safiya", "COMPLETE_UMAR_QUEST")],
-    },
-    "SQ_UMAR_REWARD": {
-        "text": (
-            "Umar menatap langit Siak, membayangkan Safiya tersenyum.\n"
-            "Umar: \"Warisan Safiya bukan hanya ramuan—ini keberanian menolong meski disalahpahami.\"\n"
-            "(Umar mempelajari ultimate: Grace Safiya.)"
-        ),
-        "choices": [("Kembali ke kota", "BACK_CITY_MENU")],
-    },
-
-    # SIDE QUEST REZA
-    "SQ_REZA_INTRO": {
-        "text": (
-            "Seorang NPC tua di Rengat menepuk bahu Reza dengan gugup.\n"
-            "NPC Tua: \"Kadang... di malam hari, aku mendengar suara dari hutan. Pelan, memanggil nama 'Reza'...\"\n"
-            "Reza menatap hutan gelap yang membatasi kota, rahangnya mengeras."
-        ),
-        "choices": [("Ikuti suara hutan", "SQ_REZA_FOREST")],
-    },
-    "SQ_REZA_FOREST": {
-        "text": (
-            "Hutan magis di pinggir Rengat terasa lebih sunyi dari biasanya. Rune bekas segel retak berpendar lemah.\n"
-            "Reza: \"Ada gema sihir yang tertahan. Febri meninggalkan luka bahkan di sini.\""
-        ),
-        "choices": [("Dekati segel yang retak", "SQ_REZA_SEAL")],
-    },
-    "SQ_REZA_SEAL": {
-        "text": (
-            "Di tengah hutan, ada segel patah yang menggaungkan suara samar.\n"
-            "Suara Guru: \"Reza... kau masih hidup.\"\n"
-            "Reza: \"Guru...? Di mana Anda? Febri mengambil semuanya dariku... bahkan Anda.\""
-        ),
-        "choices": [("Dengarkan gema guru", "SQ_REZA_MASTER")],
-    },
-    "SQ_REZA_MASTER": {
-        "text": (
-            "Suara Guru: \"Aku tidak butuh balas dendam. Aku hanya ingin kau tidak menghancurkan dirimu sendiri.\"\n"
-            "Suara Guru: \"Jaga Aruna. Jaga cahaya yang ia bawa. Harsan mempercayakan dunia padanya... dan padamu.\"\n"
-            "Reza: \"Aku ingin membenci Febri. Aku ingin melihatnya hancur. Tapi kalau aku hanya hidup untuk kebencian... apa bedanya aku dengan dia?\"\n"
-            "Suara Guru: \"Kebencianmu tidak akan mengembalikanku. Tapi pilihanmu bisa menyelamatkan mereka yang masih hidup.\""
-        ),
-        "choices": [("Bersihkan segel yang retak", "BATTLE_REZA_SEAL")],
-    },
-    "SQ_REZA_RESOLVE": {
-        "text": (
-            "Segel patah itu perlahan luruh setelah pertempuran, meninggalkan ketenangan.\n"
-            "Reza menatap Aruna Core yang berpendar di dadamu, wajahnya melunak.\n"
-            "Reza: \"Guruku tidak ingin aku dikendalikan dendam. Aku akan melindungi Aruna sampai akhir, bukan karena benci Febri, tapi karena aku memilih jalan berbeda.\""
-        ),
-        "choices": [("Terima warisan guru", "COMPLETE_REZA_QUEST")],
-    },
-    "SQ_REZA_REWARD": {
-        "text": (
-            "Cahaya biru lembut menyelimuti party, seperti pelukan guru yang lama hilang.\n"
-            "Reza: \"Warisan Sang Guru akan menjaga kita. Aku tidak akan jatuh dalam kebencian lagi.\"\n"
-            "(Reza mempelajari ultimate: Warisan Sang Guru.)"
-        ),
-        "choices": [("Kembali ke kota", "BACK_CITY_MENU")],
-    },
-}
+# Muat scene utama saat startup
+load_scenes()
 
 WORLD_MAP_ASCII = """
               [ HUTAN KAMPAR ]
@@ -3222,7 +2734,7 @@ async def send_scene(
     extra_text: str = "",
 ):
     reward_text = handle_scene_side_effects(state)
-    data = SCENE_DATA.get(state.scene_id)
+    data = get_scene(state.scene_id)
     if not data:
         # fallback
         text = "Scene belum diimplementasikan. (TODO) \nID: " + state.scene_id
@@ -3234,18 +2746,34 @@ async def send_scene(
             await update.message.reply_text(text=text, reply_markup=keyboard)
         return
 
-    text = data["text"]
+    text_lines = data.get("text", [])
+    if isinstance(text_lines, str):
+        text_lines = text_lines.split("\n")
+    text = "\n".join(text_lines)
     if reward_text:
         extra_text = reward_text + ("\n\n" + extra_text if extra_text else "")
     if extra_text:
         text = extra_text + "\n\n" + text
 
-    keyboard = make_keyboard(data["choices"])
+    choices_raw = data.get("choices", [])
+    choices = [(c.get("label"), c.get("next_scene")) for c in choices_raw if c.get("label") and c.get("next_scene")]
+    keyboard = make_keyboard(choices)
     query = update.callback_query
     if query:
         await query.edit_message_text(text=text, reply_markup=keyboard)
     else:
         await update.message.reply_text(text=text, reply_markup=keyboard)
+
+
+async def render_scene(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    scene_id: str,
+    extra_text: str = "",
+):
+    state.scene_id = scene_id
+    await send_scene(update, context, state, extra_text=extra_text)
 
 
 async def handle_scene_choice(
@@ -3381,8 +2909,7 @@ async def handle_scene_choice(
         return
 
     # Default: ganti scene_id dan tampilkan scene
-    state.scene_id = choice_data
-    await send_scene(update, context, state)
+    await render_scene(update, context, state, choice_data)
 
 
 # ==========================
@@ -4040,20 +3567,16 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             state.location = loc_id
             if loc_id == "SIAK" and not state.flags.get("VISITED_SIAK"):
                 state.flags["VISITED_SIAK"] = True
-                state.scene_id = "CH1_SIAK_ENTRY"
-                await send_scene(update, context, state)
+                await render_scene(update, context, state, "CH1_SIAK_ENTRY")
             elif loc_id == "RENGAT" and not state.flags.get("VISITED_RENGAT"):
                 state.flags["VISITED_RENGAT"] = True
-                state.scene_id = "CH2_RENGAT_GATE"
-                await send_scene(update, context, state)
+                await render_scene(update, context, state, "CH2_RENGAT_GATE")
             elif loc_id == "PEKANBARU" and not state.flags.get("VISITED_PEKANBARU"):
                 state.flags["VISITED_PEKANBARU"] = True
-                state.scene_id = "CH3_PEKANBARU_ENTRY"
-                await send_scene(update, context, state)
+                await render_scene(update, context, state, "CH3_PEKANBARU_ENTRY")
             elif loc_id == "KAMPAR" and not state.flags.get("VISITED_KAMPAR"):
                 state.flags["VISITED_KAMPAR"] = True
-                state.scene_id = "CH4_KAMPAR_ENTRY"
-                await send_scene(update, context, state)
+                await render_scene(update, context, state, "CH4_KAMPAR_ENTRY")
             else:
                 await send_city_menu(update, context, state)
             return
@@ -4136,8 +3659,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 return
             if not state.flags.get("HAS_UMAR"):
-                state.scene_id = "CH1_UMAR_CLINIC"
-                await send_scene(update, context, state)
+                await render_scene(update, context, state, "CH1_UMAR_CLINIC")
             else:
                 text = "Umar: \"Jaga dirimu baik-baik, Aruna. Aku di sini kalau kau butuh bantuan.\"\n"
                 keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
@@ -4185,35 +3707,29 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         if data == "EVENT_SIAK_GATE":
-            state.scene_id = "CH1_GATE_ALERT"
-            await send_scene(update, context, state)
+            await render_scene(update, context, state, "CH1_GATE_ALERT")
             return
 
         if data == "EVENT_PEKANBARU_CAFE":
             state.flags["PEKANBARU_RUMOR_DONE"] = True
-            state.scene_id = "CH3_PEKANBARU_ENTRY"
-            await send_scene(update, context, state)
+            await render_scene(update, context, state, "CH3_PEKANBARU_ENTRY")
             return
 
         if data == "EVENT_KASTIL_ENTRY":
-            state.scene_id = "CH4_CASTLE_APPROACH"
-            await send_scene(update, context, state)
+            await render_scene(update, context, state, "CH4_CASTLE_APPROACH")
             return
 
         if data == "QUEST_UMAR":
-            state.scene_id = "SQ_UMAR_INTRO"
-            await send_scene(update, context, state)
+            await render_scene(update, context, state, "SQ_UMAR_INTRO")
             return
 
         if data == "QUEST_REZA":
-            state.scene_id = "SQ_REZA_INTRO"
-            await send_scene(update, context, state)
+            await render_scene(update, context, state, "SQ_REZA_INTRO")
             return
         if data == "QUEST_HARSAN_BLADE":
             state.flags["QUEST_WEAPON_STARTED"] = True
             state.flags["WEAPON_QUEST_STARTED"] = True
-            state.scene_id = "SQ_HARSAN_BLADE_INTRO"
-            await send_scene(update, context, state)
+            await render_scene(update, context, state, "SQ_HARSAN_BLADE_INTRO")
             return
 
         if data.startswith("DO_JOB|"):
@@ -4223,6 +3739,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if data == "GO_TO_WORLD_MAP":
             await send_world_map(update, context, state)
+            return
+
+        if data in SCENES:
+            await render_scene(update, context, state, data)
             return
 
         # SCENE / STORY CHOICE
