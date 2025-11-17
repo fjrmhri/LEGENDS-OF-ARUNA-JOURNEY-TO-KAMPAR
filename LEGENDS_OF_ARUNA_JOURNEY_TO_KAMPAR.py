@@ -373,6 +373,7 @@ MONSTERS = {
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
+        "encounter_weight": 1.2,
     },
     "MIST_WOLF": {
         "name": "Mist Wolf",
@@ -390,6 +391,26 @@ MONSTERS = {
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
+        "encounter_weight": 1.0,
+    },
+    "SCARRED_PANTHER": {
+        "name": "Scarred Panther",
+        "area": "HUTAN_SELATPANJANG",
+        "level": 4,
+        "hp": 80,
+        "mp": 10,
+        "atk": 12,
+        "defense": 6,
+        "mag": 3,
+        "spd": 9,
+        "luck": 5,
+        "xp": 28,
+        "gold": 22,
+        "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
+        "rarity": "RARE",
+        "encounter_weight": 0.08,
     },
     "SHADOW_BANDIT": {
         "name": "Shadow Bandit",
@@ -407,6 +428,7 @@ MONSTERS = {
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
+        "encounter_weight": 1.1,
     },
     "GATE_SPIRIT": {
         "name": "Gate Spirit",
@@ -424,6 +446,8 @@ MONSTERS = {
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
+        "encounter_weight": 0.9,
+        "can_escape": False,
     },
     "HERB_GUARDIAN": {
         "name": "Herb Guardian",
@@ -431,7 +455,7 @@ MONSTERS = {
         "level": 6,
         "hp": 85,
         "mp": 15,
-        "atk": 12,
+        "atk": 10,
         "defense": 9,
         "mag": 6,
         "spd": 6,
@@ -441,6 +465,27 @@ MONSTERS = {
         "element": "ALAM",
         "weakness": ["API"],
         "resist": ["ALAM"],
+        "encounter_weight": 0.6,
+        "can_escape": False,
+    },
+    "BLOODTHORN_VINE": {
+        "name": "Bloodthorn Vine",
+        "area": "HUTAN_SIAK",
+        "level": 7,
+        "hp": 130,
+        "mp": 20,
+        "atk": 16,
+        "defense": 11,
+        "mag": 6,
+        "spd": 7,
+        "luck": 5,
+        "xp": 45,
+        "gold": 32,
+        "element": "ALAM",
+        "weakness": ["API"],
+        "resist": ["ALAM"],
+        "rarity": "RARE",
+        "encounter_weight": 0.05,
     },
     "CORRUPTED_TREANT": {
         "name": "Corrupted Treant",
@@ -448,7 +493,7 @@ MONSTERS = {
         "level": 5,
         "hp": 60,
         "mp": 10,
-        "atk": 9,
+        "atk": 8,
         "defense": 8,
         "mag": 4,
         "spd": 3,
@@ -458,6 +503,7 @@ MONSTERS = {
         "element": "ALAM",
         "weakness": ["API"],
         "resist": ["ALAM"],
+        "encounter_weight": 1.1,
     },
     "FOREST_WISP": {
         "name": "Forest Wisp",
@@ -475,6 +521,7 @@ MONSTERS = {
         "element": "CAHAYA",
         "weakness": ["GELAP"],
         "resist": ["CAHAYA"],
+        "encounter_weight": 0.9,
     },
     "SEAL_WARDEN": {
         "name": "Penjaga Segel Retak",
@@ -492,6 +539,7 @@ MONSTERS = {
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
+        "encounter_weight": 0.6,
     },
     "CORRUPTED_FOREST_GOLEM": {
         "name": "Corrupted Forest Golem",
@@ -509,6 +557,8 @@ MONSTERS = {
         "element": "ALAM",
         "weakness": ["API"],
         "resist": ["ALAM"],
+        "encounter_weight": 0.2,
+        "can_escape": False,
     },
     "PHANTOM_MERCHANT": {
         "name": "Phantom Merchant",
@@ -526,6 +576,7 @@ MONSTERS = {
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
+        "encounter_weight": 1.0,
     },
     "CURSED_MILITIA": {
         "name": "Cursed Militia",
@@ -543,6 +594,7 @@ MONSTERS = {
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
+        "encounter_weight": 0.9,
     },
     "ABYSS_HOUND": {
         "name": "Abyss Hound",
@@ -560,6 +612,7 @@ MONSTERS = {
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
+        "encounter_weight": 1.0,
     },
     "VOID_KNIGHT": {
         "name": "Void Knight",
@@ -577,6 +630,7 @@ MONSTERS = {
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
+        "encounter_weight": 0.6,
     },
     "HOUND_OF_VOID": {
         "name": "Hound of Void",
@@ -594,6 +648,8 @@ MONSTERS = {
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
+        "encounter_weight": 0.3,
+        "can_escape": False,
     },
     "VOID_SENTINEL": {
         "name": "Void Sentinel",
@@ -611,6 +667,8 @@ MONSTERS = {
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
+        "encounter_weight": 0.2,
+        "can_escape": False,
     },
     "LUMINAR_SENTINEL": {
         "name": "Luminar Sentinel",
@@ -645,6 +703,7 @@ MONSTERS = {
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
+        "encounter_weight": 0.5,
     },
     "FEBRI_LORD": {
         "name": "Febri, Lord of Abyss",
@@ -662,6 +721,8 @@ MONSTERS = {
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
+        "encounter_weight": 0.05,
+        "can_escape": False,
     },
 }
 
@@ -744,6 +805,24 @@ SKILLS = {
         "power": 1.3,
         "element": "CAHAYA",
         "description": "Tebasan fisik bercahaya yang melemahkan musuh.",
+    },
+    "TWIN_STRIKE": {
+        "name": "Twin Strike",
+        "mp_cost": 6,
+        "type": "PHYS",
+        "power": 0.85,
+        "hits": 2,
+        "element": "NETRAL",
+        "description": "Serangan beruntun dua kali dengan kekuatan fisik Aruna.",
+    },
+    "TRIPLE_SLASH": {
+        "name": "Triple Slash",
+        "mp_cost": 12,
+        "type": "PHYS",
+        "power": 0.75,
+        "hits": 3,
+        "element": "NETRAL",
+        "description": "Tiga tebasan cepat yang mengandalkan ketangkasan Aruna.",
     },
     "GUARDIAN_OATH": {
         "name": "Guardian's Oath",
@@ -931,7 +1010,9 @@ CHAR_SKILL_UNLOCKS = {
     "ARUNA": [
         (3, "LIGHT_BURST"),
         (6, "RADIANT_SLASH"),
+        (7, "TWIN_STRIKE"),
         (9, "GUARDIAN_OATH"),
+        (11, "TRIPLE_SLASH"),
         (12, "LIGHT_WAVE"),
     ],
     "UMAR": [
@@ -2194,6 +2275,9 @@ def create_enemy_from_key(monster_key: str) -> Dict[str, Any]:
         "resist": list(base.get("resist", [])),
         "area": base.get("area", "UNKNOWN"),
         "id": monster_key,
+        "rarity": base.get("rarity", "STORY"),
+        "encounter_weight": base.get("encounter_weight", 1.0),
+        "can_escape": base.get("can_escape", False),
     }
 
 
@@ -2239,10 +2323,11 @@ def make_keyboard(choices: List[tuple]) -> InlineKeyboardMarkup:
 # ==========================
 
 def pick_random_monster_for_area(area: str) -> Dict[str, Any]:
-    pool = [m for m in MONSTERS.values() if m["area"] == area]
+    pool = [(key, m) for key, m in MONSTERS.items() if m["area"] == area]
     if not pool:
-        pool = [MONSTERS["SHADOW_SLIME"]]  # fallback
-    base = random.choice(pool)
+        pool = [("SHADOW_SLIME", MONSTERS["SHADOW_SLIME"])]  # fallback
+    weights = [m.get("encounter_weight", 1.0) for _, m in pool]
+    base_key, base = random.choices(pool, weights=weights, k=1)[0]
     # copy agar tidak mengubah base
     return {
         "name": base["name"],
@@ -2260,8 +2345,34 @@ def pick_random_monster_for_area(area: str) -> Dict[str, Any]:
         "weakness": list(base.get("weakness", [])),
         "resist": list(base.get("resist", [])),
         "area": base.get("area", area),
-        "id": base["name"].upper().replace(" ", "_"),
+        "id": base.get("id", base_key),
+        "rarity": base.get("rarity", "COMMON"),
+        "encounter_weight": base.get("encounter_weight", 1.0),
+        "can_escape": base.get("can_escape", True),
     }
+
+
+def average_party_speed(state: GameState) -> float:
+    speeds = [
+        get_effective_stat(state.party[cid], "spd")
+        for cid in state.party_order
+        if state.party[cid].hp > 0
+    ]
+    return sum(speeds) / len(speeds) if speeds else 0.0
+
+
+def average_enemy_speed(state: GameState) -> float:
+    speeds = [enemy.get("spd", 0) for enemy in state.battle_enemies if enemy.get("hp", 0) > 0]
+    return sum(speeds) / len(speeds) if speeds else 0.0
+
+
+def compute_escape_chance(state: GameState) -> float:
+    base = 0.6
+    party_spd = average_party_speed(state)
+    enemy_spd = average_enemy_speed(state)
+    diff = party_spd - enemy_spd
+    chance = base + diff * 0.02
+    return max(0.2, min(0.95, chance))
 
 
 def compute_elemental_multiplier(
@@ -2394,7 +2505,10 @@ async def start_random_battle(update: Update, context: ContextTypes.DEFAULT_TYPE
     reset_battle_flags(state)
     state.flags["CURRENT_BATTLE_AREA"] = area
     initialize_battle_turn_state(state)
-    await send_battle_state(update, context, state, intro=True)
+    intro_text = ""
+    if enemy.get("rarity") == "RARE":
+        intro_text = "Monster langka muncul! Kamu merasakan aura berbahaya menyelimuti hutan."
+    await send_battle_state(update, context, state, intro=True, extra_text=intro_text)
 
 
 def battle_status_text(state: GameState) -> str:
@@ -2529,24 +2643,24 @@ async def process_battle_action(
         )
 
     elif action_key == "BATTLE_RUN":
-        if active_char_id != "ARUNA":
+        if any(not enemy.get("can_escape", True) for enemy in state.battle_enemies):
             await send_battle_state(
                 update,
                 context,
                 state,
                 intro=False,
-                extra_text="Hanya Aruna yang bisa memutuskan untuk kabur!",
+                extra_text="Kamu tidak bisa kabur dari pertarungan ini!",
             )
             return
-        chance = 0.5 + character.luck * 0.01
+        chance = compute_escape_chance(state)
         if random.random() < chance:
-            log.append("Kamu berhasil kabur dari pertarungan.")
+            log.append("Kamu berhasil kabur dari battle!")
             state.in_battle = False
             state.battle_enemies = []
             state.flags["LAST_BATTLE_RESULT"] = "ESCAPE"
             await end_battle_and_return(update, context, state, log_text="\n".join(log))
             return
-        log.append("Kamu gagal kabur!")
+        log.append("Gagal kabur! Musuh bersiap menyerang!")
 
     else:
         log.append("Aksi belum dikenal dalam sistem battle ini.")
@@ -2602,30 +2716,50 @@ async def process_use_skill(
                 return
         else:
             idx, enemy = target_info
-            if skill_type == "PHYS":
-                dmg, hit_weakness, hit_resist = calc_physical_damage(
-                    character,
-                    enemy["defense"],
-                    skill.get("power", 1.0),
-                    element,
-                    enemy.get("weakness"),
-                    enemy.get("resist"),
-                    enemy.get("element"),
+            hits = max(1, int(skill.get("hits", 1))) if skill_type == "PHYS" else 1
+            total_dmg = 0
+            per_hit_logs: List[str] = []
+            hit_weakness = False
+            hit_resist = False
+            for hit in range(hits):
+                if skill_type == "PHYS":
+                    dmg, h_weak, h_res = calc_physical_damage(
+                        character,
+                        enemy["defense"],
+                        skill.get("power", 1.0),
+                        element,
+                        enemy.get("weakness"),
+                        enemy.get("resist"),
+                        enemy.get("element"),
+                    )
+                else:
+                    dmg, h_weak, h_res = calc_magic_damage(
+                        character,
+                        enemy["defense"],
+                        skill.get("power", 1.0),
+                        element,
+                        enemy.get("weakness"),
+                        enemy.get("resist"),
+                        enemy.get("element"),
+                    )
+                if element == "CAHAYA" and state.flags.get("LIGHT_BUFF_TURNS"):
+                    dmg = int(dmg * 1.2)
+                enemy["hp"] -= dmg
+                total_dmg += dmg
+                hit_weakness = hit_weakness or h_weak
+                hit_resist = hit_resist or h_res
+                if hits > 1:
+                    per_hit_logs.append(f"Hit {hit + 1}: {dmg} damage.")
+
+            if hits > 1:
+                hit_text = " ".join(per_hit_logs)
+                log.append(
+                    f"{character.name} melancarkan serangan beruntun dengan {skill['name']} ke {enemy['name']}! {hit_text} Total damage: {total_dmg}."
                 )
             else:
-                dmg, hit_weakness, hit_resist = calc_magic_damage(
-                    character,
-                    enemy["defense"],
-                    skill.get("power", 1.0),
-                    element,
-                    enemy.get("weakness"),
-                    enemy.get("resist"),
-                    enemy.get("element"),
+                log.append(
+                    f"{character.name} menggunakan {skill['name']}! {enemy['name']} menerima {total_dmg} damage."
                 )
-            if element == "CAHAYA" and state.flags.get("LIGHT_BUFF_TURNS"):
-                dmg = int(dmg * 1.2)
-            enemy["hp"] -= dmg
-            log.append(f"{character.name} menggunakan {skill['name']}! {enemy['name']} menerima {dmg} damage.")
             if hit_weakness:
                 log.append("Itu serangan yang sangat efektif!")
             if hit_resist:
