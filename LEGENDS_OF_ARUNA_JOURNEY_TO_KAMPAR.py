@@ -129,7 +129,14 @@ CITY_FEATURES = {
     },
     "RENGAT": {
         "description": "Kota para penyihir dengan menara-menara riset dan hutan magis.",
-        "shop_items": ["LIGHT_ROBE", "POTION_SMALL", "POTION_MEDIUM", "ETHER_SMALL"],
+        "shop_items": [
+            "LIGHT_ROBE",
+            "POTION_SMALL",
+            "POTION_MEDIUM",
+            "ETHER_SMALL",
+            "ETHER_MEDIUM",
+            "HERBAL_TEA",
+        ],
         "inn_cost": 30,
         "jobs": {
             "ASISTEN_RISET": {
@@ -148,7 +155,14 @@ CITY_FEATURES = {
     },
     "PEKANBARU": {
         "description": "Metropolis suram, tempat terakhir untuk melengkapi persiapan sebelum Kampar.",
-        "shop_items": ["MYSTIC_CLOAK", "POTION_MEDIUM", "ETHER_SMALL"],
+        "shop_items": [
+            "BRONZE_SWORD",
+            "CHAIN_ARMOR",
+            "MYSTIC_CLOAK",
+            "POTION_MEDIUM",
+            "ETHER_MEDIUM",
+            "HERBAL_TEA",
+        ],
         "inn_cost": 45,
         "jobs": {
             "PENGAWAL_KARAVAN": {
@@ -205,6 +219,24 @@ ITEMS = {
         "sell_price": 20,
         "effects": {"mp_restore": 15, "target": "single"},
     },
+    "ETHER_MEDIUM": {
+        "id": "ETHER_MEDIUM",
+        "name": "Ether Sedang",
+        "description": "Memulihkan 30 MP satu karakter.",
+        "type": "consumable",
+        "buy_price": 90,
+        "sell_price": 45,
+        "effects": {"mp_restore": 30, "target": "single"},
+    },
+    "HERBAL_TEA": {
+        "id": "HERBAL_TEA",
+        "name": "Teh Herbal Hangat",
+        "description": "Ramuan ringan yang menyembuhkan seluruh party sedikit.",
+        "type": "consumable",
+        "buy_price": 120,
+        "sell_price": 60,
+        "effects": {"hp_restore": 40, "target": "party"},
+    },
     "WOODEN_SWORD": {
         "id": "WOODEN_SWORD",
         "name": "Pedang Kayu",
@@ -215,6 +247,16 @@ ITEMS = {
         "allowed_users": ["ARUNA"],
         "effects": {"atk_bonus": 3},
     },
+    "BRONZE_SWORD": {
+        "id": "BRONZE_SWORD",
+        "name": "Pedang Perunggu",
+        "description": "Pedang logam ringan yang menambah daya serang Aruna.",
+        "type": "weapon",
+        "buy_price": 140,
+        "sell_price": 70,
+        "allowed_users": ["ARUNA"],
+        "effects": {"atk_bonus": 7},
+    },
     "LEATHER_ARMOR": {
         "id": "LEATHER_ARMOR",
         "name": "Baju Kulit",
@@ -224,6 +266,16 @@ ITEMS = {
         "sell_price": 30,
         "allowed_users": ["ARUNA"],
         "effects": {"def_bonus": 3, "hp_bonus": 12},
+    },
+    "CHAIN_ARMOR": {
+        "id": "CHAIN_ARMOR",
+        "name": "Zirah Rantai",
+        "description": "Armor rantai sederhana yang menambah pertahanan fisik.",
+        "type": "armor",
+        "buy_price": 150,
+        "sell_price": 75,
+        "allowed_users": ["ARUNA"],
+        "effects": {"def_bonus": 6, "hp_bonus": 18},
     },
     "LIGHT_ROBE": {
         "id": "LIGHT_ROBE",
@@ -597,17 +649,21 @@ DROP_TABLES = {
     "HUTAN_SIAK": [
         {"item_id": "POTION_SMALL", "chance": 0.3, "min_qty": 1, "max_qty": 2},
         {"item_id": "LEATHER_ARMOR", "chance": 0.06, "min_qty": 1, "max_qty": 1},
+        {"item_id": "ETHER_SMALL", "chance": 0.1, "min_qty": 1, "max_qty": 1},
     ],
     "HUTAN_RENGAT": [
         {"item_id": "POTION_MEDIUM", "chance": 0.25, "min_qty": 1, "max_qty": 1},
         {"item_id": "LIGHT_ROBE", "chance": 0.08, "min_qty": 1, "max_qty": 1},
+        {"item_id": "HERBAL_TEA", "chance": 0.12, "min_qty": 1, "max_qty": 1},
     ],
     "HUTAN_PEKANBARU": [
         {"item_id": "ETHER_SMALL", "chance": 0.25, "min_qty": 1, "max_qty": 1},
         {"item_id": "MYSTIC_CLOAK", "chance": 0.05, "min_qty": 1, "max_qty": 1},
+        {"item_id": "ETHER_MEDIUM", "chance": 0.16, "min_qty": 1, "max_qty": 1},
     ],
     "KAMPAR_LUAR": [
         {"item_id": "POTION_MEDIUM", "chance": 0.35, "min_qty": 1, "max_qty": 2},
+        {"item_id": "BRONZE_SWORD", "chance": 0.07, "min_qty": 1, "max_qty": 1},
     ],
     "HARSAN_SHRINE": [
         {"item_id": "ETHER_SMALL", "chance": 0.4, "min_qty": 1, "max_qty": 2},
