@@ -23,7 +23,9 @@ import asyncio
 import json
 import logging
 import os
+from collections import Counter
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 import random
 
@@ -39,6 +41,8 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
     ContextTypes,
+    MessageHandler,
+    filters,
 )
 
 # ==========================
@@ -154,7 +158,7 @@ LOCATIONS = {
         "min_level": 1,
         "type": "CITY",
         "has_shop": False,
-        "has_job": False,
+        "has_guild": False,
         "has_inn": False,
         "has_clinic": False,
     },
@@ -163,7 +167,7 @@ LOCATIONS = {
         "min_level": 2,
         "type": "CITY",
         "has_shop": True,
-        "has_job": True,
+        "has_guild": True,
         "has_inn": True,
         "has_clinic": True,
     },
@@ -172,7 +176,7 @@ LOCATIONS = {
         "min_level": 5,
         "type": "CITY",
         "has_shop": True,
-        "has_job": True,
+        "has_guild": True,
         "has_inn": True,
         "has_clinic": False,
     },
@@ -181,7 +185,7 @@ LOCATIONS = {
         "min_level": 8,
         "type": "CITY",
         "has_shop": True,
-        "has_job": True,
+        "has_guild": True,
         "has_inn": True,
         "has_clinic": False,
     },
@@ -190,7 +194,7 @@ LOCATIONS = {
         "min_level": 12,
         "type": "CURSED",
         "has_shop": False,
-        "has_job": False,
+        "has_guild": False,
         "has_inn": False,
         "has_clinic": False,
     },
@@ -198,32 +202,17 @@ LOCATIONS = {
 
 CITY_FEATURES = {
     "SELATPANJANG": {
-        "description": "Kota pelabuhan kecil dan tenang. Di sinilah petualangan Aruna dimulai.",
+        "description": "Kota pelabuhan kecil yang menyimpan reruntuhan kekaisaran lama.",
         "shop_items": [],
         "inn_cost": 0,
-        "jobs": {},
     },
     "SIAK": {
-        "description": "Kota sungai damai dengan klinik Safiya dan tempat kerja sederhana.",
+        "description": "Kota sungai dengan klinik Umar dan cabang guild pemburu.",
         "shop_items": ["WOODEN_SWORD", "LEATHER_ARMOR", "POTION_SMALL", "ETHER_SMALL"],
         "inn_cost": 20,
-        "jobs": {
-            "KURIR_OBAT": {
-                "name": "Kurir Obat",
-                "description": "Mengantar ramuan ke dermaga.",
-                "payout": (15, 30),
-                "fail_chance": 0.05,
-            },
-            "PENJAGA_GUDANG": {
-                "name": "Penjaga Gudang",
-                "description": "Menjaga gudang bahan medis sepanjang malam.",
-                "payout": (25, 45),
-                "fail_chance": 0.15,
-            },
-        },
     },
     "RENGAT": {
-        "description": "Kota para penyihir dengan menara-menara riset dan hutan magis.",
+        "description": "Kota para magi penjaga segel kuno.",
         "shop_items": [
             "LIGHT_ROBE",
             "POTION_SMALL",
@@ -233,23 +222,9 @@ CITY_FEATURES = {
             "HERBAL_TEA",
         ],
         "inn_cost": 30,
-        "jobs": {
-            "ASISTEN_RISET": {
-                "name": "Asisten Riset",
-                "description": "Membantu laboratorium Reza mengumpulkan bahan sihir.",
-                "payout": (35, 60),
-                "fail_chance": 0.1,
-            },
-            "EKSPEDISI_HUTAN": {
-                "name": "Ekspedisi Hutan",
-                "description": "Mengawal murid muda memasuki hutan magis.",
-                "payout": (50, 80),
-                "fail_chance": 0.2,
-            },
-        },
     },
     "PEKANBARU": {
-        "description": "Metropolis suram, tempat terakhir untuk melengkapi persiapan sebelum Kampar.",
+        "description": "Metropolis suram tempat para guild mempersiapkan ekspedisi ke Kampar.",
         "shop_items": [
             "BRONZE_SWORD",
             "CHAIN_ARMOR",
@@ -259,26 +234,11 @@ CITY_FEATURES = {
             "HERBAL_TEA",
         ],
         "inn_cost": 45,
-        "jobs": {
-            "PENGAWAL_KARAVAN": {
-                "name": "Pengawal Karavan",
-                "description": "Mengawal saudagar melewati jalanan berkabut.",
-                "payout": (70, 110),
-                "fail_chance": 0.2,
-            },
-            "PEMBURU_RUMOR": {
-                "name": "Pemburu Rumor",
-                "description": "Menyelidiki rumor Abyss di gang-gang gelap.",
-                "payout": (60, 90),
-                "fail_chance": 0.25,
-            },
-        },
     },
     "KAMPAR": {
-        "description": "Kota terkutuk tanpa NPC. Semua jalan menuju kastil Febri.",
+        "description": "Kota terkutuk yang sunyi; semua jalan menuju kastil Zabx.",
         "shop_items": [],
         "inn_cost": 0,
-        "jobs": {},
     },
 }
 
@@ -345,7 +305,7 @@ ITEMS = {
     "BRONZE_SWORD": {
         "id": "BRONZE_SWORD",
         "name": "Pedang Perunggu",
-        "description": "Pedang logam ringan yang menambah daya serang Aruna.",
+        "description": "Pedang logam ringan yang menambah daya serang sang ksatria abadi.",
         "type": "weapon",
         "buy_price": 140,
         "sell_price": 70,
@@ -355,7 +315,7 @@ ITEMS = {
     "LEATHER_ARMOR": {
         "id": "LEATHER_ARMOR",
         "name": "Baju Kulit",
-        "description": "Pelindung ringan yang meningkatkan ketahanan Aruna.",
+        "description": "Pelindung ringan yang meningkatkan ketahanan sang ksatria abadi.",
         "type": "armor",
         "buy_price": 65,
         "sell_price": 30,
@@ -399,8 +359,8 @@ ITEMS = {
     },
     "HARSAN_LEGACY_BLADE": {
         "id": "HARSAN_LEGACY_BLADE",
-        "name": "Pedang Warisan Harsan",
-        "description": "Pedang warisan keluarga Harsan yang bangkit kembali saat bersatu dengan Aruna Core; dulu dipisahkan dari kalung untuk menahan Abyss.",
+        "name": "Pedang Warisan Kekaisaran",
+        "description": "Pedang asli milik sang ksatria abadi yang terbangun kembali saat bersatu dengan sigil keabadiannya.",
         "type": "weapon",
         "buy_price": 0,
         "sell_price": 0,
@@ -417,25 +377,6 @@ ITEMS = {
 }
 
 # Area hutan/dungeon terdekat per kota
-NEAREST_DUNGEON = {
-    "SELATPANJANG": "HUTAN_SELATPANJANG",
-    "SIAK": "HUTAN_SIAK",
-    "RENGAT": "HUTAN_RENGAT",
-    "PEKANBARU": "HUTAN_PEKANBARU",
-    "KAMPAR": "KAMPAR_LUAR",
-}
-
-# Peluang encounter monster langka per area (bisa disesuaikan untuk balancing).
-RARE_ENCOUNTER_CHANCE = {
-    "HUTAN_SELATPANJANG": 0.04,
-    "HUTAN_SIAK": 0.04,
-    "HUTAN_RENGAT": 0.05,
-    "HUTAN_PEKANBARU": 0.05,
-    "KAMPAR_LUAR": 0.06,
-}
-
-RARE_LEVEL_BUFFER = 2  # selisih level minimal player agar rare bisa muncul
-
 # Monster definitions lengkap sesuai GDD
 MONSTERS = {
     "SHADOW_SLIME": {
@@ -844,7 +785,7 @@ MONSTERS = {
         "encounter_weight": 0.5,
     },
     "FEBRI_LORD": {
-        "name": "Febri, Lord of Abyss",
+        "name": "Almighty Zabx",
         "area": "KASTIL_FEBRI",
         "level": 20,
         "hp": 400,
@@ -863,6 +804,235 @@ MONSTERS = {
         "can_escape": False,
     },
 }
+
+# Peluang encounter monster langka per area (bisa disesuaikan untuk balancing).
+RARE_ENCOUNTER_CHANCE = {
+    "HUTAN_SELATPANJANG": 0.05,
+    "HUTAN_SIAK": 0.05,
+    "HUTAN_RENGAT": 0.06,
+    "HUTAN_PEKANBARU": 0.06,
+    "KAMPAR_LUAR": 0.08,
+    "KASTIL_FEBRI": 0.12,
+}
+
+RARE_LEVEL_BUFFER = 2  # selisih level minimal player agar rare bisa muncul
+
+
+def _infer_monster_rank(monster: Dict[str, Any]) -> str:
+    rating = monster.get("hp", 50) / 25 + monster.get("atk", 5) + monster.get("defense", 5)
+    if rating < 6:
+        return "WEAK"
+    if rating < 12:
+        return "MEDIUM"
+    if rating < 20:
+        return "STRONG"
+    if monster.get("rarity") == "RARE":
+        return "RARE"
+    return "BOSS"
+
+
+for _mid, _mdata in MONSTERS.items():
+    _mdata.setdefault("rank", _infer_monster_rank(_mdata))
+
+
+HUNTING_AREAS = {
+    "HUNT_SELATPANJANG": {
+        "name": "Perbatasan Selatpanjang",
+        "area_key": "HUTAN_SELATPANJANG",
+        "min_level": 1,
+        "element": "NEUTRAL",
+        "level_range": "Lv 1-3",
+        "description": "Reruntuhan dermaga lama tempat makhluk kabut berkeliaran.",
+        "monsters": ["SHADOW_SLIME", "MIST_WOLF", "SCARRED_PANTHER"],
+    },
+    "HUNT_SIAK": {
+        "name": "Hutan Berkabut Siak",
+        "area_key": "HUTAN_SIAK",
+        "min_level": 3,
+        "element": "WATER",
+        "level_range": "Lv 3-5",
+        "description": "Jalur sungai lama dengan roh kabut yang agresif.",
+        "monsters": ["SHADOW_BANDIT", "GATE_SPIRIT", "HERB_GUARDIAN"],
+    },
+    "HUNT_RENGAT": {
+        "name": "Rimba Arcana Rengat",
+        "area_key": "HUTAN_RENGAT",
+        "min_level": 5,
+        "element": "EARTH",
+        "level_range": "Lv 5-8",
+        "description": "Pepohonan sihir yang menyimpan energi segel tua.",
+        "monsters": ["CORRUPTED_TREANT", "FOREST_WISP", "CORRUPTED_FOREST_GOLEM"],
+    },
+    "HUNT_PEKANBARU": {
+        "name": "Hutan Pekanbaru",
+        "area_key": "HUTAN_PEKANBARU",
+        "min_level": 8,
+        "element": "FIRE",
+        "level_range": "Lv 8-12",
+        "description": "Jalur terbakar akibat percobaan demon.",
+        "monsters": ["PHANTOM_MERCHANT", "CURSED_MILITIA", "ANCIENT_WOLF"],
+    },
+    "HUNT_KAMPAR": {
+        "name": "Kabut Kampar",
+        "area_key": "KAMPAR_LUAR",
+        "min_level": 12,
+        "element": "DARK",
+        "level_range": "Lv 12-18",
+        "description": "Kabut kutukan yang menutup jalan ke kastil.",
+        "monsters": ["ABYSS_HOUND", "VOID_KNIGHT", "ABYSS_REVENANT"],
+    },
+    "KASTIL_ZABX": {
+        "name": "Kastil Terkurung Zabx",
+        "area_key": "KASTIL_FEBRI",
+        "min_level": 18,
+        "element": "DARK",
+        "level_range": "Lv 18-20",
+        "description": "Benteng terakhir sang Raja Iblis.",
+        "monsters": ["VOID_SENTINEL", "FEBRI_LORD"],
+    },
+}
+
+DEFAULT_CITY_HUNTING = {
+    "SELATPANJANG": "HUNT_SELATPANJANG",
+    "SIAK": "HUNT_SIAK",
+    "RENGAT": "HUNT_RENGAT",
+    "PEKANBARU": "HUNT_PEKANBARU",
+    "KAMPAR": "HUNT_KAMPAR",
+}
+
+
+GUILD_QUESTS = {
+    "SIAK_WOLVES": {
+        "name": "Kabut Serigala",
+        "location": "SIAK",
+        "type": "HUNT",
+        "target": "MIST_WOLF",
+        "required_amount": 5,
+        "min_level": 3,
+        "reward_gold": 80,
+        "reward_items": {"POTION_SMALL": 2},
+        "description": "Lenyapkan kawanan Mist Wolf yang mengganggu jalur suplai klinik.",
+    },
+    "RENGAT_GOLEM": {
+        "name": "Jantung Golem Retak",
+        "location": "RENGAT",
+        "type": "HUNT",
+        "target": "CORRUPTED_FOREST_GOLEM",
+        "required_amount": 3,
+        "min_level": 6,
+        "reward_gold": 150,
+        "reward_items": {"ETHER_MEDIUM": 1},
+        "description": "Hancurkan Golem korup di rimba arcana sebelum mereka menghancurkan menara sihir.",
+    },
+    "PEKANBARU_EMBER": {
+        "name": "Arwah Bara",
+        "location": "PEKANBARU",
+        "type": "HUNT",
+        "target": "CURSED_MILITIA",
+        "required_amount": 6,
+        "min_level": 9,
+        "reward_gold": 220,
+        "reward_items": {"POTION_MEDIUM": 2},
+        "description": "Guild ingin meredam Ember Phantom sebelum nyala iblis menyebar ke kota.",
+    },
+}
+
+ELEMENTAL_ADVANTAGE: Dict[str, Dict[str, float]] = {
+    "FIRE": {"WATER": 0.6, "EARTH": 1.4},
+    "WATER": {"FIRE": 2.2, "EARTH": 0.8},
+    "EARTH": {"WIND": 2.0, "FIRE": 0.75},
+    "WIND": {"EARTH": 0.7},
+    "LIGHT": {"DARK": 1.8},
+    "DARK": {"LIGHT": 1.8},
+}
+
+
+def stop_auto_hunt(state: GameState) -> None:
+    state.auto_hunt = False
+    state.auto_hunt_area = None
+
+
+def get_city_guild_quests(location: str) -> Dict[str, Dict[str, Any]]:
+    return {qid: data for qid, data in GUILD_QUESTS.items() if data.get("location") == location}
+
+
+def find_completed_quest(state: GameState, quest_id: str) -> Optional[QuestState]:
+    for quest in state.quests_completed:
+        if quest.id == quest_id:
+            return quest
+    return None
+
+
+def accept_guild_quest(state: GameState, quest_id: str) -> Tuple[bool, str]:
+    data = GUILD_QUESTS.get(quest_id)
+    if not data:
+        return False, "Quest tidak ditemukan."
+    if quest_id in state.quests_active:
+        return False, "Quest ini sudah kamu ambil."
+    if find_completed_quest(state, quest_id):
+        return False, "Quest ini sudah pernah kamu selesaikan."
+    if highest_party_level(state) < data.get("min_level", 1):
+        return False, "Levelmu belum cukup untuk menerima quest ini."
+    quest = QuestState(
+        id=quest_id,
+        type=data.get("type", "HUNT"),
+        target=data.get("target"),
+        required_amount=data.get("required_amount", 0),
+        reward_gold=data.get("reward_gold", 0),
+        reward_items=dict(data.get("reward_items", {})),
+        description=data.get("description", ""),
+        status="ACTIVE",
+    )
+    state.quests_active[quest_id] = quest
+    return True, f"Quest guild '{data.get('name')}' diterima."
+
+
+def complete_guild_quest(state: GameState, quest_id: str) -> Tuple[bool, str]:
+    quest = state.quests_active.get(quest_id)
+    if not quest:
+        return False, "Quest ini belum kamu ambil."
+    if quest.status != "COMPLETED":
+        return False, "Quest ini belum selesai."
+    quest.reward_received = True
+    quest.status = "REWARDED"
+    quest.completion_time = quest.completion_time or datetime.utcnow().isoformat()
+    if quest.reward_gold:
+        state.gold += quest.reward_gold
+    for item_id, qty in quest.reward_items.items():
+        adjust_inventory(state, item_id, qty)
+    state.quests_completed.append(quest)
+    state.quests_active.pop(quest_id, None)
+    reward_parts = []
+    if quest.reward_gold:
+        reward_parts.append(f"{quest.reward_gold} Gold")
+    for item_id, qty in quest.reward_items.items():
+        item = ITEMS.get(item_id, {"name": item_id})
+        reward_parts.append(f"{item['name']} x{qty}")
+    reward_text = ", ".join(reward_parts) if reward_parts else "pengakuan guild"
+    return True, f"Quest '{quest.id}' selesai. Hadiah: {reward_text}."
+
+
+def update_hunt_quest_progress(state: GameState, defeated_ids: List[str]) -> List[str]:
+    if not defeated_ids or not state.quests_active:
+        return []
+    counts = Counter([mid for mid in defeated_ids if mid])
+    logs: List[str] = []
+    for quest in state.quests_active.values():
+        if quest.type != "HUNT" or not quest.target:
+            continue
+        gained = counts.get(quest.target, 0)
+        if not gained:
+            continue
+        before = quest.progress
+        quest.progress = min(quest.required_amount, quest.progress + gained)
+        logs.append(
+            f"{quest.id}: {quest.progress}/{quest.required_amount} target terbunuh (+'{gained}')."
+        )
+        if quest.progress >= quest.required_amount and quest.status != "COMPLETED":
+            quest.status = "COMPLETED"
+            quest.completion_time = datetime.utcnow().isoformat()
+            logs.append(f"{quest.id}: Laporkan ke guild untuk klaim hadiah.")
+    return logs
 
 # Drop tables per area
 DROP_TABLES = {
@@ -902,7 +1072,7 @@ SKILLS = {
         "type": "PHYS",
         "power": 1.0,
         "element": "NETRAL",
-        "description": "Serangan fisik standar Aruna.",
+        "description": "Serangan fisik standar sang ksatria abadi.",
     },
     "LIGHT_BURST": {
         "name": "Light Burst",
@@ -927,7 +1097,7 @@ SKILLS = {
         "power": 0.85,
         "hits": 2,
         "element": "NETRAL",
-        "description": "Menyerang musuh 2x dengan kecepatan pedang Aruna.",
+        "description": "Menyerang musuh 2x dengan kecepatan pedang warisan sang ksatria.",
     },
     "TRISULA_CAHAYA": {
         "name": "Trisula Cahaya",
@@ -944,7 +1114,7 @@ SKILLS = {
         "type": "BUFF_DEF_SELF",
         "duration": 3,
         "buffs": {"defense": 5},
-        "description": "Aruna memperkuat pertahanan dan resistensi kegelapan sementara.",
+        "description": "Sang ksatria memperkuat pertahanan dan resistensi kegelapan sementara.",
     },
     "LIGHT_WAVE": {
         "name": "Light Wave",
@@ -955,10 +1125,10 @@ SKILLS = {
         "description": "Gelombang cahaya yang menghantam semua musuh.",
     },
     "ARUNA_CORE_AWAKENING": {
-        "name": "Aruna Core Awakening",
+        "name": "Sigil Keabadian",
         "mp_cost": 0,
         "type": "LIMIT_HEAL",
-        "description": "Skill cerita: menyembuhkan dan memberkati seluruh party sekali per battle.",
+        "description": "Skill cerita: sigil keabadian meledak, menyembuhkan dan memberkati seluruh party sekali per battle.",
     },
     "HEAL": {
         "name": "Heal",
@@ -1050,7 +1220,7 @@ SKILLS = {
         "type": "PHYS",
         "power": 1.6,
         "element": "CAHAYA",
-        "description": "Tebasan cahaya dari pedang warisan Harsan yang membakar kegelapan.",
+        "description": "Tebasan cahaya dari pedang warisan kekaisaran yang membakar kegelapan.",
     },
     "ABYSS_SEAL": {
         "name": "Abyss Seal",
@@ -1073,7 +1243,7 @@ SKILLS = {
 # Base stats karakter sesuai GDD (disederhanakan)
 CHAR_BASE = {
     "ARUNA": {
-        "name": "Aruna",
+        "name": "Ksatria Abadi",
         "level": 1,
         "hp": 40,
         "mp": 15,
@@ -1268,36 +1438,10 @@ def get_scene(scene_id: str) -> Optional[Dict[str, Any]]:
 # Muat scene utama saat startup
 load_scenes()
 
-WORLD_MAP_ASCII = """
-▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
-▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒
-▒░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░▒▒
-▒░▒     [KASTIL FEBRI]      ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒
-▒░▒        [HUTAN KAMPAR]  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒
-▒░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒
-▒░░▒░▒▒▒▒▒░░░░░░░░░░░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒▒
-▒░░░▒░  [KAMPAR]   ░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒▒▒▒
-▒░░░▒░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒▒▒▒▒▒
-▒░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒▒▒▒▒▒▒▒
-▒░░░░░░░░ [PEKANBARU] ░░▒▒▒▒▒▒▒▒▒░░▒▒▒▒▒▒▒▒▒▒▒▒
-▒░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒▒▒▒▒▒▒▒▒▒
-▒░░░░░ [HUTAN PEKANBARU] ░░░░░░░░░░░░░░░░▒▒▒▒▒▒▒
-▒░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
-▒░░░░░░░░░░░░░ [RENGAT] ░░░░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒
-▒░░░░░░░ [HUTAN RENGAT] ░░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒
-▒░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
-▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒
-▒░░░░ [SIAK] ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒
-▒░░░ [HUTAN SELATPANJANG] ░░░░░░░░░░░░░░░░░░░▒
-▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒
-▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒
-▒░░░░░░░░░░░░ [SELATPANJANG] ░░░░░░░░░░░░░░░▒
-▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
-"""
-
 # ==========================
 # STRUKTUR STATE GAME
 # ==========================
+
 
 @dataclass
 class CharacterState:
@@ -1368,10 +1512,57 @@ class BattleTurnState:
 
 
 @dataclass
+class QuestState:
+    id: str
+    type: str
+    target: Optional[str] = None
+    required_amount: int = 0
+    progress: int = 0
+    reward_gold: int = 0
+    reward_items: Dict[str, int] = field(default_factory=dict)
+    status: str = "ACTIVE"
+    description: str = ""
+    completion_time: Optional[str] = None
+    reward_received: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "type": self.type,
+            "target": self.target,
+            "required_amount": self.required_amount,
+            "progress": self.progress,
+            "reward_gold": self.reward_gold,
+            "reward_items": dict(self.reward_items),
+            "status": self.status,
+            "description": self.description,
+            "completion_time": self.completion_time,
+            "reward_received": self.reward_received,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "QuestState":
+        return cls(
+            id=data.get("id", "UNKNOWN_QUEST"),
+            type=data.get("type", "HUNT"),
+            target=data.get("target"),
+            required_amount=int(data.get("required_amount", 0)),
+            progress=int(data.get("progress", 0)),
+            reward_gold=int(data.get("reward_gold", 0)),
+            reward_items=dict(data.get("reward_items", {})),
+            status=data.get("status", "ACTIVE"),
+            description=data.get("description", ""),
+            completion_time=data.get("completion_time"),
+            reward_received=bool(data.get("reward_received", False)),
+        )
+
+
+@dataclass
 class GameState:
     user_id: int
     scene_id: str = "CH0_S1"
     location: str = "SELATPANJANG"
+    player_name: Optional[str] = None
     in_battle: bool = False
     battle_enemies: List[Dict[str, Any]] = field(default_factory=list)
     battle_turn: str = "PLAYER"
@@ -1385,6 +1576,10 @@ class GameState:
     flags: Dict[str, Any] = field(default_factory=dict)
     return_scene_after_battle: Optional[str] = None
     loss_scene_after_battle: Optional[str] = None
+    auto_hunt: bool = False
+    auto_hunt_area: Optional[str] = None
+    quests_active: Dict[str, QuestState] = field(default_factory=dict)
+    quests_completed: List[QuestState] = field(default_factory=list)
 
     def __post_init__(self):
         self.ensure_flag_defaults()
@@ -1420,6 +1615,7 @@ class GameState:
         return {
             "scene_id": self.scene_id,
             "location": self.location,
+            "player_name": self.player_name,
             "main_progress": self.main_progress,
             "gold": self.gold,
             "party_order": list(self.party_order),
@@ -1427,6 +1623,10 @@ class GameState:
             "inventory": dict(self.inventory),
             "xp_pool": dict(self.xp_pool),
             "flags": safe_flags,
+            "auto_hunt": self.auto_hunt,
+            "auto_hunt_area": self.auto_hunt_area,
+            "quests_active": {qid: quest.to_dict() for qid, quest in self.quests_active.items()},
+            "quests_completed": [quest.to_dict() for quest in self.quests_completed],
         }
 
     @classmethod
@@ -1434,6 +1634,7 @@ class GameState:
         state = cls(user_id=user_id)
         state.scene_id = data.get("scene_id", state.scene_id)
         state.location = data.get("location", state.location)
+        state.player_name = data.get("player_name")
         state.main_progress = data.get("main_progress", state.main_progress)
         state.gold = data.get("gold", 0)
         party_data = data.get("party", {})
@@ -1451,11 +1652,28 @@ class GameState:
             state.xp_pool.setdefault(cid, 0)
         state.flags = data.get("flags", {})
         state.ensure_flag_defaults()
+        state.auto_hunt = bool(data.get("auto_hunt", False))
+        state.auto_hunt_area = data.get("auto_hunt_area")
+        quests_active_raw = data.get("quests_active", {}) or {}
+        state.quests_active = {
+            qid: QuestState.from_dict(qdata)
+            for qid, qdata in quests_active_raw.items()
+            if isinstance(qdata, dict)
+        }
+        state.quests_completed = [
+            QuestState.from_dict(entry)
+            for entry in data.get("quests_completed", [])
+            if isinstance(entry, dict)
+        ]
         state.in_battle = False
         state.battle_enemies = []
         state.battle_state = BattleTurnState()
         state.return_scene_after_battle = None
         state.loss_scene_after_battle = None
+        if not state.player_name:
+            hero = state.party.get("ARUNA")
+            if hero:
+                state.player_name = hero.name
         return state
 
     def ensure_aruna(self):
@@ -1463,7 +1681,7 @@ class GameState:
             base = CHAR_BASE["ARUNA"]
             self.party["ARUNA"] = CharacterState(
                 id="ARUNA",
-                name=base["name"],
+                name=self.player_name or base["name"],
                 level=base["level"],
                 hp=base["hp"],
                 max_hp=base["hp"],
@@ -1478,6 +1696,31 @@ class GameState:
             )
             self.party_order.append("ARUNA")
             self.xp_pool["ARUNA"] = 0
+        else:
+            hero = self.party.get("ARUNA")
+            if hero and self.player_name:
+                hero.name = self.player_name
+
+    def reset_for_new_journey(self):
+        self.scene_id = "CH0_S1"
+        self.location = "SELATPANJANG"
+        self.in_battle = False
+        self.battle_enemies = []
+        self.battle_state = BattleTurnState()
+        self.battle_turn = "PLAYER"
+        self.gold = 0
+        self.main_progress = "PROLOG"
+        self.party = {}
+        self.party_order = []
+        self.inventory = {}
+        self.xp_pool = {}
+        self.flags = {}
+        self.auto_hunt = False
+        self.auto_hunt_area = None
+        self.quests_active = {}
+        self.quests_completed = []
+        self.ensure_flag_defaults()
+        self.ensure_aruna()
 
     def add_umar(self):
         if "UMAR" not in self.party:
@@ -2086,7 +2329,7 @@ def tick_buffs(state: GameState) -> List[str]:
         state.flags["LIGHT_BUFF_TURNS"] -= 1
         if state.flags["LIGHT_BUFF_TURNS"] <= 0:
             state.flags.pop("LIGHT_BUFF_TURNS", None)
-            logs.append("Aura cahaya dari Aruna Core memudar.")
+            logs.append("Aura sigil keabadian mereda.")
     return logs
 
 
@@ -2340,7 +2583,11 @@ async def resolve_battle_outcome(
             "",
             *drop_section,
         ]
+        quest_logs = update_hunt_quest_progress(state, [mid for mid in enemy_keys if mid])
         combined_log = summary_lines + [""] + log
+        if quest_logs:
+            combined_log.extend(["", "Progress Quest Guild:"])
+            combined_log.extend(quest_logs)
         if reward_logs:
             combined_log.extend([""] + reward_logs)
         log = combined_log
@@ -2364,6 +2611,7 @@ async def resolve_battle_outcome(
         "==== KALAH ====",
         "Kamu tumbang dalam pertarungan ini...",
     ]
+    stop_auto_hunt(state)
     for cid in state.party_order:
         member = state.party.get(cid)
         if not member:
@@ -2690,6 +2938,8 @@ def create_enemy_from_key(monster_key: str) -> Dict[str, Any]:
         "rarity": base.get("rarity", "STORY"),
         "encounter_weight": base.get("encounter_weight", 1.0),
         "can_escape": base.get("can_escape", False),
+        "rank": base.get("rank", "MEDIUM"),
+        "level": base.get("level", 1),
     }
 
 
@@ -2844,23 +3094,66 @@ def compute_escape_chance(state: GameState) -> float:
     return max(0.2, min(0.95, chance))
 
 
+def compute_monster_power(monster: Dict[str, Any]) -> float:
+    hp = monster.get("hp", 1)
+    atk = monster.get("atk", 1)
+    defense = monster.get("defense", 1)
+    level = monster.get("level", 1)
+    rank = monster.get("rank", "MEDIUM")
+    rank_bonus = {
+        "WEAK": 0.8,
+        "MEDIUM": 1.0,
+        "STRONG": 1.2,
+        "RARE": 1.3,
+        "BOSS": 1.6,
+    }.get(rank, 1.0)
+    return (hp / 10 + atk * 1.4 + defense * 1.2 + level * 1.1) * rank_bonus
+
+
+def compute_party_power(state: GameState) -> float:
+    total = 0.0
+    for cid in state.party_order:
+        member = state.party.get(cid)
+        if not member or member.hp <= 0:
+            continue
+        stats = get_effective_combat_stats(member)
+        total += stats["max_hp"] / 12
+        total += stats["atk"] * 1.3
+        total += stats["mag"] * 1.2
+        total += stats["defense"] * 0.9
+        total += member.level * 1.1
+    return total
+
+
 def compute_elemental_multiplier(
     element: str,
     target_weakness: Optional[List[str]],
     target_resist: Optional[List[str]],
     passives: Optional[Dict[str, Any]] = None,
+    target_element: Optional[str] = None,
 ) -> Tuple[float, bool, bool]:
     multiplier = 1.0
-    hit_weakness = bool(element and target_weakness and element in target_weakness)
-    hit_resist = bool(element and target_resist and element in target_resist)
-    if hit_weakness:
+    hit_weakness = False
+    hit_resist = False
+    used_element = element or "NETRAL"
+    if target_element:
+        advantage = ELEMENTAL_ADVANTAGE.get(used_element, {}).get(target_element)
+        if advantage:
+            multiplier *= advantage
+            if advantage > 1:
+                hit_weakness = True
+            elif advantage < 1:
+                hit_resist = True
+    if used_element and target_weakness and used_element in target_weakness:
         multiplier *= 1.5
-    if hit_resist:
+        hit_weakness = True
+    if used_element and target_resist and used_element in target_resist:
         multiplier *= 0.75
+        hit_resist = True
     if passives:
         boost = passives.get("element_boost", {})
-        if element in boost:
-            multiplier *= 1 + boost[element]
+        if used_element in boost:
+            multiplier *= 1 + boost[used_element]
     return multiplier, hit_weakness, hit_resist
 
 
@@ -2895,7 +3188,11 @@ def calc_physical_damage(
     base = int(base * random.uniform(*PLAYER_DAMAGE_VARIANCE))
     passives = get_character_passive_effects(attacker)
     element_multiplier, hit_weakness, hit_resist = compute_elemental_multiplier(
-        element, target_weakness, target_resist, passives
+        element,
+        target_weakness,
+        target_resist,
+        passives,
+        target_element=target_element,
     )
     passive_bonus = compute_passive_damage_bonus(passives, target_element, element)
     base = int(base * element_multiplier * passive_bonus)
@@ -2919,7 +3216,11 @@ def calc_magic_damage(
     base = int(base * random.uniform(*PLAYER_DAMAGE_VARIANCE))
     passives = get_character_passive_effects(attacker)
     element_multiplier, hit_weakness, hit_resist = compute_elemental_multiplier(
-        element, target_weakness, target_resist, passives
+        element,
+        target_weakness,
+        target_resist,
+        passives,
+        target_element=target_element,
     )
     passive_bonus = compute_passive_damage_bonus(passives, target_element, element)
     base = int(base * element_multiplier * passive_bonus)
@@ -3010,16 +3311,33 @@ def apply_mana_shield_absorption(
 
 
 async def start_random_battle(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
-    """
-    Mulai battle random di area dungeon berdasarkan lokasi sekarang.
-    """
-    area = NEAREST_DUNGEON.get(state.location, "HUTAN_SELATPANJANG")
+    area_id = DEFAULT_CITY_HUNTING.get(state.location, "HUNT_SELATPANJANG")
+    await start_random_battle_in_area(
+        update,
+        context,
+        state,
+        area_id,
+        source="WORLD",
+    )
+
+
+async def start_random_battle_in_area(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    area_id: str,
+    *,
+    source: str = "HUNTING",
+):
+    area_info = HUNTING_AREAS.get(area_id, {"area_key": area_id, "name": area_id})
+    battle_area = area_info.get("area_key", area_id)
     avg_level = average_party_level(state)
-    enemy = pick_random_monster_for_area(area, avg_level)
+    enemy = pick_random_monster_for_area(battle_area, avg_level)
     logger.info(
-        "User %s memulai random battle di %s melawan %s",
+        "User %s memulai random battle di %s (%s) melawan %s",
         state.user_id,
-        area,
+        area_id,
+        battle_area,
         enemy.get("id", enemy.get("name", "UNKNOWN")),
     )
     state.in_battle = True
@@ -3028,14 +3346,25 @@ async def start_random_battle(update: Update, context: ContextTypes.DEFAULT_TYPE
     state.return_scene_after_battle = None
     state.loss_scene_after_battle = None
     reset_battle_flags(state)
-    state.flags["CURRENT_BATTLE_AREA"] = area
+    state.flags["CURRENT_BATTLE_AREA"] = battle_area
+    state.flags["LAST_BATTLE_SOURCE"] = {"type": source, "area": area_id}
+    state.flags["LAST_HUNT_AREA"] = area_id
     initialize_battle_turn_state(state)
-    intro_text = ""
+    intro_lines = []
+    rank = enemy.get("rank")
+    level = enemy.get("level", "?")
+    intro_lines.append(
+        f"{enemy['name']} [{rank}] Lv {level} muncul di {area_info.get('name', 'area liar')}!"
+    )
     if enemy.get("rarity") == "RARE":
-        intro_text = (
-            f"Aura kuat menyelimuti hutan... {enemy['name']} muncul sebagai monster langka!"
-        )
-    await send_battle_state(update, context, state, intro=True, extra_text=intro_text)
+        intro_lines.append("Aura kuat menyelimuti udara. Ini monster langka!")
+    await send_battle_state(
+        update,
+        context,
+        state,
+        intro=True,
+        extra_text="\n".join(intro_lines),
+    )
 
 
 def battle_status_text(
@@ -3060,7 +3389,9 @@ def battle_status_text(
     lines.append("")
     lines.append("[Musuh]")
     for e in state.battle_enemies:
-        lines.append(f"{e['name']}  HP {e['hp']}/{e['max_hp']}")
+        rank = e.get("rank", "?")
+        level = e.get("level", "?")
+        lines.append(f"{e['name']} [{rank}] Lv {level}  HP {e['hp']}/{e['max_hp']}")
 
     token = state.battle_state.active_token
     if token:
@@ -3313,7 +3644,7 @@ async def execute_skill_action(
             member.hp = min(get_effective_max_hp(member), member.hp + heal_amount)
             total.append(f"{member.name}+{member.hp - before}HP")
         log.append(
-            "==== CAHAYA BANGKIT ====\nAruna Core Awakening memulihkan party dan memberkati serangan cahaya!"
+            "==== SIGIL KEABADIAN ====\nSigil Keabadian memulihkan party dan memberkati serangan cahaya!"
         )
         log.append("Pemulihan: " + ", ".join(total))
     elif skill_type == "BUFF_TEAM":
@@ -3546,7 +3877,7 @@ async def process_use_skill(
             context,
             state,
             intro=False,
-            extra_text="Aruna Core sudah bangkit sekali di pertarungan ini!",
+            extra_text="Sigil Keabadian sudah digunakan sekali di pertarungan ini!",
         )
         return
 
@@ -3698,6 +4029,8 @@ async def end_battle_and_return(
     Untuk sekarang: jika battle random, balik ke 'DUNGEON_MENU', kalau battle story, balik ke scene.
     """
     last_result = state.flags.pop("LAST_BATTLE_RESULT", None)
+    battle_source = state.flags.pop("LAST_BATTLE_SOURCE", None)
+    source_area = battle_source.get("area") if isinstance(battle_source, dict) else None
     reset_battle_flags(state)
     autosave_note = flush_pending_autosave(state)
 
@@ -3728,19 +4061,34 @@ async def end_battle_and_return(
             )
             return
 
-    # Battle random biasa
     text = append_optional_text(log_text, autosave_note)
+
+    if source_area and source_area in HUNTING_AREAS:
+        if last_result == "WIN" and state.auto_hunt and state.auto_hunt_area == source_area:
+            if text and update.effective_chat:
+                await update.effective_chat.send_message(text)
+            await start_random_battle_in_area(
+                update,
+                context,
+                state,
+                source_area,
+                source=battle_source.get("type", "HUNTING") if isinstance(battle_source, dict) else "HUNTING",
+            )
+            return
+        await send_hunting_area_menu(update, context, state, source_area, extra_text=text)
+        return
+
     text = append_optional_text(text, "Kamu kembali ke area hutan.")
     keyboard = make_keyboard(
         [
-            ("Cari monster lagi", "DUNGEON_BATTLE_AGAIN"),
+            ("🗺️ Menu Hunting", "MENU_HUNTING"),
             ("Kembali ke kota", "RETURN_TO_CITY"),
         ]
     )
     query = update.callback_query
     if query:
         await safe_edit_text(query, text=text, reply_markup=keyboard)
-    else:
+    elif update.message:
         await update.message.reply_text(text=text, reply_markup=keyboard)
 
 
@@ -4041,7 +4389,7 @@ def handle_scene_side_effects(state: GameState) -> str:
         quest_lines = [
             "==== QUEST SELESAI ====",
             '"Jejak Pedang Warisan" telah diselesaikan.',
-            "Pedang warisan keluarga Harsan bangkit kembali saat bersatu dengan Aruna Core!",
+            "Pedang leluhur kekaisaran beresonansi dengan kutukan abadi dalam dirimu!",
             equip_msg,
             "Skill baru diperoleh: Legacy Radiance.",
         ]
@@ -4058,22 +4406,36 @@ def handle_scene_side_effects(state: GameState) -> str:
         wielding = aruna and aruna.weapon_id == "HARSAN_LEGACY_BLADE"
         if wielding:
             extras.append(
-                "Febri menatap pedangmu: \"Itu bilah Harsan... cahaya yang pernah mengkhianatiku.\" Aura Abyss-nya bergolak."
+                "Zabx menatap pedangmu: \"Itu bilah kekaisaran... cahaya yang dulu mengkhianatiku.\" Aura iblisnya bergolak."
             )
         else:
             extras.append(
-                "Aura pedang warisan dalam tasmu membuat Febri gelisah, seolah ia merasakan tatapan Harsan dari kejauhan."
+                "Aura pedang warisan dalam tasmu membuat Zabx gelisah, seolah ia merasakan tatapan para kaisar masa lalu."
             )
     if state.scene_id == "CH5_FINAL_WIN":
         if state.flags.get("UMAR_QUEST_DONE") and state.flags.get("REZA_QUEST_DONE"):
             extras.append(
-                "Cahaya Aruna Core beresonansi dengan niat Umar dan Reza yang sudah pulih. Jalan menuju TRUE ENDING terbuka."
+                "Kutukan abadi, doa Umar, dan segel Reza beresonansi. Jalan menuju TRUE ENDING terbuka."
             )
         else:
             extras.append(
-                "Ada gema yang belum tuntas. Selesaikan Warisan Safiya dan Suara dari Segel untuk menemukan akhir sejati."
+                "Ada janji yang belum ditutup. Selesaikan Warisan Safiya dan Suara dari Segel untuk menemukan akhir sejati."
             )
     return "\n\n".join(extras)
+
+
+def apply_story_tokens(text_lines: List[str], state: GameState) -> List[str]:
+    hero_name = state.player_name or state.party.get("ARUNA").name if state.party.get("ARUNA") else "Ksatria"
+    replacements = {
+        "{PLAYER_NAME}": hero_name,
+        "{HERO_NAME}": hero_name,
+    }
+    result: List[str] = []
+    for line in text_lines:
+        for src, dest in replacements.items():
+            line = line.replace(src, dest)
+        result.append(line)
+    return result
 
 
 async def send_scene(
@@ -4106,6 +4468,7 @@ async def send_scene(
         text_lines = text_lines.split("\n")
     if not text_lines:
         text_lines = ["Maaf, terjadi kesalahan pada cerita. Teks scene kosong."]
+    text_lines = apply_story_tokens(text_lines, state)
     text = "\n".join(text_lines)
     if reward_text:
         extra_text = reward_text + ("\n\n" + extra_text if extra_text else "")
@@ -4220,35 +4583,47 @@ async def send_world_map(
     state: GameState,
     extra_text: str = "",
 ):
-    text = "WORLD MAP\n" + WORLD_MAP_ASCII + "\n\n"
     current_loc = LOCATIONS.get(state.location)
     if not current_loc:
         logger.warning("Lokasi state tidak dikenal untuk user %s: %s", state.user_id, state.location)
     loc_name = current_loc.get("name") if current_loc else state.location
-    text += f"Lokasi kamu sekarang: {loc_name}\n"
-    text += f"Main Quest: {state.main_progress}\n"
-    text += "Pilih tujuan:"
-
-    if extra_text:
-        text += "\n\n" + extra_text
-
-    # buat tombol kota + dungeon
-    choices = []
+    lines = [
+        "=== PETA DUNIA ===",
+        f"Lokasi saat ini: {loc_name}",
+        f"Main Quest: {state.main_progress}",
+        "",
+        "Kota yang dikenal:",
+    ]
+    hero_level = highest_party_level(state)
     for loc_id, info in LOCATIONS.items():
-        if loc_id == state.location:
+        status = "Siap dikunjungi" if hero_level >= info.get("min_level", 1) else f"Butuh Lv {info.get('min_level', 1)}"
+        lines.append(f"- {info['name']} (Lv {info['min_level']}+): {status}")
+    lines.append("")
+    lines.append("Area hunting utama:")
+    for area_id, info in sorted(HUNTING_AREAS.items(), key=lambda item: item[1].get("min_level", 1)):
+        status = "Terbuka" if hero_level >= info.get("min_level", 1) else f"Butuh Lv {info.get('min_level', 1)}"
+        lines.append(
+            f"- {info['name']} ({info['level_range']}, elemen {info['element']}): {status}"
+        )
+    if extra_text:
+        lines.append("")
+        lines.append(extra_text)
+    text = "\n".join(lines)
+    choices: List[Tuple[str, str]] = []
+    for loc_id, info in LOCATIONS.items():
+        if hero_level < info.get("min_level", 1):
             continue
-        label = f"{info['name']} (Lv {info['min_level']}+)"
+        label = info.get("name", loc_id)
         choices.append((label, f"GOTO_CITY|{loc_id}"))
-
-    # dungeon terdekat dari lokasi sekarang
-    choices.append(("Pergi ke hutan terdekat (grinding)", "ENTER_DUNGEON"))
-
+    choices.append(("🗺️ Menu Hunting", "MENU_HUNTING"))
     keyboard = make_keyboard(choices)
     query = update.callback_query
     if query:
         await safe_edit_text(query, text=text, reply_markup=keyboard)
-    else:
+    elif update.message:
         await update.message.reply_text(text=text, reply_markup=keyboard)
+    else:
+        await update.effective_chat.send_message(text, reply_markup=keyboard)
 
 
 async def send_city_menu(
@@ -4276,15 +4651,20 @@ async def send_city_menu(
         text += extra_text + "\n"
     text += "Apa yang ingin kamu lakukan?"
 
-    choices = [("Lihat status party", "MENU_STATUS"), ("Kelola Equipment", "MENU_EQUIPMENT"), ("Inventory", "MENU_INVENTORY")]
+    choices = [
+        ("Lihat status party", "MENU_STATUS"),
+        ("Kelola Equipment", "MENU_EQUIPMENT"),
+        ("Inventory", "MENU_INVENTORY"),
+    ]
     if loc.get("has_shop"):
         choices.append(("Pergi ke toko", "MENU_SHOP"))
-    if loc.get("has_job") and features.get("jobs"):
-        choices.append(("Bekerja (job)", "MENU_JOB"))
     if loc.get("has_inn"):
         choices.append(("Ke penginapan (heal)", "MENU_INN"))
     if loc.get("has_clinic"):
         choices.append(("Pergi ke klinik", "MENU_CLINIC"))
+    choices.append(("🗺️ Hunting", "MENU_HUNTING"))
+    if loc.get("has_guild") and get_city_guild_quests(state.location):
+        choices.append(("🏰 Guild Pemburu", "MENU_GUILD"))
 
     # Event / side quest per kota
     if state.location == "SIAK":
@@ -4302,10 +4682,10 @@ async def send_city_menu(
         and not (state.flags.get("WEAPON_QUEST_DONE") or state.flags.get("QUEST_WEAPON_DONE"))
     ):
         started = state.flags.get("QUEST_WEAPON_STARTED") or state.flags.get("WEAPON_QUEST_STARTED")
-        label = "Lanjutkan pencarian pedang Harsan" if started else "Jejak pedang warisan Harsan"
+        label = "Lanjutkan pencarian pedang kekaisaran" if started else "Jejak pedang warisan kekaisaran"
         choices.append((label, "QUEST_HARSAN_BLADE"))
     if state.location == "KAMPAR":
-        choices.append(("Menuju Kastil Febri", "EVENT_KASTIL_ENTRY"))
+        choices.append(("Menuju Kastil Zabx", "EVENT_KASTIL_ENTRY"))
 
     choices.append(("Kembali ke world map", "GO_TO_WORLD_MAP"))
 
@@ -4317,11 +4697,10 @@ async def send_city_menu(
         await update.message.reply_text(text=text, reply_markup=keyboard)
 
 
-async def send_job_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
-    features = CITY_FEATURES.get(state.location, {})
-    jobs = features.get("jobs", {})
-    if not jobs:
-        text = "Tidak ada pekerjaan yang tersedia di kota ini."
+async def send_guild_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
+    loc = LOCATIONS.get(state.location, {})
+    if not loc.get("has_guild"):
+        text = "Tidak ada cabang guild di kota ini."
         keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
         query = update.callback_query
         if query:
@@ -4329,19 +4708,75 @@ async def send_job_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, stat
         else:
             await update.message.reply_text(text=text, reply_markup=keyboard)
         return
-
-    lines = ["Pilih pekerjaan di kota ini:"]
-    keyboard_choices = []
-    for job_id, info in jobs.items():
-        lines.append(f"- {info['name']}: {info['description']} (Bayaran {info['payout'][0]}-{info['payout'][1]} Gold)")
-        keyboard_choices.append((info["name"], f"DO_JOB|{job_id}"))
-    keyboard_choices.append(("Batal", "BACK_CITY_MENU"))
-    keyboard = make_keyboard(keyboard_choices)
+    quests = get_city_guild_quests(state.location)
+    lines = [f"🏰 Guild Pemburu {loc.get('name', state.location)}"]
+    if not quests:
+        lines.append("Belum ada kontrak berburu di papan pengumuman.")
+    else:
+        hero_level = highest_party_level(state)
+        for quest_id, data in quests.items():
+            quest_state = state.quests_active.get(quest_id)
+            completed = find_completed_quest(state, quest_id)
+            min_level = data.get("min_level", 1)
+            lines.append("")
+            lines.append(f"[{data['name']}] (Lv {min_level}+) - {data['description']}")
+            reward_parts = []
+            if data.get("reward_gold"):
+                reward_parts.append(f"{data['reward_gold']} Gold")
+            for item_id, qty in data.get("reward_items", {}).items():
+                item = ITEMS.get(item_id, {"name": item_id})
+                reward_parts.append(f"{item['name']} x{qty}")
+            if reward_parts:
+                lines.append("Hadiah: " + ", ".join(reward_parts))
+            if quest_state:
+                lines.append(
+                    f"Progress: {quest_state.progress}/{quest_state.required_amount}"
+                )
+                if quest_state.status == "COMPLETED":
+                    lines.append("Siap diklaim di meja guild.")
+            elif completed:
+                lines.append("Status: ✔ Selesai")
+            else:
+                status = "Tersedia" if hero_level >= min_level else "Level belum cukup"
+                lines.append(f"Status: {status}")
+    buttons: List[List[InlineKeyboardButton]] = []
+    for quest_id in quests:
+        quest_state = state.quests_active.get(quest_id)
+        completed = find_completed_quest(state, quest_id)
+        if quest_state and quest_state.status == "COMPLETED":
+            buttons.append(
+                [InlineKeyboardButton("Klaim hadiah", callback_data=f"GUILD_CLAIM|{quest_id}")]
+            )
+        elif not quest_state and not completed:
+            min_level = GUILD_QUESTS[quest_id].get("min_level", 1)
+            if highest_party_level(state) >= min_level:
+                buttons.append(
+                    [InlineKeyboardButton("Ambil quest", callback_data=f"GUILD_ACCEPT|{quest_id}")]
+                )
+    buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="BACK_CITY_MENU")])
+    markup = InlineKeyboardMarkup(buttons)
+    text = "\n".join(lines)
     query = update.callback_query
     if query:
-        await safe_edit_text(query, text="\n".join(lines), reply_markup=keyboard)
-    else:
-        await update.message.reply_text(text="\n".join(lines), reply_markup=keyboard)
+        await safe_edit_text(query, text=text, reply_markup=markup)
+    elif update.message:
+        await update.message.reply_text(text=text, reply_markup=markup)
+
+
+async def handle_guild_accept(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, quest_id: str
+):
+    success, message = accept_guild_quest(state, quest_id)
+    await update.callback_query.answer(message, show_alert=not success)
+    await send_guild_menu(update, context, state)
+
+
+async def handle_guild_claim(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, quest_id: str
+):
+    success, message = complete_guild_quest(state, quest_id)
+    await update.callback_query.answer(message, show_alert=not success)
+    await send_guild_menu(update, context, state)
 
 
 async def send_shop_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
@@ -4370,6 +4805,113 @@ async def send_shop_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, sta
         await safe_edit_text(query, text=text, reply_markup=markup)
     elif update.message:
         await update.message.reply_text(text=text, reply_markup=markup)
+
+
+async def send_hunting_menu(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, extra_text: str = ""
+):
+    hero_level = highest_party_level(state)
+    lines = ["=== AREA HUNTING ===", f"Level party tertinggi: {hero_level}"]
+    if extra_text:
+        lines.append("")
+        lines.append(extra_text)
+    lines.append("")
+    buttons: List[List[InlineKeyboardButton]] = []
+    for area_id, info in sorted(HUNTING_AREAS.items(), key=lambda item: item[1].get("min_level", 1)):
+        status = "Tersedia" if hero_level >= info.get("min_level", 1) else f"Butuh Lv {info.get('min_level', 1)}"
+        lines.append(
+            f"- {info['name']} ({info['level_range']}, elemen {info['element']}) → {status}"
+        )
+        if hero_level >= info.get("min_level", 1):
+            buttons.append(
+                [InlineKeyboardButton(info["name"], callback_data=f"HUNT_AREA|{area_id}")]
+            )
+    buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="BACK_CITY_MENU")])
+    markup = InlineKeyboardMarkup(buttons)
+    text = "\n".join(lines)
+    query = update.callback_query
+    if query:
+        await safe_edit_text(query, text=text, reply_markup=markup)
+    elif update.message:
+        await update.message.reply_text(text=text, reply_markup=markup)
+
+
+async def send_hunting_area_menu(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    area_id: str,
+    extra_text: str = "",
+):
+    area = HUNTING_AREAS.get(area_id)
+    if not area:
+        await update.callback_query.answer("Area hunting tidak dikenal.", show_alert=True)
+        await send_hunting_menu(update, context, state)
+        return
+    hero_level = highest_party_level(state)
+    if hero_level < area.get("min_level", 1):
+        await update.callback_query.answer("Levelmu belum cukup.", show_alert=True)
+        await send_hunting_menu(update, context, state)
+        return
+    state.flags["LAST_HUNT_AREA"] = area_id
+    lines = [
+        f"=== {area['name']} ===",
+        f"Rekomendasi level: {area['level_range']} (min Lv {area['min_level']})",
+        f"Elemen dominan: {area['element']}",
+        area.get("description", ""),
+    ]
+    if extra_text:
+        lines.append("")
+        lines.append(extra_text)
+    monsters = area.get("monsters", [])
+    if monsters:
+        lines.append("")
+        lines.append("Monster yang sering muncul:")
+        for mid in monsters:
+            monster = MONSTERS.get(mid)
+            if not monster:
+                continue
+            lines.append(f"- {monster['name']} [{monster.get('rank', 'MEDIUM')}]")
+    auto_active = state.auto_hunt and state.auto_hunt_area == area_id
+    buttons: List[List[InlineKeyboardButton]] = []
+    buttons.append([InlineKeyboardButton("⚔️ Bertarung sekali", callback_data=f"HUNT_BATTLE|{area_id}")])
+    if auto_active:
+        buttons.append([InlineKeyboardButton("⛔ Hentikan Auto Hunting", callback_data="AUTO_HUNT_OFF")])
+    else:
+        buttons.append([InlineKeyboardButton("⚔️ Auto Hunting", callback_data=f"AUTO_HUNT_ON|{area_id}")])
+    buttons.append([InlineKeyboardButton("⬅ Daftar Area", callback_data="MENU_HUNTING")])
+    buttons.append([InlineKeyboardButton("🏘️ Kembali ke kota", callback_data="BACK_CITY_MENU")])
+    markup = InlineKeyboardMarkup(buttons)
+    query = update.callback_query
+    if query:
+        await safe_edit_text(query, text="\n".join(lines), reply_markup=markup)
+    else:
+        await update.effective_chat.send_message("\n".join(lines), reply_markup=markup)
+
+
+async def handle_auto_hunt_toggle(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    area_id: Optional[str],
+    enable: bool,
+):
+    if enable:
+        if not area_id:
+            await update.callback_query.answer("Area tidak valid.", show_alert=True)
+            return
+        state.auto_hunt = True
+        state.auto_hunt_area = area_id
+        await update.callback_query.answer("Auto hunting dimulai.", show_alert=False)
+        await start_random_battle_in_area(update, context, state, area_id, source="HUNTING")
+    else:
+        stop_auto_hunt(state)
+        await update.callback_query.answer("Auto hunting dihentikan.", show_alert=False)
+        target_area = area_id or state.flags.get("LAST_HUNT_AREA") or state.auto_hunt_area
+        if target_area:
+            await send_hunting_area_menu(update, context, state, target_area)
+        else:
+            await send_hunting_menu(update, context, state)
 
 
 async def send_shop_buy_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
@@ -4468,27 +5010,6 @@ async def handle_sell_item(
         f"Kamu menjual {item['name']} seharga {sell_price} Gold.", show_alert=False
     )
     await send_shop_sell_menu(update, context, state)
-
-
-async def resolve_job(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, job_id: str):
-    features = CITY_FEATURES.get(state.location, {})
-    job = features.get("jobs", {}).get(job_id)
-    if not job:
-        text = "Pekerjaan tidak tersedia."
-    else:
-        fail = random.random() < job.get("fail_chance", 0)
-        if fail:
-            text = f"Kamu gagal menyelesaikan {job['name']}. Kamu tidak dibayar."
-        else:
-            payout = random.randint(job["payout"][0], job["payout"][1])
-            state.gold += payout
-            text = f"Kamu menyelesaikan {job['name']} dan mendapatkan {payout} Gold!"
-    keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
-    query = update.callback_query
-    if query:
-        await safe_edit_text(query, text=text, reply_markup=keyboard)
-    else:
-        await update.message.reply_text(text=text, reply_markup=keyboard)
 
 
 async def send_equipment_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
@@ -4740,6 +5261,38 @@ async def handle_use_item_outside(
     await send_inventory_menu(update, context, state, extra_text="\n".join(logs))
 
 
+async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text or update.message.text.startswith("/"):
+        return
+    user_id = update.effective_user.id
+    text = update.message.text.strip()
+    try:
+        async with get_user_lock(user_id):
+            state = get_game_state(user_id)
+            awaiting_name = state.flags.get("AWAITING_PLAYER_NAME")
+            if not awaiting_name:
+                return
+            if len(text) < 3:
+                await update.message.reply_text("Nama minimal 3 karakter.")
+                return
+            if len(text) > 18:
+                text = text[:18]
+            state.player_name = text
+            state.reset_for_new_journey()
+            state.flags.pop("AWAITING_PLAYER_NAME", None)
+            greeting = (
+                f"Namamu tercatat sebagai {text}.\n"
+                "500 tahun berlalu sejak kekaisaran runtuh, namun sumpahmu belum padam."
+            )
+        await update.message.reply_text(greeting)
+        await send_scene(update, context, state)
+    except Exception:
+        logger.exception("Gagal memproses input nama untuk user %s", user_id)
+        await update.message.reply_text(
+            "Terjadi kesalahan saat menyimpan namamu. Coba lagi dengan /start."
+        )
+
+
 # ==========================
 # HANDLER KOMANDO
 # ==========================
@@ -4749,12 +5302,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         async with get_user_lock(user_id):
             state = get_game_state(user_id)
-            state.scene_id = "CH0_S1"
-            state.location = "SELATPANJANG"
-            state.main_progress = "PROLOG"
-            state.ensure_aruna()
-        logger.info("User %s memulai permainan dengan /start", user_id)
-        await send_scene(update, context, state)
+            needs_name = not state.player_name
+            if needs_name:
+                state.flags["AWAITING_PLAYER_NAME"] = True
+            else:
+                state.flags.pop("AWAITING_PLAYER_NAME", None)
+                state.ensure_aruna()
+        if needs_name:
+            prompt = (
+                "Masukkan nama karaktermu: \n"
+                "Kau adalah ksatria abadi yang menyaksikan runtuhnya kekaisaran 500 tahun lalu."
+            )
+            if update.message:
+                await update.message.reply_text(prompt)
+            elif update.effective_chat:
+                await update.effective_chat.send_message(prompt)
+            return
+        logger.info("User %s melanjutkan petualangan dengan /start", user_id)
+        if state.scene_id in SCENES:
+            await send_scene(update, context, state)
+        else:
+            await send_world_map(update, context, state)
     except Exception:
         logger.exception("Error di handler /start untuk user %s", user_id)
         if update.message:
@@ -4767,7 +5335,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         lines = [
             "✨ Legends of Aruna: Journey to Kampar",
-            "RPG teks taktis di mana kamu memimpin Aruna dan kawan-kawan menuju Kampar.",
+            "RPG teks taktis tentang ksatria abadi yang menebus kegagalannya melawan Zabx.",
             "",
             "==============================",
             "Perintah Utama:",
@@ -4777,13 +5345,14 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• /inventory – Lihat dan gunakan item di luar battle.",
             "• /save – Simpan progress secara manual.",
             "• /load – Muat progress dari file save.",
+            "• /quests – Lihat quest guild dan progres cerita.",
             "• /help – Lihat bantuan ini.",
             "",
             "==============================",
             "Tips Singkat:",
-            "• Kamu hanya bisa bertarung di hutan/dungeon, bukan di dalam kota.",
-            "• Di kota, gunakan job untuk mendapatkan Gold, beli equipment, dan istirahat di penginapan.",
-            "• Kampar adalah area akhir dengan monster sangat kuat – pastikan levelmu cukup dan quest penting sudah selesai.",
+            "• Gunakan menu Hunting untuk memilih area dan menyalakan auto hunting.",
+            "• Kunjungi Guild di tiap kota besar untuk kontrak berburu dan hadiah tambahan.",
+            "• Kampar dan Kastil Zabx sangat berbahaya – selesaikan quest karakter dan pedang warisan sebelum maju.",
         ]
         text = "\n".join(lines)
         if update.message:
@@ -4883,12 +5452,13 @@ async def load_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if update.message:
             loc_name = LOCATIONS.get(loaded.location, {}).get("name", loaded.location)
             aruna = loaded.party.get("ARUNA")
+            hero_name = loaded.player_name or (aruna.name if aruna else "Ksatria")
             aruna_level = aruna.level if aruna else "-"
             await update.message.reply_text(
                 (
                     "Progress berhasil dimuat!\n"
                     f"Lokasi: {loc_name}\n"
-                    f"Level Aruna: {aruna_level}\n"
+                    f"Level {hero_name}: {aruna_level}\n"
                     "Gunakan /status untuk melihat detail party."
                 )
             )
@@ -4956,7 +5526,7 @@ async def show_state_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         quest_flags = [
             ("Warisan Safiya", state.flags.get("UMAR_QUEST_DONE")),
             ("Suara dari Segel", state.flags.get("REZA_QUEST_DONE")),
-            ("Pedang Harsan", state.flags.get("WEAPON_QUEST_DONE") or state.flags.get("QUEST_WEAPON_DONE")),
+            ("Pedang warisan kekaisaran", state.flags.get("WEAPON_QUEST_DONE") or state.flags.get("QUEST_WEAPON_DONE")),
             ("Gerbang Siak", state.flags.get("SIAK_GATE_EVENT_DONE")),
             ("Rumor Pekanbaru", state.flags.get("PEKANBARU_RUMOR_DONE")),
             ("Kampar", state.flags.get("VISITED_KAMPAR")),
@@ -4986,6 +5556,56 @@ async def inventory_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if update.message:
             await update.message.reply_text(
                 "Terjadi kesalahan tak terduga. Silakan coba lagi. Jika masalah berlanjut, hubungi admin."
+            )
+
+
+async def quests_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    try:
+        async with get_user_lock(user_id):
+            state = get_game_state(user_id)
+        lines = ["=== QUEST TRACKER ==="]
+        if state.quests_active:
+            lines.append("\nQuest Aktif:")
+            for quest in state.quests_active.values():
+                lines.append(
+                    f"- {quest.id}: {quest.description or quest.type} ({quest.progress}/{quest.required_amount})"
+                )
+        else:
+            lines.append("\nQuest Aktif: (tidak ada)")
+        if state.quests_completed:
+            lines.append("\nQuest Selesai:")
+            for quest in state.quests_completed[-5:]:
+                status = "Hadiah diambil" if quest.reward_received else "Belum klaim"
+                lines.append(f"- {quest.id} ({status})")
+        else:
+            lines.append("\nQuest Selesai: (belum ada)")
+        lines.append("\nStatus Cerita:")
+        lines.append(f"• Main Quest: {state.main_progress}")
+        lines.append(
+            "• Warisan Umar: "
+            + ("Selesai" if state.flags.get("UMAR_QUEST_DONE") else "Belum tuntas")
+        )
+        lines.append(
+            "• Suara Reza: "
+            + ("Selesai" if state.flags.get("REZA_QUEST_DONE") else "Belum tuntas")
+        )
+        lines.append(
+            "• Pedang Warisan: "
+            + (
+                "Bangkit"
+                if state.flags.get("WEAPON_QUEST_DONE") or state.flags.get("QUEST_WEAPON_DONE")
+                else "Dalam pencarian"
+            )
+        )
+        text = "\n".join(lines)
+        if update.message:
+            await update.message.reply_text(text)
+    except Exception:
+        logger.exception("Error di handler /quests untuk user %s", user_id)
+        if update.message:
+            await update.message.reply_text(
+                "Terjadi kesalahan saat membaca daftar quest. Coba lagi nanti."
             )
 
 
@@ -5058,13 +5678,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await process_target_selection(update, context, state, data)
                     return
 
-                if data == "DUNGEON_BATTLE_AGAIN":
-                    handled = True
-                    await start_random_battle(update, context, state)
-                    return
-
                 if data == "RETURN_TO_CITY":
                     handled = True
+                    stop_auto_hunt(state)
                     await send_city_menu(update, context, state)
                     return
 
@@ -5169,14 +5785,57 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         await send_city_menu(update, context, state)
                     return
 
-                if data == "ENTER_DUNGEON":
+                if data == "MENU_GUILD":
                     handled = True
-                    area = NEAREST_DUNGEON.get(state.location, "HUTAN_SELATPANJANG")
-                    text = f"Kamu memasuki {area}. Monster berkeliaran di sini."
-                    keyboard = make_keyboard(
-                        [("Cari monster", "DUNGEON_BATTLE_AGAIN"), ("Kembali ke kota", "RETURN_TO_CITY")]
-                    )
-                    await safe_edit_text(query, text=text, reply_markup=keyboard)
+                    await send_guild_menu(update, context, state)
+                    return
+                if data.startswith("GUILD_ACCEPT|"):
+                    handled = True
+                    parts = parse_callback_parts(data, 2)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    await handle_guild_accept(update, context, state, parts[1])
+                    return
+                if data.startswith("GUILD_CLAIM|"):
+                    handled = True
+                    parts = parse_callback_parts(data, 2)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    await handle_guild_claim(update, context, state, parts[1])
+                    return
+                if data == "MENU_HUNTING":
+                    handled = True
+                    await send_hunting_menu(update, context, state)
+                    return
+                if data.startswith("HUNT_AREA|"):
+                    handled = True
+                    parts = parse_callback_parts(data, 2)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    await send_hunting_area_menu(update, context, state, parts[1])
+                    return
+                if data.startswith("HUNT_BATTLE|"):
+                    handled = True
+                    parts = parse_callback_parts(data, 2)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    await start_random_battle_in_area(update, context, state, parts[1])
+                    return
+                if data.startswith("AUTO_HUNT_ON|"):
+                    handled = True
+                    parts = parse_callback_parts(data, 2)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    await handle_auto_hunt_toggle(update, context, state, parts[1], True)
+                    return
+                if data == "AUTO_HUNT_OFF":
+                    handled = True
+                    await handle_auto_hunt_toggle(update, context, state, state.auto_hunt_area, False)
                     return
 
                 # MENU KOTA
@@ -5234,11 +5893,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await handle_sell_item(update, context, state, item_id)
                     return
 
-                if data == "MENU_JOB":
-                    handled = True
-                    await send_job_menu(update, context, state)
-                    return
-
                 if data == "MENU_INN":
                     handled = True
                     cost = CITY_FEATURES.get(state.location, {}).get("inn_cost", 0)
@@ -5274,7 +5928,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     if not state.flags.get("HAS_UMAR"):
                         await render_scene(update, context, state, "CH1_UMAR_CLINIC")
                     else:
-                        text = "Umar: \"Jaga dirimu baik-baik, Aruna. Aku di sini kalau kau butuh bantuan.\"\n"
+                        hero_name = state.player_name or (
+                            state.party.get("ARUNA").name if state.party.get("ARUNA") else "Ksatria"
+                        )
+                        text = (
+                            f"Umar: \"Jaga dirimu baik-baik, {hero_name}. Aku di sini kalau kau butuh bantuan.\"\n"
+                        )
                         keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
                         await safe_edit_text(query, text=text, reply_markup=keyboard)
                     return
@@ -5383,16 +6042,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await render_scene(update, context, state, "SQ_HARSAN_BLADE_INTRO")
                     return
 
-                if data.startswith("DO_JOB|"):
-                    handled = True
-                    parts = parse_callback_parts(data, 2)
-                    if not parts:
-                        await notify_unknown_callback(update)
-                        return
-                    _, job_id = parts[:2]
-                    await resolve_job(update, context, state, job_id)
-                    return
-
                 if data == "GO_TO_WORLD_MAP":
                     handled = True
                     await send_world_map(update, context, state)
@@ -5439,26 +6088,34 @@ def main():
     application.add_handler(CommandHandler("save", save_cmd))
     application.add_handler(CommandHandler("load", load_cmd))
     application.add_handler(CommandHandler("inventory", inventory_cmd))
+    application.add_handler(CommandHandler("quests", quests_cmd))
     application.add_handler(CommandHandler("help", help_cmd))
     application.add_handler(CommandHandler("force_save", force_save_cmd))
     application.add_handler(CommandHandler("show_state", show_state_cmd))
 
+    text_filter = filters.TEXT & (~filters.COMMAND)
+    application.add_handler(MessageHandler(text_filter, handle_text_message))
     application.add_handler(CallbackQueryHandler(button))
 
     logger.info("Bot Legends of Aruna berjalan...")
     application.run_polling()
 
 
-# Balance summary (for quick tweaking reference):
-# - Damage & battle balancing: calc_physical_damage/calc_magic_damage + calc_enemy_basic_damage
-#   now use PHYSICAL_DEF_RATIO/MAGICAL_DEF_RATIO and ENEMY_ATTACK_SCALE constants so editing
-#   those values adjusts the entire curve (monsters now hit roughly comparable to players).
-# - Combo skills: Aruna gains SERANGAN_KEMBAR + TRISULA_CAHAYA (multi-hit), Reza gains
-#   ARCANE_BARRAGE, and the battle log shows each hit to sell the combo fantasy.
-# - Rare monsters: Gaung Bayangan, Serigala Purba, Revenant Abyss (plus other RARE-tagged foes)
-#   spawn through pick_random_monster_for_area with RARE_ENCOUNTER_CHANCE + level buffer.
-# - World map: WORLD_MAP_ASCII replaced with a decorative ▒/░ background to highlight route
-#   from Selatpanjang up to Kastil Febri without touching any travel logic.
+# Ringkasan pembaruan Immortal Knight:
+# - Story & Prologue: Seluruh scene utama kini mengikuti kisah ksatria abadi melawan Zabx, lengkap
+#   dengan pengenalan kota modern, Umar, Reza, dan pedang warisan kekaisaran.
+# - Guild quests: Job kota digantikan dengan sistem guild berburu yang melacak quest aktif dan
+#   hadiah lewat QuestState baru.
+# - Hunting maps & auto-hunting: Menu berburu area khusus memungkinkan battle manual maupun
+#   auto-hunt berantai tanpa melanggar model async.
+# - Scaling & monster labels: MONSTERS memakai rank serta helper power check supaya label WEAK/
+#   MEDIUM/STRONG/BOSS tampil di UI dan skala statistik terasa konsisten antar area.
+# - Quest tracking (/quests): Struktur GameState menyimpan quest aktif/selesai untuk cerita utama,
+#   side quest Umar & Reza, pedang warisan, dan misi guild.
+# - Elemental damage: Senjata, skill, dan monster memakai elemen (Api, Air, Netral, dll) dengan
+#   matriks multiplier agar strategi unsur terasa penting.
+# - Map display: /map menampilkan daftar kota & area berburu alih-alih ASCII lama sehingga mudah
+#   diperluas dengan data hunting map baru.
 
 if __name__ == "__main__":
     main()
