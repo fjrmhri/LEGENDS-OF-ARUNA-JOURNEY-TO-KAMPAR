@@ -1947,8 +1947,27 @@ def find_revive_target(state: GameState) -> Optional[CharacterState]:
 
 
 def initialize_battle_turn_state(state: GameState):
-    order = [f"CHAR:{cid}" for cid in state.party_order]
-    order += [f"ENEMY:{idx}" for idx in range(len(state.battle_enemies))]
+    entries: List[Tuple[str, int, int, int]] = []
+    for pos, cid in enumerate(state.party_order):
+        character = state.party.get(cid)
+        if not character or character.hp <= 0:
+            continue
+        spd = get_effective_stat(character, "spd")
+        entries.append((f"CHAR:{cid}", spd, 0, pos))
+    for idx, enemy in enumerate(state.battle_enemies):
+        if enemy.get("hp", 0) <= 0:
+            continue
+        spd = int(enemy.get("spd", 1))
+        entries.append((f"ENEMY:{idx}", spd, 1, idx))
+    if not entries:
+        order: List[str] = []
+    else:
+        entries.sort(key=lambda item: (-item[1], item[2], item[3]))
+        order = [token for token, *_ in entries]
+    logger.debug(
+        "Initial turn order (SPD): %s",
+        ", ".join(f"{token}:{spd}" for token, spd, *_ in entries) or "(kosong)",
+    )
     state.battle_state = BattleTurnState(
         turn_order=order, current_turn_index=-1, enemies=state.battle_enemies
     )
