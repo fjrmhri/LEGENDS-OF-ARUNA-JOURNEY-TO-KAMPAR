@@ -425,21 +425,32 @@ NEAREST_DUNGEON = {
     "KAMPAR": "KAMPAR_LUAR",
 }
 
+# Peluang encounter monster langka per area (bisa disesuaikan untuk balancing).
+RARE_ENCOUNTER_CHANCE = {
+    "HUTAN_SELATPANJANG": 0.04,
+    "HUTAN_SIAK": 0.04,
+    "HUTAN_RENGAT": 0.05,
+    "HUTAN_PEKANBARU": 0.05,
+    "KAMPAR_LUAR": 0.06,
+}
+
+RARE_LEVEL_BUFFER = 2  # selisih level minimal player agar rare bisa muncul
+
 # Monster definitions lengkap sesuai GDD
 MONSTERS = {
     "SHADOW_SLIME": {
         "name": "Shadow Slime",
         "area": "HUTAN_SELATPANJANG",
         "level": 1,
-        "hp": 20,
+        "hp": 24,
         "mp": 5,
-        "atk": 4,
-        "defense": 2,
+        "atk": 5,
+        "defense": 3,
         "mag": 1,
         "spd": 3,
         "luck": 1,
-        "xp": 5,
-        "gold": 3,
+        "xp": 6,
+        "gold": 4,
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
@@ -449,15 +460,15 @@ MONSTERS = {
         "name": "Mist Wolf",
         "area": "HUTAN_SELATPANJANG",
         "level": 2,
-        "hp": 28,
+        "hp": 32,
         "mp": 5,
-        "atk": 6,
-        "defense": 3,
+        "atk": 7,
+        "defense": 4,
         "mag": 1,
         "spd": 5,
         "luck": 2,
-        "xp": 8,
-        "gold": 5,
+        "xp": 10,
+        "gold": 6,
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
@@ -467,34 +478,53 @@ MONSTERS = {
         "name": "Scarred Panther",
         "area": "HUTAN_SELATPANJANG",
         "level": 4,
-        "hp": 80,
+        "hp": 90,
         "mp": 10,
-        "atk": 12,
-        "defense": 6,
+        "atk": 13,
+        "defense": 7,
         "mag": 3,
         "spd": 9,
         "luck": 5,
-        "xp": 28,
-        "gold": 22,
+        "xp": 40,
+        "gold": 30,
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
         "rarity": "RARE",
         "encounter_weight": 0.08,
     },
+    "ECHO_SHADE": {
+        "name": "Gaung Bayangan",
+        "area": "HUTAN_SELATPANJANG",
+        "level": 5,
+        "hp": 110,
+        "mp": 18,
+        "atk": 14,
+        "defense": 8,
+        "mag": 8,
+        "spd": 8,
+        "luck": 6,
+        "xp": 65,
+        "gold": 48,
+        "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
+        "rarity": "RARE",
+        "encounter_weight": 0.03,
+    },
     "SHADOW_BANDIT": {
         "name": "Shadow Bandit",
         "area": "HUTAN_SIAK",
         "level": 3,
-        "hp": 35,
+        "hp": 38,
         "mp": 10,
-        "atk": 8,
-        "defense": 4,
+        "atk": 9,
+        "defense": 5,
         "mag": 2,
         "spd": 6,
         "luck": 2,
-        "xp": 12,
-        "gold": 10,
+        "xp": 14,
+        "gold": 12,
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
@@ -504,15 +534,15 @@ MONSTERS = {
         "name": "Gate Spirit",
         "area": "HUTAN_SIAK",
         "level": 4,
-        "hp": 40,
+        "hp": 44,
         "mp": 20,
-        "atk": 5,
+        "atk": 6,
         "defense": 5,
-        "mag": 8,
+        "mag": 9,
         "spd": 4,
         "luck": 3,
-        "xp": 16,
-        "gold": 12,
+        "xp": 18,
+        "gold": 14,
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
@@ -523,15 +553,15 @@ MONSTERS = {
         "name": "Herb Guardian",
         "area": "HUTAN_SIAK",
         "level": 6,
-        "hp": 85,
+        "hp": 95,
         "mp": 15,
-        "atk": 10,
-        "defense": 9,
+        "atk": 11,
+        "defense": 10,
         "mag": 6,
         "spd": 6,
         "luck": 4,
-        "xp": 36,
-        "gold": 24,
+        "xp": 40,
+        "gold": 26,
         "element": "ALAM",
         "weakness": ["API"],
         "resist": ["ALAM"],
@@ -542,15 +572,15 @@ MONSTERS = {
         "name": "Bloodthorn Vine",
         "area": "HUTAN_SIAK",
         "level": 7,
-        "hp": 130,
-        "mp": 20,
-        "atk": 16,
-        "defense": 11,
+        "hp": 150,
+        "mp": 22,
+        "atk": 14,
+        "defense": 12,
         "mag": 6,
         "spd": 7,
         "luck": 5,
-        "xp": 45,
-        "gold": 32,
+        "xp": 55,
+        "gold": 38,
         "element": "ALAM",
         "weakness": ["API"],
         "resist": ["ALAM"],
@@ -561,15 +591,15 @@ MONSTERS = {
         "name": "Corrupted Treant",
         "area": "HUTAN_RENGAT",
         "level": 5,
-        "hp": 60,
+        "hp": 70,
         "mp": 10,
-        "atk": 8,
-        "defense": 8,
+        "atk": 9,
+        "defense": 9,
         "mag": 4,
         "spd": 3,
         "luck": 2,
-        "xp": 20,
-        "gold": 15,
+        "xp": 24,
+        "gold": 18,
         "element": "ALAM",
         "weakness": ["API"],
         "resist": ["ALAM"],
@@ -579,15 +609,15 @@ MONSTERS = {
         "name": "Forest Wisp",
         "area": "HUTAN_RENGAT",
         "level": 6,
-        "hp": 40,
-        "mp": 30,
+        "hp": 46,
+        "mp": 32,
         "atk": 4,
         "defense": 3,
-        "mag": 10,
+        "mag": 11,
         "spd": 7,
         "luck": 4,
-        "xp": 22,
-        "gold": 18,
+        "xp": 26,
+        "gold": 20,
         "element": "CAHAYA",
         "weakness": ["GELAP"],
         "resist": ["CAHAYA"],
@@ -597,15 +627,15 @@ MONSTERS = {
         "name": "Penjaga Segel Retak",
         "area": "HUTAN_RENGAT",
         "level": 9,
-        "hp": 120,
-        "mp": 28,
-        "atk": 16,
-        "defense": 12,
-        "mag": 14,
+        "hp": 140,
+        "mp": 30,
+        "atk": 15,
+        "defense": 13,
+        "mag": 15,
         "spd": 7,
         "luck": 4,
-        "xp": 55,
-        "gold": 32,
+        "xp": 65,
+        "gold": 38,
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
@@ -615,15 +645,15 @@ MONSTERS = {
         "name": "Corrupted Forest Golem",
         "area": "HUTAN_RENGAT",
         "level": 8,
-        "hp": 150,
+        "hp": 180,
         "mp": 30,
-        "atk": 18,
-        "defense": 15,
+        "atk": 20,
+        "defense": 16,
         "mag": 8,
         "spd": 4,
         "luck": 3,
-        "xp": 80,
-        "gold": 50,
+        "xp": 95,
+        "gold": 60,
         "element": "ALAM",
         "weakness": ["API"],
         "resist": ["ALAM"],
@@ -634,15 +664,15 @@ MONSTERS = {
         "name": "Phantom Merchant",
         "area": "HUTAN_PEKANBARU",
         "level": 9,
-        "hp": 70,
-        "mp": 25,
-        "atk": 10,
-        "defense": 8,
-        "mag": 10,
-        "spd": 6,
+        "hp": 80,
+        "mp": 28,
+        "atk": 11,
+        "defense": 9,
+        "mag": 11,
+        "spd": 7,
         "luck": 5,
-        "xp": 30,
-        "gold": 25,
+        "xp": 38,
+        "gold": 30,
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
@@ -652,33 +682,52 @@ MONSTERS = {
         "name": "Cursed Militia",
         "area": "HUTAN_PEKANBARU",
         "level": 10,
-        "hp": 80,
-        "mp": 10,
-        "atk": 14,
-        "defense": 12,
+        "hp": 95,
+        "mp": 12,
+        "atk": 15,
+        "defense": 13,
         "mag": 4,
-        "spd": 5,
+        "spd": 6,
         "luck": 3,
-        "xp": 35,
-        "gold": 28,
+        "xp": 45,
+        "gold": 34,
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
         "encounter_weight": 0.9,
     },
+    "ANCIENT_WOLF": {
+        "name": "Serigala Purba",
+        "area": "HUTAN_PEKANBARU",
+        "level": 12,
+        "hp": 180,
+        "mp": 22,
+        "atk": 21,
+        "defense": 15,
+        "mag": 8,
+        "spd": 11,
+        "luck": 6,
+        "xp": 120,
+        "gold": 90,
+        "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
+        "rarity": "RARE",
+        "encounter_weight": 0.04,
+    },
     "ABYSS_HOUND": {
         "name": "Abyss Hound",
         "area": "KAMPAR_LUAR",
         "level": 13,
-        "hp": 95,
-        "mp": 20,
-        "atk": 18,
-        "defense": 10,
+        "hp": 110,
+        "mp": 22,
+        "atk": 19,
+        "defense": 11,
         "mag": 6,
         "spd": 12,
         "luck": 4,
-        "xp": 45,
-        "gold": 40,
+        "xp": 55,
+        "gold": 45,
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
@@ -688,19 +737,38 @@ MONSTERS = {
         "name": "Void Knight",
         "area": "KAMPAR_LUAR",
         "level": 15,
-        "hp": 120,
-        "mp": 30,
-        "atk": 20,
-        "defense": 16,
+        "hp": 145,
+        "mp": 34,
+        "atk": 22,
+        "defense": 18,
         "mag": 10,
         "spd": 8,
         "luck": 5,
-        "xp": 60,
-        "gold": 50,
+        "xp": 80,
+        "gold": 58,
         "element": "GELAP",
         "weakness": ["CAHAYA"],
         "resist": ["GELAP"],
         "encounter_weight": 0.6,
+    },
+    "ABYSS_REVENANT": {
+        "name": "Revenant Abyss",
+        "area": "KAMPAR_LUAR",
+        "level": 16,
+        "hp": 230,
+        "mp": 45,
+        "atk": 26,
+        "defense": 19,
+        "mag": 18,
+        "spd": 11,
+        "luck": 6,
+        "xp": 180,
+        "gold": 110,
+        "element": "GELAP",
+        "weakness": ["CAHAYA"],
+        "resist": ["GELAP"],
+        "rarity": "RARE",
+        "encounter_weight": 0.03,
     },
     "HOUND_OF_VOID": {
         "name": "Hound of Void",
@@ -829,7 +897,7 @@ DROP_TABLES = {
 # Skill dasar lengkap
 SKILLS = {
     "SLASH": {
-        "name": "Slash",
+        "name": "Tebasan",
         "mp_cost": 0,
         "type": "PHYS",
         "power": 1.0,
@@ -852,23 +920,23 @@ SKILLS = {
         "element": "CAHAYA",
         "description": "Tebasan fisik bercahaya yang melemahkan musuh.",
     },
-    "TWIN_STRIKE": {
-        "name": "Twin Strike",
-        "mp_cost": 6,
+    "SERANGAN_KEMBAR": {
+        "name": "Serangan Kembar",
+        "mp_cost": 7,
         "type": "PHYS",
         "power": 0.85,
         "hits": 2,
         "element": "NETRAL",
-        "description": "Serangan beruntun dua kali dengan kekuatan fisik Aruna.",
+        "description": "Menyerang musuh 2x dengan kecepatan pedang Aruna.",
     },
-    "TRIPLE_SLASH": {
-        "name": "Triple Slash",
-        "mp_cost": 12,
+    "TRISULA_CAHAYA": {
+        "name": "Trisula Cahaya",
+        "mp_cost": 14,
         "type": "PHYS",
         "power": 0.75,
         "hits": 3,
-        "element": "NETRAL",
-        "description": "Tiga tebasan cepat yang mengandalkan ketangkasan Aruna.",
+        "element": "CAHAYA",
+        "description": "Tebasan cahaya beruntun 3x yang membelah kegelapan.",
     },
     "GUARDIAN_OATH": {
         "name": "Guardian's Oath",
@@ -957,6 +1025,15 @@ SKILLS = {
         "power": 0.8,
         "element": "PETIR",
         "description": "Serangan AoE petir dengan peluang stun.",
+    },
+    "ARCANE_BARRAGE": {
+        "name": "Badai Arkan",
+        "mp_cost": 12,
+        "type": "MAG",
+        "power": 0.55,
+        "hits": 3,
+        "element": "PETIR",
+        "description": "Semburan sihir 3x berturut-turut ke satu musuh.",
     },
     "ARCANE_FOCUS": {
         "name": "Arcane Focus",
@@ -1056,9 +1133,9 @@ CHAR_SKILL_UNLOCKS = {
     "ARUNA": [
         (3, "LIGHT_BURST"),
         (6, "RADIANT_SLASH"),
-        (7, "TWIN_STRIKE"),
+        (7, "SERANGAN_KEMBAR"),
         (9, "GUARDIAN_OATH"),
-        (11, "TRIPLE_SLASH"),
+        (10, "TRISULA_CAHAYA"),
         (12, "LIGHT_WAVE"),
     ],
     "UMAR": [
@@ -1072,6 +1149,7 @@ CHAR_SKILL_UNLOCKS = {
         (2, "FIRE_BOLT"),
         (5, "CHAIN_LIGHTNING"),
         (7, "MANA_SHIELD"),
+        (9, "ARCANE_BARRAGE"),
         (10, "ARCANE_FOCUS"),
         (14, "ABYSS_SEAL"),
     ],
@@ -1191,33 +1269,30 @@ def get_scene(scene_id: str) -> Optional[Dict[str, Any]]:
 load_scenes()
 
 WORLD_MAP_ASCII = """
-              [ HUTAN KAMPAR ]
-                    ||
-        +-----------||-----------+
-        |                       |
-    [KAMPAR] - - - - - - - - [KASTIL FEBRI]
-
-              ^
-              |
-        [PEKANBARU]
-              ^
-              |
-       [HUTAN PEKANBARU]
-              ^
-              |
-           [RENGAT]
-              ^
-              |
-       [HUTAN RENGAT]
-              ^
-              |
-            [SIAK]
-              ^
-              |
-    [HUTAN SELATPANJANG]
-              ^
-              |
-        [SELATPANJANG]
+▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒
+▒░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░▒▒
+▒░▒     [KASTIL FEBRI]      ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒
+▒░▒        [HUTAN KAMPAR]  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒
+▒░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒
+▒░░▒░▒▒▒▒▒░░░░░░░░░░░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒▒
+▒░░░▒░  [KAMPAR]   ░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒▒▒▒
+▒░░░▒░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒▒▒▒▒▒
+▒░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒▒▒▒▒▒▒▒
+▒░░░░░░░░ [PEKANBARU] ░░▒▒▒▒▒▒▒▒▒░░▒▒▒▒▒▒▒▒▒▒▒▒
+▒░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒▒▒▒▒▒▒▒▒▒
+▒░░░░░ [HUTAN PEKANBARU] ░░░░░░░░░░░░░░░░▒▒▒▒▒▒▒
+▒░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+▒░░░░░░░░░░░░░ [RENGAT] ░░░░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒
+▒░░░░░░░ [HUTAN RENGAT] ░░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒
+▒░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒
+▒░░░░ [SIAK] ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒
+▒░░░ [HUTAN SELATPANJANG] ░░░░░░░░░░░░░░░░░░░▒
+▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒
+▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒
+▒░░░░░░░░░░░░ [SELATPANJANG] ░░░░░░░░░░░░░░░▒
+▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
 """
 
 # ==========================
@@ -2323,10 +2398,7 @@ def enemy_take_turn(state: GameState, enemy_index: int) -> List[str]:
     if not target:
         return log
     target_def = get_effective_stat(target, "defense")
-    base = enemy["atk"] - target_def // 2
-    if base < 1:
-        base = 1
-    dmg = max(1, int(base * random.uniform(0.8, 1.1)))
+    dmg = calc_enemy_basic_damage(enemy["atk"], target_def)
     defending = state.flags.get("DEFENDING", {})
     if defending.get(target_id):
         dmg = max(1, dmg // 2)
@@ -2387,12 +2459,19 @@ def describe_skill_short(
 
     if skill_type == "PHYS":
         hits = max(1, int(skill.get("hits", 1)))
-        parts.append(f"{hits}x serangan fisik")
+        if hits > 1:
+            parts.append(f"{hits}x serangan fisik")
+        else:
+            parts.append("serangan fisik")
         estimate = estimate_skill_damage(character, skill)
         if estimate:
             parts.append(f"~{estimate[0]}-{estimate[1]} DMG")
     elif skill_type == "MAG":
-        parts.append("serangan sihir kuat")
+        hits = max(1, int(skill.get("hits", 1)))
+        if hits > 1:
+            parts.append(f"{hits}x serangan sihir")
+        else:
+            parts.append("serangan sihir kuat")
         estimate = estimate_skill_damage(character, skill)
         if estimate:
             parts.append(f"~{estimate[0]}-{estimate[1]} DMG")
@@ -2680,12 +2759,33 @@ def make_keyboard(choices: List[tuple]) -> InlineKeyboardMarkup:
 # BATTLE LOGIC SEDERHANA
 # ==========================
 
-def pick_random_monster_for_area(area: str) -> Dict[str, Any]:
+# Damage tuning constants.
+# Ubah angka berikut jika ingin menyesuaikan seberapa besar serangan dasar
+# pemain/monster tanpa mengutak-atik rumus di banyak tempat.
+PHYSICAL_DEF_RATIO = 0.45  # Semakin besar semakin kuat pertahanan fisik.
+MAGICAL_DEF_RATIO = 0.35   # Rasio mitigasi damage sihir.
+PLAYER_DAMAGE_VARIANCE = (0.9, 1.1)
+ENEMY_DAMAGE_VARIANCE = (0.88, 1.12)
+ENEMY_ATTACK_SCALE = 0.92  # Skala ATK musuh relatif ke pemain setara level.
+ENEMY_DEF_RATIO = 0.45
+
+def pick_random_monster_for_area(area: str, party_level: Optional[int] = None) -> Dict[str, Any]:
     pool = [(key, m) for key, m in MONSTERS.items() if m["area"] == area]
     if not pool:
         pool = [("SHADOW_SLIME", MONSTERS["SHADOW_SLIME"])]  # fallback
-    weights = [m.get("encounter_weight", 1.0) for _, m in pool]
-    base_key, base = random.choices(pool, weights=weights, k=1)[0]
+    rare_pool = [(key, m) for key, m in pool if m.get("rarity") == "RARE"]
+    common_pool = [(key, m) for key, m in pool if m.get("rarity") != "RARE"]
+    selected_pool = common_pool or pool
+    rare_ready = False
+    if rare_pool:
+        min_rare_level = min(m.get("level", 1) for _, m in rare_pool)
+        rare_ready = party_level is None or party_level + RARE_LEVEL_BUFFER >= min_rare_level
+    if rare_pool and rare_ready:
+        rare_chance = RARE_ENCOUNTER_CHANCE.get(area, 0.03)
+        if random.random() < rare_chance:
+            selected_pool = rare_pool
+    weights = [m.get("encounter_weight", 1.0) for _, m in selected_pool]
+    base_key, base = random.choices(selected_pool, weights=weights, k=1)[0]
     # copy agar tidak mengubah base
     return {
         "name": base["name"],
@@ -2722,6 +2822,17 @@ def average_party_speed(state: GameState) -> float:
 def average_enemy_speed(state: GameState) -> float:
     speeds = [enemy.get("spd", 0) for enemy in state.battle_enemies if enemy.get("hp", 0) > 0]
     return sum(speeds) / len(speeds) if speeds else 0.0
+
+
+def average_party_level(state: GameState) -> int:
+    levels: List[int] = []
+    for cid in state.party_order:
+        member = state.party.get(cid)
+        if member:
+            levels.append(member.level)
+    if not levels:
+        return 1
+    return max(1, int(sum(levels) / len(levels)))
 
 
 def compute_escape_chance(state: GameState) -> float:
@@ -2777,17 +2888,17 @@ def calc_physical_damage(
     target_element: Optional[str] = None,
 ) -> Tuple[int, bool, bool]:
     attacker_atk = get_effective_stat(attacker, "atk")
-    base = attacker_atk - target_def // 2
+    base = attacker_atk - target_def * PHYSICAL_DEF_RATIO
     if base < 1:
         base = 1
-    # variasi kecil
-    base = int(base * random.uniform(0.9, 1.1))
+    base = int(base * power)
+    base = int(base * random.uniform(*PLAYER_DAMAGE_VARIANCE))
     passives = get_character_passive_effects(attacker)
     element_multiplier, hit_weakness, hit_resist = compute_elemental_multiplier(
         element, target_weakness, target_resist, passives
     )
     passive_bonus = compute_passive_damage_bonus(passives, target_element, element)
-    base = int(base * power * element_multiplier * passive_bonus)
+    base = int(base * element_multiplier * passive_bonus)
     return max(1, base), hit_weakness, hit_resist
 
 
@@ -2801,10 +2912,11 @@ def calc_magic_damage(
     target_element: Optional[str] = None,
 ) -> Tuple[int, bool, bool]:
     attacker_mag = get_effective_stat(attacker, "mag")
-    base = int((attacker_mag - target_def / 3) * power)
+    base = attacker_mag - target_def * MAGICAL_DEF_RATIO
     if base < 1:
         base = 1
-    base = int(base * random.uniform(0.9, 1.1))
+    base = int(base * power)
+    base = int(base * random.uniform(*PLAYER_DAMAGE_VARIANCE))
     passives = get_character_passive_effects(attacker)
     element_multiplier, hit_weakness, hit_resist = compute_elemental_multiplier(
         element, target_weakness, target_resist, passives
@@ -2812,6 +2924,15 @@ def calc_magic_damage(
     passive_bonus = compute_passive_damage_bonus(passives, target_element, element)
     base = int(base * element_multiplier * passive_bonus)
     return max(1, base), hit_weakness, hit_resist
+
+
+def calc_enemy_basic_damage(enemy_atk: int, target_def: int) -> int:
+    """Damage fisik standar musuh → pemain berdasarkan konstanta balancing."""
+    base = (enemy_atk * ENEMY_ATTACK_SCALE) - (target_def * ENEMY_DEF_RATIO)
+    if base < 1:
+        base = 1
+    dmg = int(base * random.uniform(*ENEMY_DAMAGE_VARIANCE))
+    return max(1, dmg)
 
 
 def calc_heal_amount(caster: CharacterState, power: float) -> int:
@@ -2834,11 +2955,11 @@ def estimate_skill_damage(
         return None
     target_def = estimate_enemy_defense(caster)
     element = skill.get("element", "NETRAL")
-    hits = max(1, int(skill.get("hits", 1))) if skill_type == "PHYS" else 1
+    hits = max(1, int(skill.get("hits", 1)))
     if skill_type == "PHYS":
-        base = max(1, get_effective_stat(caster, "atk") - target_def // 2)
+        base = max(1, get_effective_stat(caster, "atk") - target_def * PHYSICAL_DEF_RATIO)
     else:
-        base = max(1, int(get_effective_stat(caster, "mag") - target_def / 3))
+        base = max(1, get_effective_stat(caster, "mag") - target_def * MAGICAL_DEF_RATIO)
     per_hit = int(base * skill.get("power", 1.0))
     if element == "CAHAYA" and caster.id == "ARUNA":
         per_hit = int(per_hit * 1.05)
@@ -2893,7 +3014,8 @@ async def start_random_battle(update: Update, context: ContextTypes.DEFAULT_TYPE
     Mulai battle random di area dungeon berdasarkan lokasi sekarang.
     """
     area = NEAREST_DUNGEON.get(state.location, "HUTAN_SELATPANJANG")
-    enemy = pick_random_monster_for_area(area)
+    avg_level = average_party_level(state)
+    enemy = pick_random_monster_for_area(area, avg_level)
     logger.info(
         "User %s memulai random battle di %s melawan %s",
         state.user_id,
@@ -2910,7 +3032,9 @@ async def start_random_battle(update: Update, context: ContextTypes.DEFAULT_TYPE
     initialize_battle_turn_state(state)
     intro_text = ""
     if enemy.get("rarity") == "RARE":
-        intro_text = "Kamu merasakan aura kuat... Monster langka muncul!"
+        intro_text = (
+            f"Aura kuat menyelimuti hutan... {enemy['name']} muncul sebagai monster langka!"
+        )
     await send_battle_state(update, context, state, intro=True, extra_text=intro_text)
 
 
@@ -3081,7 +3205,7 @@ async def execute_skill_action(
                 return False
             return False
         idx, enemy = target_info
-        hits = max(1, int(skill.get("hits", 1))) if skill_type == "PHYS" else 1
+        hits = max(1, int(skill.get("hits", 1)))
         total_dmg = 0
         per_hit_logs: List[str] = []
         hit_weakness = False
@@ -3117,10 +3241,10 @@ async def execute_skill_action(
             total_dmg += dmg
             hit_weakness = hit_weakness or h_weak
             hit_resist = hit_resist or h_res
-            per_hit_logs.append(f"Hit {hit + 1}: {dmg} damage.")
+            per_hit_logs.append(f"Hantaman {hit + 1}: {dmg} damage.")
         if hits > 1:
             log.extend(per_hit_logs)
-            log.append(f"Total damage ke {enemy['name']}: {total_dmg}.")
+            log.append(f"Total damage kombo ke {enemy['name']}: {total_dmg}.")
         else:
             log.append(f"{enemy['name']} menerima {total_dmg} damage.")
         if hit_weakness:
@@ -5324,6 +5448,17 @@ def main():
     logger.info("Bot Legends of Aruna berjalan...")
     application.run_polling()
 
+
+# Balance summary (for quick tweaking reference):
+# - Damage & battle balancing: calc_physical_damage/calc_magic_damage + calc_enemy_basic_damage
+#   now use PHYSICAL_DEF_RATIO/MAGICAL_DEF_RATIO and ENEMY_ATTACK_SCALE constants so editing
+#   those values adjusts the entire curve (monsters now hit roughly comparable to players).
+# - Combo skills: Aruna gains SERANGAN_KEMBAR + TRISULA_CAHAYA (multi-hit), Reza gains
+#   ARCANE_BARRAGE, and the battle log shows each hit to sell the combo fantasy.
+# - Rare monsters: Gaung Bayangan, Serigala Purba, Revenant Abyss (plus other RARE-tagged foes)
+#   spawn through pick_random_monster_for_area with RARE_ENCOUNTER_CHANCE + level buffer.
+# - World map: WORLD_MAP_ASCII replaced with a decorative ▒/░ background to highlight route
+#   from Selatpanjang up to Kastil Febri without touching any travel logic.
 
 if __name__ == "__main__":
     main()
