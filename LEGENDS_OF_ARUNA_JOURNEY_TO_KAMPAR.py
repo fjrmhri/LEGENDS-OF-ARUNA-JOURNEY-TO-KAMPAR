@@ -31,7 +31,9 @@ from telegram import (
     Update,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    CallbackQuery,
 )
+from telegram.error import BadRequest
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -75,6 +77,71 @@ AUTOSAVE_BOSS_KEYS = {
 }
 AUTOSAVE_NOTICE_TEXT = "Progress otomatis disimpan."
 PENDING_AUTOSAVE_FLAG = "_PENDING_AUTOSAVE"
+UNKNOWN_CALLBACK_MESSAGE = "Perintah ini tidak dikenal. Coba tekan menu lagi."
+
+
+async def safe_edit_text(
+    query: Optional[CallbackQuery],
+    text: str,
+    reply_markup: Optional[InlineKeyboardMarkup] = None,
+    context_info: str = "",
+) -> None:
+    """Edit pesan callback dengan perlindungan error umum dari Telegram."""
+
+    if not query:
+        return
+    try:
+        await query.edit_message_text(text=text, reply_markup=reply_markup)
+    except BadRequest as exc:
+        message = str(exc)
+        if "message is not modified" in message.lower():
+            logger.debug(
+                "Edit pesan diabaikan (%s) karena tidak ada perubahan: %s",
+                context_info or "tanpa konteks",
+                message,
+            )
+            return
+        user_id = query.from_user.id if query.from_user else "unknown"
+        logger.warning(
+            "Gagal mengedit pesan (%s) untuk user %s: %s",
+            context_info or "callback",
+            user_id,
+            message,
+        )
+        if query.message:
+            try:
+                await query.message.reply_text(
+                    "Terjadi kesalahan saat memperbarui pesan. Coba lagi."
+                )
+            except Exception:
+                logger.exception(
+                    "Gagal mengirim pesan fallback setelah error edit (%s)",
+                    context_info or "callback",
+                )
+
+
+def parse_callback_parts(data: str, min_parts: int) -> Optional[List[str]]:
+    parts = data.split("|")
+    if len(parts) < min_parts:
+        logger.warning(
+            "Callback data tidak lengkap (%s), butuh minimal %s bagian",
+            data,
+            min_parts,
+        )
+        return None
+    return parts
+
+
+async def notify_unknown_callback(update: Update, message: str = UNKNOWN_CALLBACK_MESSAGE) -> None:
+    query = update.callback_query
+    if query:
+        await safe_edit_text(query, message)
+    elif update.effective_chat:
+        try:
+            await update.effective_chat.send_message(message)
+        except Exception:
+            user_id = update.effective_user.id if update.effective_user else "unknown"
+            logger.exception("Gagal mengirim pesan unknown callback ke user %s", user_id)
 
 # ==========================
 # DATA DASAR DARI GDD
@@ -1656,7 +1723,9 @@ def equip_item(
 def get_equipped_owners(state: GameState, item_id: str) -> List[str]:
     owners = []
     for cid in state.party_order:
-        character = state.party[cid]
+        character = state.party.get(cid)
+        if not character:
+            continue
         if character.weapon_id == item_id or character.armor_id == item_id:
             owners.append(character.name)
     return owners
@@ -1752,7 +1821,9 @@ def apply_growth(character: CharacterState) -> Optional[Dict[str, int]]:
 def check_level_up(state: GameState) -> List[str]:
     messages: List[str] = []
     for cid in state.party_order:
-        character = state.party[cid]
+        character = state.party.get(cid)
+        if not character:
+            continue
         pool = state.xp_pool.get(cid, 0)
         while pool >= xp_required_for_next_level(character.level):
             requirement = xp_required_for_next_level(character.level)
@@ -1945,7 +2016,12 @@ def tick_buffs(state: GameState) -> List[str]:
 
 
 def living_party_members(state: GameState) -> List[str]:
-    return [cid for cid in state.party_order if state.party[cid].hp > 0]
+    members: List[str] = []
+    for cid in state.party_order:
+        character = state.party.get(cid)
+        if character and character.hp > 0:
+            members.append(cid)
+    return members
 
 
 def living_enemies(state: GameState) -> List[tuple]:
@@ -1982,8 +2058,8 @@ def enemy_target_buttons(state: GameState) -> List[Tuple[str, str]]:
 def ally_target_buttons(state: GameState) -> List[Tuple[str, str]]:
     buttons: List[Tuple[str, str]] = []
     for cid in state.party_order:
-        member = state.party[cid]
-        if member.hp <= 0:
+        member = state.party.get(cid)
+        if not member or member.hp <= 0:
             continue
         effective_hp = get_effective_max_hp(member)
         label = f"{member.name} (HP {member.hp}/{effective_hp})"
@@ -2020,6 +2096,10 @@ def clear_pending_action(state: GameState):
 async def show_pending_target_prompt(
     update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState
 ):
+    if not state.battle_state:
+        logger.warning("Battle state hilang saat meminta target untuk user %s", state.user_id)
+        await send_battle_state(update, context, state)
+        return
     action = state.battle_state.pending_action
     if not action:
         await send_battle_state(update, context, state)
@@ -2042,12 +2122,14 @@ async def show_pending_target_prompt(
         [InlineKeyboardButton(text=label, callback_data=data)] for label, data in options
     ]
     actor_id = action.get("actor_id")
-    rows.append([InlineKeyboardButton("⬅️ Batalkan", f"BATTLE_MENU|{actor_id}")])
+    rows.append(
+        [InlineKeyboardButton("⬅️ Batalkan", callback_data=f"BATTLE_MENU|{actor_id}")]
+    )
     prompt_text = action.get("prompt", "Pilih target:")
     markup = InlineKeyboardMarkup(rows)
     query = update.callback_query
     if query:
-        await query.edit_message_text(text=prompt_text, reply_markup=markup)
+        await safe_edit_text(query, prompt_text, reply_markup=markup, context_info="target_prompt")
     else:
         await update.message.reply_text(text=prompt_text, reply_markup=markup)
 
@@ -2060,7 +2142,11 @@ def choose_random_party_target(state: GameState) -> Optional[str]:
 
 
 def pick_lowest_hp_ally(state: GameState) -> Optional[CharacterState]:
-    candidates = [state.party[cid] for cid in state.party_order if state.party[cid].hp > 0]
+    candidates: List[CharacterState] = []
+    for cid in state.party_order:
+        member = state.party.get(cid)
+        if member and member.hp > 0:
+            candidates.append(member)
     if not candidates:
         return None
     return min(candidates, key=lambda c: c.hp / max(1, get_effective_max_hp(c)))
@@ -2068,8 +2154,8 @@ def pick_lowest_hp_ally(state: GameState) -> Optional[CharacterState]:
 
 def find_revive_target(state: GameState) -> Optional[CharacterState]:
     for cid in state.party_order:
-        member = state.party[cid]
-        if member.hp <= 0:
+        member = state.party.get(cid)
+        if member and member.hp <= 0:
             return member
     return None
 
@@ -2197,7 +2283,9 @@ async def resolve_battle_outcome(
         "Kamu tumbang dalam pertarungan ini...",
     ]
     for cid in state.party_order:
-        member = state.party[cid]
+        member = state.party.get(cid)
+        if not member:
+            continue
         member.hp = max(1, get_effective_max_hp(member) // 3)
     state.in_battle = False
     state.battle_enemies = []
@@ -2224,7 +2312,9 @@ def enemy_take_turn(state: GameState, enemy_index: int) -> List[str]:
     target_id = choose_random_party_target(state)
     if not target_id:
         return log
-    target = state.party[target_id]
+    target = state.party.get(target_id)
+    if not target:
+        return log
     target_def = get_effective_stat(target, "defense")
     base = enemy["atk"] - target_def // 2
     if base < 1:
@@ -2281,7 +2371,12 @@ def describe_skill_short(
     base = f"{skill.get('name', skill_id)} (MP {skill.get('mp_cost', 0)})"
     skill_type = skill.get("type")
     parts: List[str] = []
-    alive_party = sum(1 for cid in state.party_order if state.party[cid].hp > 0) or 1
+    alive_party = 0
+    for cid in state.party_order:
+        member = state.party.get(cid)
+        if member and member.hp > 0:
+            alive_party += 1
+    alive_party = alive_party or 1
 
     if skill_type == "PHYS":
         hits = max(1, int(skill.get("hits", 1)))
@@ -2353,7 +2448,7 @@ async def send_skill_menu(
     text = battle_status_text(state) + f"\n\nPilih skill {character.name}:"
     query = update.callback_query
     if query:
-        await query.edit_message_text(text=text, reply_markup=keyboard)
+        await safe_edit_text(query, text=text, reply_markup=keyboard)
     elif update.message:
         await update.message.reply_text(text=text, reply_markup=keyboard)
 
@@ -2361,6 +2456,10 @@ async def send_skill_menu(
 async def send_battle_item_menu(
     update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, char_id: Optional[str] = None
 ):
+    if not state.battle_state:
+        logger.warning("Battle state hilang saat membuka menu item user %s", state.user_id)
+        await send_battle_state(update, context, state)
+        return
     if not char_id:
         token = state.battle_state.active_token
         if token and token.startswith("CHAR:"):
@@ -2395,8 +2494,11 @@ async def send_battle_item_menu(
     buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data=back_target)])
     query = update.callback_query
     if query:
-        await query.edit_message_text(
-            text="\n".join(lines), reply_markup=InlineKeyboardMarkup(buttons)
+        await safe_edit_text(
+            query,
+            "\n".join(lines),
+            reply_markup=InlineKeyboardMarkup(buttons),
+            context_info="battle_item_menu",
         )
     elif update.message:
         await update.message.reply_text(
@@ -2414,7 +2516,10 @@ def apply_item_effects_in_battle(
     target_mode = effects.get("target", "single")
     targets: List[CharacterState] = []
     if target_mode == "party":
-        targets = [state.party[cid] for cid in state.party_order if state.party[cid].hp > 0]
+        for cid in state.party_order:
+            member = state.party.get(cid)
+            if member and member.hp > 0:
+                targets.append(member)
     else:
         actor = state.party.get(user_char_id)
         if actor:
@@ -2441,11 +2546,19 @@ def apply_item_effects_in_battle(
 async def process_use_item(
     update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, item_id: str
 ):
+    if not state.battle_state:
+        logger.warning("Battle state hilang saat USE_ITEM oleh user %s", state.user_id)
+        await send_battle_state(update, context, state)
+        return
     token = state.battle_state.active_token
     if not token or not token.startswith("CHAR:"):
         await send_battle_state(update, context, state)
         return
     char_id = token.split(":", 1)[1]
+    character = state.party.get(char_id)
+    if not character:
+        await send_battle_state(update, context, state)
+        return
     item = ITEMS.get(item_id)
     if not item or item.get("type") != "consumable":
         await send_battle_state(
@@ -2463,7 +2576,7 @@ async def process_use_item(
         await send_battle_state(update, context, state, intro=False, extra_text="\n".join(effect_logs))
         return
     adjust_inventory(state, item_id, -1)
-    log = [f"{state.party[char_id].name} menggunakan {item['name']}."] + effect_logs
+    log = [f"{character.name} menggunakan {item['name']}."] + effect_logs
     await conclude_player_turn(update, context, state, log)
 
 
@@ -2566,11 +2679,11 @@ def pick_random_monster_for_area(area: str) -> Dict[str, Any]:
 
 
 def average_party_speed(state: GameState) -> float:
-    speeds = [
-        get_effective_stat(state.party[cid], "spd")
-        for cid in state.party_order
-        if state.party[cid].hp > 0
-    ]
+    speeds: List[int] = []
+    for cid in state.party_order:
+        member = state.party.get(cid)
+        if member and member.hp > 0:
+            speeds.append(get_effective_stat(member, "spd"))
     return sum(speeds) / len(speeds) if speeds else 0.0
 
 
@@ -2779,7 +2892,9 @@ def battle_status_text(
 
     lines.append("[Party]")
     for cid in state.party_order:
-        c = state.party[cid]
+        c = state.party.get(cid)
+        if not c:
+            continue
         effective_hp = get_effective_max_hp(c)
         effective_mp = get_effective_max_mp(c)
         lines.append(
@@ -2851,7 +2966,7 @@ async def send_battle_state(
 
     query = update.callback_query
     if query:
-        await query.edit_message_text(text=text, reply_markup=keyboard)
+        await safe_edit_text(query, text=text, reply_markup=keyboard)
     else:
         await update.message.reply_text(text=text, reply_markup=keyboard)
 
@@ -3001,8 +3116,8 @@ async def execute_skill_action(
     elif skill_type == "HEAL_ALL":
         total = []
         for cid in state.party_order:
-            member = state.party[cid]
-            if member.hp <= 0:
+            member = state.party.get(cid)
+            if not member or member.hp <= 0:
                 continue
             heal_amount = calc_heal_amount(character, skill.get("power", 0.25))
             before = member.hp
@@ -3034,7 +3149,9 @@ async def execute_skill_action(
         state.flags["LIGHT_BUFF_TURNS"] = 3
         total = []
         for cid in state.party_order:
-            member = state.party[cid]
+            member = state.party.get(cid)
+            if not member:
+                continue
             heal_amount = max(1, int(get_effective_max_hp(member) * 0.4))
             before = member.hp
             member.hp = min(get_effective_max_hp(member), member.hp + heal_amount)
@@ -3048,8 +3165,8 @@ async def execute_skill_action(
         duration = skill.get("duration", 3)
         affected = []
         for cid in state.party_order:
-            member = state.party[cid]
-            if member.hp <= 0:
+            member = state.party.get(cid)
+            if not member or member.hp <= 0:
                 continue
             for stat, amount in buffs.items():
                 apply_temporary_modifier(state, make_char_buff_key(cid), stat, amount, duration)
@@ -3131,6 +3248,10 @@ async def process_battle_action(
     action_key = action_parts[0]
     requested_char = action_parts[1] if len(action_parts) > 1 else None
 
+    if not state.battle_state:
+        logger.warning("Battle state hilang saat memproses aksi user %s", state.user_id)
+        await send_battle_state(update, context, state)
+        return
     token = state.battle_state.active_token
     if not token or not token.startswith("CHAR:"):
         token = advance_to_next_actor(state)
@@ -3143,7 +3264,10 @@ async def process_battle_action(
         await send_battle_state(update, context, state)
         return
 
-    character = state.party[active_char_id]
+    character = state.party.get(active_char_id)
+    if not character:
+        await send_battle_state(update, context, state)
+        return
 
     clear_pending_action(state)
 
@@ -3215,11 +3339,18 @@ async def process_battle_action(
 async def process_use_skill(
     update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, user: str, skill_id: str
 ):
+    if not state.battle_state:
+        logger.warning("Battle state hilang saat USE_SKILL oleh user %s", state.user_id)
+        await send_battle_state(update, context, state)
+        return
     token = state.battle_state.active_token
     if not token or not token.startswith("CHAR:") or token.split(":", 1)[1] != user:
         await send_battle_state(update, context, state)
         return
-    character = state.party[user]
+    character = state.party.get(user)
+    if not character:
+        await send_battle_state(update, context, state)
+        return
     skill = SKILLS.get(skill_id)
     if not skill:
         await send_battle_state(update, context, state)
@@ -3284,6 +3415,10 @@ async def process_use_skill(
 async def process_target_selection(
     update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, data: str
 ):
+    if not state.battle_state:
+        logger.warning("Battle state hilang saat memilih target user %s", state.user_id)
+        await send_battle_state(update, context, state)
+        return
     action = state.battle_state.pending_action
     if not action:
         await send_battle_state(update, context, state)
@@ -3410,7 +3545,7 @@ async def end_battle_and_return(
     )
     query = update.callback_query
     if query:
-        await query.edit_message_text(text=text, reply_markup=keyboard)
+        await safe_edit_text(query, text=text, reply_markup=keyboard)
     else:
         await update.message.reply_text(text=text, reply_markup=keyboard)
 
@@ -3551,7 +3686,7 @@ async def send_scene_not_found(
     keyboard = make_keyboard([("Kembali ke map", "GO_TO_WORLD_MAP")])
     query = update.callback_query
     if query:
-        await query.edit_message_text(text=text, reply_markup=keyboard)
+        await safe_edit_text(query, text=text, reply_markup=keyboard)
     elif update.message:
         await update.message.reply_text(text=text, reply_markup=keyboard)
     await send_world_map(update, context, state)
@@ -3762,7 +3897,7 @@ async def send_scene(
         keyboard = make_keyboard([("Kembali ke map", "GO_TO_WORLD_MAP")])
         query = update.callback_query
         if query:
-            await query.edit_message_text(text=text, reply_markup=keyboard)
+            await safe_edit_text(query, text=text, reply_markup=keyboard)
         elif update.message:
             await update.message.reply_text(text=text, reply_markup=keyboard)
         await send_world_map(update, context, state)
@@ -3794,7 +3929,7 @@ async def send_scene(
     keyboard = make_keyboard(visible_choices)
     query = update.callback_query
     if query:
-        await query.edit_message_text(text=text, reply_markup=keyboard)
+        await safe_edit_text(query, text=text, reply_markup=keyboard)
     else:
         await update.message.reply_text(text=text, reply_markup=keyboard)
 
@@ -3888,7 +4023,11 @@ async def send_world_map(
     extra_text: str = "",
 ):
     text = "WORLD MAP\n" + WORLD_MAP_ASCII + "\n\n"
-    text += "Lokasi kamu sekarang: " + LOCATIONS[state.location]["name"] + "\n"
+    current_loc = LOCATIONS.get(state.location)
+    if not current_loc:
+        logger.warning("Lokasi state tidak dikenal untuk user %s: %s", state.user_id, state.location)
+    loc_name = current_loc.get("name") if current_loc else state.location
+    text += f"Lokasi kamu sekarang: {loc_name}\n"
     text += f"Main Quest: {state.main_progress}\n"
     text += "Pilih tujuan:"
 
@@ -3909,7 +4048,7 @@ async def send_world_map(
     keyboard = make_keyboard(choices)
     query = update.callback_query
     if query:
-        await query.edit_message_text(text=text, reply_markup=keyboard)
+        await safe_edit_text(query, text=text, reply_markup=keyboard)
     else:
         await update.message.reply_text(text=text, reply_markup=keyboard)
 
@@ -3920,7 +4059,16 @@ async def send_city_menu(
     state: GameState,
     extra_text: str = "",
 ):
-    loc = LOCATIONS[state.location]
+    loc = LOCATIONS.get(state.location)
+    if not loc:
+        logger.error("Lokasi kota tidak dikenal untuk user %s: %s", state.user_id, state.location)
+        await send_world_map(
+            update,
+            context,
+            state,
+            extra_text="Terjadi kesalahan lokasi. Kamu dikembalikan ke peta dunia.",
+        )
+        return
     features = CITY_FEATURES.get(state.location, {})
     text = f"KOTA: {loc['name']} (Lv {loc['min_level']}+)\n"
     if features.get("description"):
@@ -3966,7 +4114,7 @@ async def send_city_menu(
     keyboard = make_keyboard(choices)
     query = update.callback_query
     if query:
-        await query.edit_message_text(text=text, reply_markup=keyboard)
+        await safe_edit_text(query, text=text, reply_markup=keyboard)
     else:
         await update.message.reply_text(text=text, reply_markup=keyboard)
 
@@ -3979,7 +4127,7 @@ async def send_job_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, stat
         keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
         query = update.callback_query
         if query:
-            await query.edit_message_text(text=text, reply_markup=keyboard)
+            await safe_edit_text(query, text=text, reply_markup=keyboard)
         else:
             await update.message.reply_text(text=text, reply_markup=keyboard)
         return
@@ -3993,7 +4141,7 @@ async def send_job_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, stat
     keyboard = make_keyboard(keyboard_choices)
     query = update.callback_query
     if query:
-        await query.edit_message_text(text="\n".join(lines), reply_markup=keyboard)
+        await safe_edit_text(query, text="\n".join(lines), reply_markup=keyboard)
     else:
         await update.message.reply_text(text="\n".join(lines), reply_markup=keyboard)
 
@@ -4003,7 +4151,7 @@ async def send_shop_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, sta
     loc_info = LOCATIONS.get(state.location)
     if not loc_info or not loc_info.get("has_shop"):
         if query:
-            await query.edit_message_text(
+            await safe_edit_text(query, 
                 "Tidak ada toko di lokasi ini.",
                 reply_markup=make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")]),
             )
@@ -4021,7 +4169,7 @@ async def send_shop_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, sta
     text = "\n".join(lines)
     markup = InlineKeyboardMarkup(buttons)
     if query:
-        await query.edit_message_text(text=text, reply_markup=markup)
+        await safe_edit_text(query, text=text, reply_markup=markup)
     elif update.message:
         await update.message.reply_text(text=text, reply_markup=markup)
 
@@ -4050,7 +4198,7 @@ async def send_shop_buy_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
     buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="MENU_SHOP")])
     markup = InlineKeyboardMarkup(buttons)
     if query:
-        await query.edit_message_text("\n".join(lines), reply_markup=markup)
+        await safe_edit_text(query, "\n".join(lines), reply_markup=markup)
     else:
         await update.message.reply_text("\n".join(lines), reply_markup=markup)
 
@@ -4079,7 +4227,7 @@ async def send_shop_sell_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="MENU_SHOP")])
     markup = InlineKeyboardMarkup(buttons)
     if query:
-        await query.edit_message_text("\n".join(lines), reply_markup=markup)
+        await safe_edit_text(query, "\n".join(lines), reply_markup=markup)
     else:
         await update.message.reply_text("\n".join(lines), reply_markup=markup)
 
@@ -4140,7 +4288,7 @@ async def resolve_job(update: Update, context: ContextTypes.DEFAULT_TYPE, state:
     keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
     query = update.callback_query
     if query:
-        await query.edit_message_text(text=text, reply_markup=keyboard)
+        await safe_edit_text(query, text=text, reply_markup=keyboard)
     else:
         await update.message.reply_text(text=text, reply_markup=keyboard)
 
@@ -4149,7 +4297,9 @@ async def send_equipment_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     lines = ["Kelola equipment party:"]
     buttons = []
     for cid in state.party_order:
-        c = state.party[cid]
+        c = state.party.get(cid)
+        if not c:
+            continue
         weapon = ITEMS.get(c.weapon_id, {}).get("name") if c.weapon_id else "(Kosong)"
         armor = ITEMS.get(c.armor_id, {}).get("name") if c.armor_id else "(Kosong)"
         lines.append(f"- {c.name}: Senjata {weapon} | Armor {armor}")
@@ -4160,7 +4310,7 @@ async def send_equipment_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     query = update.callback_query
     text = "\n".join(lines)
     if query:
-        await query.edit_message_text(text=text, reply_markup=markup)
+        await safe_edit_text(query, text=text, reply_markup=markup)
     else:
         await update.message.reply_text(text=text, reply_markup=markup)
 
@@ -4225,7 +4375,7 @@ async def send_character_equipment_menu(
     query = update.callback_query
     text = "\n".join(lines)
     if query:
-        await query.edit_message_text(text=text, reply_markup=markup)
+        await safe_edit_text(query, text=text, reply_markup=markup)
     else:
         await update.message.reply_text(text=text, reply_markup=markup)
 
@@ -4274,7 +4424,10 @@ def apply_consumable_outside_battle(state: GameState, item_id: str) -> Tuple[boo
     target_mode = effects.get("target", "single")
     targets: List[CharacterState] = []
     if target_mode == "party":
-        targets = [state.party[cid] for cid in state.party_order if state.party[cid].hp > 0]
+        for cid in state.party_order:
+            member = state.party.get(cid)
+            if member and member.hp > 0:
+                targets.append(member)
     else:
         aruna = state.party.get("ARUNA")
         if aruna and aruna.hp > 0:
@@ -4348,7 +4501,9 @@ async def send_inventory_menu(
             lines.append(f"  {item['description']}")
     lines.append("\nPerlengkapan terpasang:")
     for cid in state.party_order:
-        c = state.party[cid]
+        c = state.party.get(cid)
+        if not c:
+            continue
         weapon = ITEMS.get(c.weapon_id, {}).get("name") if c.weapon_id else "(Kosong)"
         armor = ITEMS.get(c.armor_id, {}).get("name") if c.armor_id else "(Kosong)"
         lines.append(f"- {c.name}: Senjata {weapon} | Armor {armor}")
@@ -4370,7 +4525,7 @@ async def send_inventory_menu(
     query = update.callback_query
     text = "\n".join(lines)
     if query:
-        await query.edit_message_text(text=text, reply_markup=markup)
+        await safe_edit_text(query, text=text, reply_markup=markup)
     elif update.message:
         await update.message.reply_text(text=text, reply_markup=markup)
 
@@ -4452,10 +4607,14 @@ async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             state = get_game_state(user_id)
         lines = ["=== STATUS PARTY ==="]
         for cid in state.party_order:
-            c = state.party[cid]
+            c = state.party.get(cid)
+            if not c:
+                continue
             lines.append(format_effective_stat_summary(c))
+        loc_info = LOCATIONS.get(state.location)
+        loc_name = loc_info.get("name") if loc_info else state.location
         lines.append(f"\nGold: {state.gold}")
-        lines.append(f"Lokasi: {LOCATIONS[state.location]['name']}")
+        lines.append(f"Lokasi: {loc_name}")
         lines.append(f"Main Quest: {state.main_progress}")
         await update.message.reply_text("\n".join(lines))
     except Exception:
@@ -4661,7 +4820,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if action_key in battle_action_keys:
                     handled = True
                     if not state.in_battle:
-                        await query.edit_message_text("Kamu tidak sedang dalam battle.")
+                        await safe_edit_text(query, "Kamu tidak sedang dalam battle.")
                         return
                     await process_battle_action(update, context, state, data)
                     return
@@ -4669,18 +4828,26 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if data.startswith("USE_SKILL|"):
                     handled = True
                     # format: USE_SKILL|CHAR_ID|SKILL_ID
-                    _, char_id, skill_id = data.split("|")
+                    parts = parse_callback_parts(data, 3)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    _, char_id, skill_id = parts[:3]
                     if not state.in_battle:
-                        await query.edit_message_text("Kamu tidak sedang dalam battle.")
+                        await safe_edit_text(query, "Kamu tidak sedang dalam battle.")
                         return
                     await process_use_skill(update, context, state, char_id, skill_id)
                     return
 
                 if data.startswith("USE_ITEM|"):
                     handled = True
-                    _, item_id = data.split("|", 1)
+                    parts = parse_callback_parts(data, 2)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    item_id = parts[1]
                     if not state.in_battle:
-                        await query.edit_message_text("Kamu tidak sedang dalam battle.")
+                        await safe_edit_text(query, "Kamu tidak sedang dalam battle.")
                         return
                     await process_use_item(update, context, state, item_id)
                     return
@@ -4688,7 +4855,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if data.startswith("TARGET_ENEMY|") or data.startswith("TARGET_ALLY|"):
                     handled = True
                     if not state.in_battle:
-                        await query.edit_message_text("Kamu tidak sedang dalam battle.")
+                        await safe_edit_text(query, "Kamu tidak sedang dalam battle.")
                         return
                     await process_target_selection(update, context, state, data)
                     return
@@ -4712,16 +4879,37 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # WORLD MAP / TRAVEL
                 if data.startswith("GOTO_CITY|"):
                     handled = True
-                    _, loc_id = data.split("|")
-                    loc_info = LOCATIONS[loc_id]
-                    aruna = state.party["ARUNA"]
+                    parts = parse_callback_parts(data, 2)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    _, loc_id = parts[:2]
+                    loc_info = LOCATIONS.get(loc_id)
+                    if not loc_info:
+                        logger.warning(
+                            "Lokasi callback tidak dikenal dari user %s: %s", user_id, loc_id
+                        )
+                        await notify_unknown_callback(
+                            update,
+                            "Lokasi ini tidak dikenal. Kamu akan dikembalikan ke peta dunia.",
+                        )
+                        await send_world_map(update, context, state)
+                        return
+                    aruna = state.party.get("ARUNA")
+                    if not aruna:
+                        state.ensure_aruna()
+                        aruna = state.party.get("ARUNA")
+                    if not aruna:
+                        logger.error("State user %s tidak memiliki Aruna saat cek level", user_id)
+                        await notify_unknown_callback(update)
+                        return
                     if aruna.level < loc_info["min_level"]:
                         text = (
                             f"Level kamu ({aruna.level}) belum cukup untuk masuk ke {loc_info['name']} "
                             f"(butuh Lv {loc_info['min_level']})."
                         )
                         keyboard = make_keyboard([("Kembali ke map", "GO_TO_WORLD_MAP")])
-                        await query.edit_message_text(text=text, reply_markup=keyboard)
+                        await safe_edit_text(query, text=text, reply_markup=keyboard)
                         return
                     previous_location = state.location
                     state.location = loc_id
@@ -4790,7 +4978,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     keyboard = make_keyboard(
                         [("Cari monster", "DUNGEON_BATTLE_AGAIN"), ("Kembali ke kota", "RETURN_TO_CITY")]
                     )
-                    await query.edit_message_text(text=text, reply_markup=keyboard)
+                    await safe_edit_text(query, text=text, reply_markup=keyboard)
                     return
 
                 # MENU KOTA
@@ -4798,14 +4986,18 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     handled = True
                     lines = ["=== STATUS PARTY ==="]
                     for cid in state.party_order:
-                        c = state.party[cid]
+                        c = state.party.get(cid)
+                        if not c:
+                            continue
                         lines.append(format_effective_stat_summary(c))
+                    loc_info = LOCATIONS.get(state.location)
+                    loc_name = loc_info.get("name") if loc_info else state.location
                     lines.append(f"\nGold: {state.gold}")
-                    lines.append(f"Lokasi: {LOCATIONS[state.location]['name']}")
+                    lines.append(f"Lokasi: {loc_name}")
                     lines.append(f"Main Quest: {state.main_progress}")
                     text = "\n".join(lines)
                     keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
-                    await query.edit_message_text(text=text, reply_markup=keyboard)
+                    await safe_edit_text(query, text=text, reply_markup=keyboard)
                     return
 
                 if data == "BACK_CITY_MENU":
@@ -4827,12 +5019,20 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     return
                 if data.startswith("BUY_ITEM|"):
                     handled = True
-                    _, item_id = data.split("|", 1)
+                    parts = parse_callback_parts(data, 2)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    item_id = parts[1]
                     await handle_buy_item(update, context, state, item_id)
                     return
                 if data.startswith("SELL_ITEM|"):
                     handled = True
-                    _, item_id = data.split("|", 1)
+                    parts = parse_callback_parts(data, 2)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    item_id = parts[1]
                     await handle_sell_item(update, context, state, item_id)
                     return
 
@@ -4849,7 +5049,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     else:
                         state.gold -= cost
                         for cid in state.party_order:
-                            c = state.party[cid]
+                            c = state.party.get(cid)
+                            if not c:
+                                continue
                             c.hp = get_effective_max_hp(c)
                             c.mp = get_effective_max_mp(c)
                         if cost == 0:
@@ -4860,13 +5062,13 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                 "HP & MP seluruh party pulih."
                             )
                     keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
-                    await query.edit_message_text(text=text, reply_markup=keyboard)
+                    await safe_edit_text(query, text=text, reply_markup=keyboard)
                     return
 
                 if data == "MENU_CLINIC":
                     handled = True
                     if state.location != "SIAK":
-                        await query.edit_message_text(
+                        await safe_edit_text(query, 
                             "Klinik hanya ada di Siak.",
                             reply_markup=make_keyboard([("Kembali", "BACK_CITY_MENU")]),
                         )
@@ -4876,7 +5078,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     else:
                         text = "Umar: \"Jaga dirimu baik-baik, Aruna. Aku di sini kalau kau butuh bantuan.\"\n"
                         keyboard = make_keyboard([("Kembali ke kota", "BACK_CITY_MENU")])
-                        await query.edit_message_text(text=text, reply_markup=keyboard)
+                        await safe_edit_text(query, text=text, reply_markup=keyboard)
                     return
 
                 if data == "MENU_EQUIPMENT":
@@ -4885,26 +5087,42 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     return
                 if data.startswith("EQUIP_CHAR|"):
                     handled = True
-                    _, char_id = data.split("|", 1)
+                    parts = parse_callback_parts(data, 2)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    _, char_id = parts[:2]
                     await send_character_equipment_menu(update, context, state, char_id)
                     return
                 if data.startswith("EQUIP_WEAPON|"):
                     handled = True
-                    _, char_id, item_id = data.split("|", 2)
+                    parts = parse_callback_parts(data, 3)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    _, char_id, item_id = parts[:3]
                     await handle_equip_item_selection(
                         update, context, state, char_id, item_id, slot_type="weapon"
                     )
                     return
                 if data.startswith("EQUIP_ARMOR|"):
                     handled = True
-                    _, char_id, item_id = data.split("|", 2)
+                    parts = parse_callback_parts(data, 3)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    _, char_id, item_id = parts[:3]
                     await handle_equip_item_selection(
                         update, context, state, char_id, item_id, slot_type="armor"
                     )
                     return
                 if data.startswith("EQUIP_ITEM|"):
                     handled = True
-                    _, char_id, item_id = data.split("|", 2)
+                    parts = parse_callback_parts(data, 3)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    _, char_id, item_id = parts[:3]
                     item = ITEMS.get(item_id)
                     slot_type = item.get("type") if item else "weapon"
                     await handle_equip_item_selection(
@@ -4913,7 +5131,11 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     return
                 if data.startswith("UNEQUIP|"):
                     handled = True
-                    _, char_id, slot = data.split("|", 2)
+                    parts = parse_callback_parts(data, 3)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    _, char_id, slot = parts[:3]
                     await handle_unequip_selection(update, context, state, char_id, slot)
                     return
 
@@ -4923,7 +5145,11 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     return
                 if data.startswith("USE_ITEM_OUTSIDE|"):
                     handled = True
-                    _, item_id = data.split("|", 1)
+                    parts = parse_callback_parts(data, 2)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    item_id = parts[1]
                     await handle_use_item_outside(update, context, state, item_id)
                     return
 
@@ -4961,7 +5187,11 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                 if data.startswith("DO_JOB|"):
                     handled = True
-                    _, job_id = data.split("|")
+                    parts = parse_callback_parts(data, 2)
+                    if not parts:
+                        await notify_unknown_callback(update)
+                        return
+                    _, job_id = parts[:2]
                     await resolve_job(update, context, state, job_id)
                     return
 
@@ -4980,20 +5210,20 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await handle_scene_choice(update, context, state, data)
             except Exception:
                 logger.exception("Error di callback handler untuk user %s dengan data %s", user_id, data)
-                await query.edit_message_text(
+                await safe_edit_text(query, 
                     "Terjadi kesalahan tak terduga. Silakan coba lagi. Jika masalah berlanjut, hubungi admin."
                 )
                 return
 
             if not handled:
                 logger.warning("Callback tak dikenal dari user %s: %s", user_id, data)
-                await query.edit_message_text(
+                await safe_edit_text(query, 
                     "Maaf, terjadi kesalahan saat memproses pilihanmu. Kamu akan dikembalikan ke peta dunia."
                 )
                 await send_world_map(update, context, state)
     except Exception:
         logger.exception("Error umum di callback handler untuk user %s", user_id)
-        await query.edit_message_text(
+        await safe_edit_text(query, 
             "Terjadi kesalahan tak terduga. Silakan coba lagi. Jika masalah berlanjut, hubungi admin."
         )
 
