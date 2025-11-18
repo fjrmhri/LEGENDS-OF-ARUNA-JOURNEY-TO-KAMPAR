@@ -4649,13 +4649,20 @@ async def send_city_menu(
         )
         return
     features = CITY_FEATURES.get(state.location, {})
-    text = f"KOTA: {loc['name']} (Lv {loc['min_level']}+)\n"
-    if features.get("description"):
-        text += features["description"] + "\n"
-    text += f"Gold: {state.gold}\n"
+    lines = [
+        f"=== {loc['name']} ===",
+        f"Rekomendasi level: Lv {loc['min_level']}+",
+    ]
+    description = features.get("description")
+    if description:
+        lines.append(description)
+    lines.append(f"Gold saat ini: {state.gold}")
     if extra_text:
-        text += extra_text + "\n"
-    text += "Apa yang ingin kamu lakukan?"
+        lines.append("")
+        lines.append(extra_text)
+    lines.append("")
+    lines.append("Apa yang ingin kamu lakukan?")
+    text = "\n".join(lines)
 
     choices = [
         ("Lihat status party", "MENU_STATUS"),
@@ -4664,19 +4671,19 @@ async def send_city_menu(
     ]
     if loc.get("has_shop"):
         choices.append(("Pergi ke toko", "MENU_SHOP"))
+    if loc.get("has_guild"):
+        choices.append(("Pergi ke guild (Quest)", "MENU_GUILD"))
     if loc.get("has_inn"):
         choices.append(("Ke penginapan (heal)", "MENU_INN"))
     if loc.get("has_clinic"):
         choices.append(("Pergi ke klinik", "MENU_CLINIC"))
-    choices.append(("🗺️ Hunting", "MENU_HUNTING"))
-    if loc.get("has_guild") and get_city_guild_quests(state.location):
-        choices.append(("🏰 Guild Pemburu", "MENU_GUILD"))
+    choices.append(("Pergi hunting", "MENU_HUNTING"))
 
     # Event / side quest per kota
     if state.location == "SIAK":
         if state.flags.get("HAS_UMAR") and not state.flags.get("UMAR_QUEST_DONE"):
             choices.append(("Side Quest Umar: Warisan Safiya", "QUEST_UMAR"))
-        if state.flags.get("HAS_UMAR") and not state.flags.get("SIAK_GATE_EVENT_DONE"):
+        if not state.flags.get("SIAK_GATE_EVENT_DONE"):
             choices.append(("Periksa gerbang kota", "EVENT_SIAK_GATE"))
     if state.location == "RENGAT" and state.flags.get("HAS_REZA") and not state.flags.get("REZA_QUEST_DONE"):
         choices.append(("Side Quest Reza: Suara dari Segel", "QUEST_REZA"))
@@ -4688,10 +4695,10 @@ async def send_city_menu(
         and not (state.flags.get("WEAPON_QUEST_DONE") or state.flags.get("QUEST_WEAPON_DONE"))
     ):
         started = state.flags.get("QUEST_WEAPON_STARTED") or state.flags.get("WEAPON_QUEST_STARTED")
-        label = "Lanjutkan pencarian pedang kekaisaran" if started else "Jejak pedang warisan kekaisaran"
+        label = "Lanjutkan pencarian pedang Harsan" if started else "Jejak pedang warisan Harsan"
         choices.append((label, "QUEST_HARSAN_BLADE"))
     if state.location == "KAMPAR":
-        choices.append(("Menuju Kastil Zabx", "EVENT_KASTIL_ENTRY"))
+        choices.append(("Menuju Kastil Febri", "EVENT_KASTIL_ENTRY"))
 
     choices.append(("Kembali ke world map", "GO_TO_WORLD_MAP"))
 
@@ -4699,8 +4706,10 @@ async def send_city_menu(
     query = update.callback_query
     if query:
         await safe_edit_text(query, text=text, reply_markup=keyboard)
-    else:
+    elif update.message:
         await update.message.reply_text(text=text, reply_markup=keyboard)
+    elif update.effective_chat:
+        await update.effective_chat.send_message(text, reply_markup=keyboard)
 
 
 async def send_guild_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
@@ -4711,53 +4720,126 @@ async def send_guild_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, st
         query = update.callback_query
         if query:
             await safe_edit_text(query, text=text, reply_markup=keyboard)
-        else:
+        elif update.message:
             await update.message.reply_text(text=text, reply_markup=keyboard)
+        else:
+            await update.effective_chat.send_message(text, reply_markup=keyboard)
         return
+
+    def describe_target(monster_id: Optional[str]) -> Tuple[str, Optional[str]]:
+        if not monster_id:
+            return "-", None
+        monster = MONSTERS.get(monster_id)
+        if not monster:
+            return monster_id, None
+        base = f"{monster['name']} (Lv {monster.get('level', '?')})"
+        area_key = monster.get("area")
+        area_text = None
+        if area_key:
+            for area_id, info in HUNTING_AREAS.items():
+                if info.get("area_key") == area_key or area_id == area_key:
+                    area_name = info.get("name", area_id)
+                    level_range = info.get("level_range")
+                    area_text = area_name
+                    if level_range:
+                        area_text += f" – {level_range}"
+                    break
+        return base, area_text
+
+    loc_name = loc.get("name", state.location)
     quests = get_city_guild_quests(state.location)
-    lines = [f"🏰 Guild Pemburu {loc.get('name', state.location)}"]
+    hero_level = highest_party_level(state)
+    lines = [
+        "=== GUILD QUESTS ===",
+        f"Lokasi: {loc_name}",
+        f"Level party tertinggi: {hero_level}",
+        "",
+        "-- Active Quests --",
+    ]
+    if state.quests_active:
+        for quest in state.quests_active.values():
+            target_desc, area_hint = describe_target(quest.target)
+            lines.append(
+                f"ID: {quest.id} | Type: {quest.type.title()} | Target: {target_desc} | Progress: {quest.progress}/{quest.required_amount}"
+            )
+            if area_hint:
+                lines.append(f"   Area: {area_hint}")
+            if quest.status == "COMPLETED":
+                lines.append("   Status: ✔ Siap dilaporkan ke guild.")
+    else:
+        lines.append("Tidak ada quest aktif.")
+
+    lines.append("")
+    lines.append("-- Completed Quests --")
+    if state.quests_completed:
+        for quest in state.quests_completed[-5:]:
+            target_desc, _ = describe_target(quest.target)
+            reward_status = "Hadiah diambil" if quest.reward_received else "Belum klaim hadiah"
+            lines.append(f"ID: {quest.id} | Target: {target_desc} | {reward_status}")
+    else:
+        lines.append("Belum ada quest yang selesai.")
+
+    lines.append("")
+    lines.append("-- Available Quests --")
     if not quests:
         lines.append("Belum ada kontrak berburu di papan pengumuman.")
     else:
-        hero_level = highest_party_level(state)
         for quest_id, data in quests.items():
             quest_state = state.quests_active.get(quest_id)
             completed = find_completed_quest(state, quest_id)
-            min_level = data.get("min_level", 1)
-            lines.append("")
-            lines.append(f"[{data['name']}] (Lv {min_level}+) - {data['description']}")
-            reward_parts = []
+            quest_type = data.get("type", "HUNT").title()
+            target_desc, area_hint = describe_target(data.get("target"))
+            lines.append(f"ID: {quest_id} | {data['name']} | Type: {quest_type}")
+            lines.append(f"   Target: {target_desc}")
+            if area_hint:
+                lines.append(f"   Area: {area_hint}")
+            reward_parts: List[str] = []
             if data.get("reward_gold"):
                 reward_parts.append(f"{data['reward_gold']} Gold")
             for item_id, qty in data.get("reward_items", {}).items():
                 item = ITEMS.get(item_id, {"name": item_id})
                 reward_parts.append(f"{item['name']} x{qty}")
-            if reward_parts:
-                lines.append("Hadiah: " + ", ".join(reward_parts))
+            reward_text = ", ".join(reward_parts) if reward_parts else "-"
+            lines.append(
+                f"   Hadiah: {reward_text} | Syarat level: Lv {data.get('min_level', 1)}+"
+            )
             if quest_state:
                 lines.append(
-                    f"Progress: {quest_state.progress}/{quest_state.required_amount}"
+                    f"   Status: Sedang berlangsung ({quest_state.progress}/{quest_state.required_amount})"
                 )
                 if quest_state.status == "COMPLETED":
-                    lines.append("Siap diklaim di meja guild.")
+                    lines.append("   Catatan: Laporkan untuk klaim hadiah.")
             elif completed:
-                lines.append("Status: ✔ Selesai")
+                lines.append("   Status: ✔ Sudah diselesaikan.")
             else:
-                status = "Tersedia" if hero_level >= min_level else "Level belum cukup"
-                lines.append(f"Status: {status}")
+                status_text = (
+                    "Tersedia"
+                    if hero_level >= data.get("min_level", 1)
+                    else f"Butuh Lv {data.get('min_level', 1)}"
+                )
+                lines.append(f"   Status: {status_text}")
+
     buttons: List[List[InlineKeyboardButton]] = []
-    for quest_id in quests:
+    for quest_id, data in quests.items():
         quest_state = state.quests_active.get(quest_id)
         completed = find_completed_quest(state, quest_id)
         if quest_state and quest_state.status == "COMPLETED":
             buttons.append(
-                [InlineKeyboardButton("Klaim hadiah", callback_data=f"GUILD_CLAIM|{quest_id}")]
+                [
+                    InlineKeyboardButton(
+                        f"Klaim '{data['name']}'", callback_data=f"GUILD_CLAIM|{quest_id}"
+                    )
+                ]
             )
         elif not quest_state and not completed:
-            min_level = GUILD_QUESTS[quest_id].get("min_level", 1)
-            if highest_party_level(state) >= min_level:
+            min_level = data.get("min_level", 1)
+            if hero_level >= min_level:
                 buttons.append(
-                    [InlineKeyboardButton("Ambil quest", callback_data=f"GUILD_ACCEPT|{quest_id}")]
+                    [
+                        InlineKeyboardButton(
+                            f"Ambil '{data['name']}'", callback_data=f"GUILD_ACCEPT|{quest_id}"
+                        )
+                    ]
                 )
     buttons.append([InlineKeyboardButton("⬅ Kembali", callback_data="BACK_CITY_MENU")])
     markup = InlineKeyboardMarkup(buttons)
@@ -4767,6 +4849,8 @@ async def send_guild_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, st
         await safe_edit_text(query, text=text, reply_markup=markup)
     elif update.message:
         await update.message.reply_text(text=text, reply_markup=markup)
+    elif update.effective_chat:
+        await update.effective_chat.send_message(text, reply_markup=markup)
 
 
 async def handle_guild_accept(
