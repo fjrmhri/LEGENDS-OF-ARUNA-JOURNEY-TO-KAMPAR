@@ -23,7 +23,7 @@ import asyncio
 import json
 import logging
 import os
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
@@ -947,9 +947,10 @@ ELEMENTAL_ADVANTAGE: Dict[str, Dict[str, float]] = {
 }
 
 
-def stop_auto_hunt(state: GameState) -> None:
+def reset_auto_hunt_state(state: "GameState") -> None:
     state.auto_hunt = False
     state.auto_hunt_area = None
+    state.auto_hunt_stats = {}
 
 
 def get_city_guild_quests(location: str) -> Dict[str, Dict[str, Any]]:
@@ -1578,6 +1579,7 @@ class GameState:
     loss_scene_after_battle: Optional[str] = None
     auto_hunt: bool = False
     auto_hunt_area: Optional[str] = None
+    auto_hunt_stats: Dict[str, Any] = field(default_factory=dict)
     quests_active: Dict[str, QuestState] = field(default_factory=dict)
     quests_completed: List[QuestState] = field(default_factory=list)
 
@@ -1652,8 +1654,9 @@ class GameState:
             state.xp_pool.setdefault(cid, 0)
         state.flags = data.get("flags", {})
         state.ensure_flag_defaults()
-        state.auto_hunt = bool(data.get("auto_hunt", False))
-        state.auto_hunt_area = data.get("auto_hunt_area")
+        state.auto_hunt = False
+        state.auto_hunt_area = None
+        state.auto_hunt_stats = {}
         quests_active_raw = data.get("quests_active", {}) or {}
         state.quests_active = {
             qid: QuestState.from_dict(qdata)
@@ -1717,6 +1720,7 @@ class GameState:
         self.flags = {}
         self.auto_hunt = False
         self.auto_hunt_area = None
+        self.auto_hunt_stats = {}
         self.quests_active = {}
         self.quests_completed = []
         self.ensure_flag_defaults()
@@ -1980,17 +1984,19 @@ def generate_loot_for_area(area_id: str) -> List[Tuple[str, int]]:
     return loot
 
 
-def grant_battle_drops(state: GameState) -> List[str]:
+def grant_battle_drops(state: GameState) -> Tuple[List[str], List[Tuple[str, int]]]:
     area = state.flags.get("CURRENT_BATTLE_AREA")
     if not area:
-        return []
-    drops = []
+        return [], []
+    drops: List[str] = []
+    details: List[Tuple[str, int]] = []
     for item_id, qty in generate_loot_for_area(area):
         adjust_inventory(state, item_id, qty)
         item = ITEMS.get(item_id)
         name = item["name"] if item else item_id
         drops.append(f"{name} x{qty}")
-    return drops
+        details.append((item_id, qty))
+    return drops, details
 
 
 def unequip_item(state: GameState, char_id: str, slot: str) -> Tuple[bool, str]:
@@ -2568,7 +2574,7 @@ async def resolve_battle_outcome(
         state.battle_enemies = []
         state.flags["LAST_BATTLE_RESULT"] = "WIN"
         reward_logs = handle_after_battle_xp_and_level_up(state, total_xp, total_gold)
-        drop_logs = grant_battle_drops(state)
+        drop_logs, _ = grant_battle_drops(state)
         drop_section = ["Drop:"]
         if drop_logs:
             drop_section.extend(f"- {entry}" for entry in drop_logs)
@@ -2611,7 +2617,7 @@ async def resolve_battle_outcome(
         "==== KALAH ====",
         "Kamu tumbang dalam pertarungan ini...",
     ]
-    stop_auto_hunt(state)
+    reset_auto_hunt_state(state)
     for cid in state.party_order:
         member = state.party.get(cid)
         if not member:
@@ -4842,6 +4848,9 @@ async def send_hunting_area_menu(
     state: GameState,
     area_id: str,
     extra_text: str = "",
+    *,
+    force_new_message: bool = False,
+    chat_id: Optional[int] = None,
 ):
     area = HUNTING_AREAS.get(area_id)
     if not area:
@@ -4883,10 +4892,18 @@ async def send_hunting_area_menu(
     buttons.append([InlineKeyboardButton("🏘️ Kembali ke kota", callback_data="BACK_CITY_MENU")])
     markup = InlineKeyboardMarkup(buttons)
     query = update.callback_query
+    text = "\n".join(lines)
+    if force_new_message:
+        target_chat = chat_id
+        if not target_chat and update.effective_chat:
+            target_chat = update.effective_chat.id
+        if target_chat:
+            await context.bot.send_message(chat_id=target_chat, text=text, reply_markup=markup)
+        return
     if query:
-        await safe_edit_text(query, text="\n".join(lines), reply_markup=markup)
+        await safe_edit_text(query, text=text, reply_markup=markup)
     else:
-        await update.effective_chat.send_message("\n".join(lines), reply_markup=markup)
+        await update.effective_chat.send_message(text, reply_markup=markup)
 
 
 async def handle_auto_hunt_toggle(
@@ -4896,22 +4913,644 @@ async def handle_auto_hunt_toggle(
     area_id: Optional[str],
     enable: bool,
 ):
+    query = update.callback_query
     if enable:
+        if state.auto_hunt:
+            if query:
+                await query.answer("Auto hunting sudah aktif.", show_alert=True)
+            return
         if not area_id:
-            await update.callback_query.answer("Area tidak valid.", show_alert=True)
+            if query:
+                await query.answer("Area tidak valid.", show_alert=True)
+            return
+        area = HUNTING_AREAS.get(area_id)
+        if not area:
+            if query:
+                await query.answer("Area hunting tidak dikenal.", show_alert=True)
+            return
+        hero_level = highest_party_level(state)
+        if hero_level < area.get("min_level", 1):
+            if query:
+                await query.answer("Levelmu belum cukup untuk area ini.", show_alert=True)
+            return
+        if not living_party_members(state):
+            if query:
+                await query.answer("Seluruh party sedang tidak mampu bertarung.", show_alert=True)
             return
         state.auto_hunt = True
         state.auto_hunt_area = area_id
-        await update.callback_query.answer("Auto hunting dimulai.", show_alert=False)
-        await start_random_battle_in_area(update, context, state, area_id, source="HUNTING")
-    else:
-        stop_auto_hunt(state)
-        await update.callback_query.answer("Auto hunting dihentikan.", show_alert=False)
-        target_area = area_id or state.flags.get("LAST_HUNT_AREA") or state.auto_hunt_area
-        if target_area:
-            await send_hunting_area_menu(update, context, state, target_area)
+        state.flags["LAST_HUNT_AREA"] = area_id
+        stats = {
+            "session_area": area_id,
+            "start_level": {cid: state.party[cid].level for cid in state.party_order if cid in state.party},
+            "start_xp": {cid: state.xp_pool.get(cid, 0) for cid in state.party_order},
+            "last_level_up_xp": {cid: state.xp_pool.get(cid, 0) for cid in state.party_order},
+            "gained_xp": {cid: 0 for cid in state.party_order},
+            "gained_gold": 0,
+            "kills": 0,
+            "items_gained": {},
+            "stop_reason": "",
+            "summary_sent": False,
+            "loop_active": False,
+        }
+        if update.effective_chat:
+            stats["auto_chat_id"] = update.effective_chat.id
+        if query and query.message:
+            stats["auto_message_id"] = query.message.message_id
+        state.auto_hunt_stats = stats
+        area_name = area.get("name", area_id)
+        if query:
+            await query.answer(f"Auto hunting dimulai di {area_name}.", show_alert=False)
+        runner = run_auto_hunt_loop(update, context, state)
+        if context.application:
+            context.application.create_task(runner)
         else:
-            await send_hunting_menu(update, context, state)
+            asyncio.create_task(runner)
+    else:
+        if not state.auto_hunt:
+            if query:
+                await query.answer("Auto hunting tidak aktif.", show_alert=True)
+            return
+        reason_text = "Auto hunting dihentikan."
+        if state.auto_hunt_stats:
+            reason_text = "Dihentikan oleh pemain."
+            state.auto_hunt_stats["stop_reason"] = reason_text
+        finalize_now = not state.auto_hunt_stats or not state.auto_hunt_stats.get("loop_active")
+        state.auto_hunt = False
+        if query:
+            await query.answer("Sedang menghentikan auto hunting...", show_alert=False)
+        if finalize_now:
+            runner = stop_auto_hunt(update, context, state, reason=reason_text)
+            if context.application:
+                context.application.create_task(runner)
+            else:
+                asyncio.create_task(runner)
+
+
+def get_low_hp_allies(state: GameState, threshold: float) -> List[CharacterState]:
+    allies: List[Tuple[float, CharacterState]] = []
+    for cid in state.party_order:
+        member = state.party.get(cid)
+        if not member or member.hp <= 0:
+            continue
+        max_hp = max(1, get_effective_max_hp(member))
+        ratio = member.hp / max_hp
+        if ratio <= threshold:
+            allies.append((ratio, member))
+    allies.sort(key=lambda entry: entry[0])
+    return [ally for _, ally in allies]
+
+
+def select_auto_heal_skill(
+    character: CharacterState, prefer_group: bool = False
+) -> Optional[Tuple[str, Dict[str, Any]]]:
+    best_single: Optional[Tuple[str, Dict[str, Any]]] = None
+    best_single_power = -1.0
+    best_group: Optional[Tuple[str, Dict[str, Any]]] = None
+    best_group_power = -1.0
+    for skill_id in character.skills:
+        skill = SKILLS.get(skill_id)
+        if not skill:
+            continue
+        skill_type = skill.get("type")
+        if skill_type not in {"HEAL_SINGLE", "HEAL_ALL"}:
+            continue
+        mp_cost = skill.get("mp_cost", 0)
+        if character.mp < mp_cost:
+            continue
+        power = skill.get("power", 0.3)
+        if skill_type == "HEAL_ALL":
+            if power > best_group_power:
+                best_group = (skill_id, skill)
+                best_group_power = power
+        else:
+            if power > best_single_power:
+                best_single = (skill_id, skill)
+                best_single_power = power
+    if prefer_group and best_group:
+        return best_group
+    return best_single or best_group
+
+
+def select_auto_damage_skill(
+    character: CharacterState, enemy: Optional[Dict[str, Any]]
+) -> Optional[Tuple[str, Dict[str, Any]]]:
+    best_choice: Optional[Tuple[str, Dict[str, Any]]] = None
+    best_score = 0.0
+    for skill_id in character.skills:
+        skill = SKILLS.get(skill_id)
+        if not skill or skill.get("type") not in {"PHYS", "MAG"}:
+            continue
+        mp_cost = skill.get("mp_cost", 0)
+        if character.mp < mp_cost:
+            continue
+        hits = max(1, int(skill.get("hits", 1)))
+        score = skill.get("power", 1.0) * hits
+        element = skill.get("element", "NETRAL")
+        if enemy:
+            weakness = enemy.get("weakness", [])
+            resist = enemy.get("resist", [])
+            if element and element in weakness:
+                score *= 1.4
+            if element and element in resist:
+                score *= 0.7
+        if score > best_score:
+            best_score = score
+            best_choice = (skill_id, skill)
+    return best_choice
+
+
+def perform_auto_player_action(
+    state: GameState, character: CharacterState, enemy: Dict[str, Any]
+) -> Tuple[List[str], bool]:
+    logs: List[str] = []
+    if character.hp <= 0 or enemy.get("hp", 0) <= 0:
+        return logs, enemy.get("hp", 0) <= 0
+
+    low_allies = get_low_hp_allies(state, 0.35)
+    multi_low = get_low_hp_allies(state, 0.55)
+    heal_choice = None
+    if low_allies:
+        heal_choice = select_auto_heal_skill(character, prefer_group=len(multi_low) >= 2)
+    if heal_choice:
+        skill_id, skill = heal_choice
+        mp_cost = skill.get("mp_cost", 0)
+        if character.mp >= mp_cost:
+            character.mp -= mp_cost
+            if skill.get("type") == "HEAL_ALL":
+                healed_parts: List[str] = []
+                for cid in state.party_order:
+                    member = state.party.get(cid)
+                    if not member or member.hp <= 0:
+                        continue
+                    heal_amount = calc_heal_amount(character, skill.get("power", 0.25))
+                    before = member.hp
+                    member.hp = min(get_effective_max_hp(member), member.hp + heal_amount)
+                    diff = member.hp - before
+                    healed_parts.append(f"{member.name}+{diff}")
+                logs.append(f"{character.name} menyalurkan {skill['name']} ke seluruh party.")
+                if healed_parts:
+                    logs.append("Pemulihan: " + ", ".join(healed_parts))
+                else:
+                    logs.append("Tidak ada ally yang butuh penyembuhan.")
+                return logs, False
+            target = low_allies[0]
+            heal_amount = calc_heal_amount(character, skill.get("power", 0.3))
+            before = target.hp
+            target.hp = min(get_effective_max_hp(target), target.hp + heal_amount)
+            healed = target.hp - before
+            logs.append(
+                f"{character.name} menggunakan {skill['name']} ke {target.name} (+{healed} HP)."
+            )
+            return logs, False
+
+    damage_choice = select_auto_damage_skill(character, enemy)
+    if damage_choice:
+        skill_id, skill = damage_choice
+        mp_cost = skill.get("mp_cost", 0)
+        if character.mp >= mp_cost:
+            character.mp -= mp_cost
+            hits = max(1, int(skill.get("hits", 1)))
+            skill_type = skill.get("type")
+            element = skill.get("element", "NETRAL")
+            total_damage = 0
+            hit_logs: List[str] = []
+            hit_weak = False
+            hit_resist = False
+            for hit in range(hits):
+                if skill_type == "MAG":
+                    dmg, h_weak, h_resist = calc_magic_damage(
+                        character,
+                        enemy["defense"],
+                        skill.get("power", 1.0),
+                        element,
+                        enemy.get("weakness"),
+                        enemy.get("resist"),
+                        enemy.get("element"),
+                    )
+                else:
+                    dmg, h_weak, h_resist = calc_physical_damage(
+                        character,
+                        enemy["defense"],
+                        skill.get("power", 1.0),
+                        element,
+                        enemy.get("weakness"),
+                        enemy.get("resist"),
+                        enemy.get("element"),
+                    )
+                if element == "CAHAYA" and state.flags.get("LIGHT_BUFF_TURNS"):
+                    dmg = int(dmg * 1.2)
+                enemy["hp"] -= dmg
+                total_damage += dmg
+                hit_weak = hit_weak or h_weak
+                hit_resist = hit_resist or h_resist
+                if hits > 1:
+                    hit_logs.append(f"Hit {hit + 1}: {dmg} damage")
+            logs.append(f"{character.name} menggunakan {skill['name']}!")
+            if hit_logs:
+                logs.extend(hit_logs)
+                logs.append(f"Total damage: {total_damage}.")
+            else:
+                logs.append(f"{enemy['name']} menerima {total_damage} damage.")
+            if hit_weak:
+                logs.append("Serangan ini mengenai kelemahan musuh!")
+            if hit_resist:
+                logs.append("Musuh menahan sebagian serangan ini.")
+            return logs, enemy.get("hp", 0) <= 0
+
+    damage, hit_weak, hit_resist = calc_physical_damage(
+        character,
+        enemy.get("defense", 0),
+        power=1.0,
+        element="NETRAL",
+        target_weakness=enemy.get("weakness"),
+        target_resist=enemy.get("resist"),
+        target_element=enemy.get("element"),
+    )
+    enemy["hp"] -= damage
+    logs.append(f"{character.name} menyerang {enemy['name']} → {damage} damage.")
+    if hit_weak:
+        logs.append("Serangan mengenai kelemahan musuh!")
+    if hit_resist:
+        logs.append("Musuh menahan sebagian damage.")
+    return logs, enemy.get("hp", 0) <= 0
+
+
+def perform_auto_enemy_attack(
+    state: GameState, enemy: Dict[str, Any]
+) -> Tuple[List[str], bool]:
+    logs: List[str] = []
+    target_id = choose_random_party_target(state)
+    if not target_id:
+        return logs, True
+    target = state.party.get(target_id)
+    if not target:
+        return logs, True
+    dmg = calc_enemy_basic_damage(enemy.get("atk", 1), get_effective_stat(target, "defense"))
+    defending = state.flags.get("DEFENDING", {})
+    if defending.get(target_id):
+        dmg = max(1, dmg // 2)
+        defending.pop(target_id, None)
+        if not defending:
+            state.flags.pop("DEFENDING", None)
+    dmg = apply_mana_shield_absorption(state, target_id, dmg, logs)
+    if dmg <= 0:
+        return logs, False
+    target.hp -= dmg
+    logs.append(f"{enemy['name']} menyerang {target.name} dan memberikan {dmg} damage.")
+    if target.hp <= 0:
+        target.hp = 0
+        logs.append(f"{target.name} tumbang!")
+    party_dead = not any(
+        state.party.get(cid) and state.party[cid].hp > 0 for cid in state.party_order
+    )
+    return logs, party_dead
+
+
+async def send_auto_hunt_state(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    log_lines: List[str],
+):
+    stats = state.auto_hunt_stats or {}
+    area_id = stats.get("session_area")
+    area_name = HUNTING_AREAS.get(area_id, {}).get("name", area_id or "-")
+    kills = stats.get("kills", 0)
+    total_gold = stats.get("gained_gold", 0)
+    gained_xp = stats.get("gained_xp", {})
+    xp_parts: List[str] = []
+    for cid in state.party_order:
+        member = state.party.get(cid)
+        if not member:
+            continue
+        xp_parts.append(f"{member.name} +{gained_xp.get(cid, 0)}")
+    xp_line = "XP Didapat: " + (", ".join(xp_parts) if xp_parts else "0")
+    lines = [
+        f"=== AUTO HUNTING: {area_name} ===",
+        f"Kills: {kills} | Total Gold: {total_gold}",
+        xp_line,
+        "",
+        "Status Party:",
+    ]
+    for cid in state.party_order:
+        member = state.party.get(cid)
+        if not member:
+            continue
+        eff_hp = get_effective_max_hp(member)
+        eff_mp = get_effective_max_mp(member)
+        lines.append(
+            f"- {member.name} Lv {member.level} HP {member.hp}/{eff_hp} MP {member.mp}/{eff_mp}"
+        )
+    lines.append("")
+    lines.append("Musuh:")
+    enemy = state.battle_enemies[0] if state.battle_enemies else None
+    if enemy:
+        lines.append(
+            f"- {enemy['name']} HP {max(0, enemy.get('hp', 0))}/{enemy.get('max_hp', enemy.get('hp', 0))}"
+        )
+    else:
+        lines.append("- (tidak ada)")
+    if log_lines:
+        lines.append("")
+        lines.append("---- Aksi Terakhir ----")
+        lines.extend(log_lines[-5:])
+    text = "\n".join(lines)
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("⛔ Hentikan Auto Hunting", callback_data="AUTO_HUNT_OFF")]]
+    )
+    chat_id = stats.get("auto_chat_id") or (update.effective_chat.id if update.effective_chat else None)
+    message_id = stats.get("auto_message_id")
+    try:
+        if chat_id and message_id:
+            await context.bot.edit_message_text(
+                chat_id=chat_id, message_id=message_id, text=text, reply_markup=keyboard
+            )
+        elif update.callback_query and update.callback_query.message:
+            await safe_edit_text(update.callback_query, text=text, reply_markup=keyboard)
+            state.auto_hunt_stats["auto_chat_id"] = update.callback_query.message.chat_id
+            state.auto_hunt_stats["auto_message_id"] = update.callback_query.message.message_id
+        elif chat_id:
+            message = await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=keyboard)
+            state.auto_hunt_stats["auto_chat_id"] = message.chat_id
+            state.auto_hunt_stats["auto_message_id"] = message.message_id
+        elif update.effective_message:
+            message = await update.effective_message.reply_text(text=text, reply_markup=keyboard)
+            state.auto_hunt_stats["auto_chat_id"] = message.chat_id
+            state.auto_hunt_stats["auto_message_id"] = message.message_id
+    except BadRequest as exc:
+        if "message is not modified" in str(exc).lower():
+            return
+        logger.warning(
+            "Gagal memperbarui panel auto hunting user %s: %s", state.user_id, exc
+        )
+
+
+async def stop_auto_hunt(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    *,
+    reason: str = "",
+) -> None:
+    lock = get_user_lock(state.user_id)
+    async with lock:
+        stats = state.auto_hunt_stats or {}
+        if not stats or stats.get("summary_sent"):
+            reset_auto_hunt_state(state)
+            return
+        stats["summary_sent"] = True
+        data = {
+            "session_area": stats.get("session_area") or state.flags.get("LAST_HUNT_AREA"),
+            "gained_xp": dict(stats.get("gained_xp", {})),
+            "gained_gold": stats.get("gained_gold", 0),
+            "kills": stats.get("kills", 0),
+            "items": dict(stats.get("items_gained", {})),
+            "start_xp": dict(stats.get("start_xp", {})),
+            "last_level_up_xp": dict(stats.get("last_level_up_xp", {})),
+            "chat_id": stats.get("auto_chat_id") or (update.effective_chat.id if update.effective_chat else None),
+            "message_id": stats.get("auto_message_id"),
+        }
+        stored_reason = stats.get("stop_reason") or ""
+        if not reason:
+            reason = stored_reason or "Auto hunting selesai."
+        state.auto_hunt = False
+        state.auto_hunt_area = None
+        state.in_battle = False
+        state.battle_enemies = []
+        reset_auto_hunt_state(state)
+    chat_id = data["chat_id"]
+    if data["message_id"] and chat_id:
+        try:
+            await context.bot.edit_message_reply_markup(
+                chat_id=chat_id, message_id=data["message_id"], reply_markup=None
+            )
+        except BadRequest:
+            pass
+    area_name = HUNTING_AREAS.get(data["session_area"], {}).get(
+        "name", data["session_area"] or "-"
+    )
+    lines = ["=== Ringkasan Auto Hunting ===", f"Area : {area_name}"]
+    if reason:
+        lines.append(f"Catatan: {reason}")
+    lines.append(f"Total monster dikalahkan : {data['kills']}")
+    lines.append(f"Total Gold diperoleh     : {data['gained_gold']}")
+    lines.append("")
+    lines.append("EXP per karakter:")
+    for cid in state.party_order:
+        member = state.party.get(cid)
+        if not member:
+            continue
+        gained = data["gained_xp"].get(cid, 0)
+        last_level_xp = data["last_level_up_xp"].get(cid, data["start_xp"].get(cid, 0))
+        since_last = max(0, state.xp_pool.get(cid, 0) - last_level_xp)
+        lines.append(f"- {member.name}: +{gained} EXP sejak awal auto hunting")
+        lines.append(f"  EXP sejak level up terakhir: +{since_last}")
+    lines.append("")
+    lines.append("Item yang didapat:")
+    if data["items"]:
+        for item_id, qty in data["items"].items():
+            item = ITEMS.get(item_id)
+            name = item["name"] if item else item_id
+            lines.append(f"- {name} x{qty}")
+    else:
+        lines.append("- Tidak ada item langka yang ditemukan kali ini.")
+    summary_text = "\n".join(lines)
+    if chat_id:
+        await context.bot.send_message(chat_id=chat_id, text=summary_text)
+    elif update.effective_message:
+        await update.effective_message.reply_text(summary_text)
+    target_area = data["session_area"]
+    if target_area:
+        await send_hunting_area_menu(
+            update,
+            context,
+            state,
+            target_area,
+            force_new_message=True,
+            chat_id=chat_id,
+        )
+    else:
+        await send_hunting_menu(update, context, state)
+
+
+async def run_auto_hunt_loop(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+):
+    lock = get_user_lock(state.user_id)
+    log_lines: List[str] = []
+    stop_reason = ""
+    try:
+        async with lock:
+            stats = state.auto_hunt_stats
+            if not stats:
+                return
+            stats["loop_active"] = True
+        while True:
+            async with lock:
+                stats = state.auto_hunt_stats
+                if not stats:
+                    stop_reason = stop_reason or "Auto hunting dihentikan."
+                    break
+                if not (state.auto_hunt and state.auto_hunt_area):
+                    stop_reason = stats.get("stop_reason") or "Auto hunting dihentikan."
+                    break
+                if not living_party_members(state):
+                    state.auto_hunt = False
+                    stop_reason = "Seluruh party tidak mampu bertarung."
+                    break
+                area_id = state.auto_hunt_area
+                area_info = HUNTING_AREAS.get(area_id)
+                if not area_info:
+                    state.auto_hunt = False
+                    stop_reason = "Area auto hunting tidak valid."
+                    break
+                battle_area = area_info.get("area_key", area_id)
+                enemy = pick_random_monster_for_area(battle_area, average_party_level(state))
+                state.in_battle = True
+                state.battle_enemies = [enemy]
+                reset_battle_flags(state)
+                state.flags["CURRENT_BATTLE_AREA"] = battle_area
+                state.flags["LAST_BATTLE_SOURCE"] = {"type": "AUTO_HUNT", "area": area_id}
+                intro_lines = [
+                    f"{enemy['name']} Lv {enemy.get('level', '?')} muncul di {area_info.get('name', 'area liar')}!"
+                ]
+                if enemy.get("rarity") == "RARE":
+                    intro_lines.append("Aura kuat menyelimuti udara. Monster langka!")
+                log_lines = intro_lines[-5:]
+            await send_auto_hunt_state(update, context, state, log_lines)
+            await asyncio.sleep(0.6)
+            battle_over = False
+            enemy_defeated = False
+            while not battle_over:
+                for cid in state.party_order:
+                    async with lock:
+                        stats = state.auto_hunt_stats
+                        if not stats or not state.auto_hunt:
+                            stop_reason = stats.get("stop_reason") or stop_reason or "Auto hunting dihentikan."
+                            state.in_battle = False
+                            battle_over = True
+                            action_logs: List[str] = []
+                            break
+                        if not state.battle_enemies:
+                            action_logs = []
+                            battle_over = True
+                            break
+                        enemy = state.battle_enemies[0]
+                        character = state.party.get(cid)
+                        if not character or character.hp <= 0:
+                            action_logs = []
+                        else:
+                            action_logs, defeated = perform_auto_player_action(state, character, enemy)
+                            if defeated:
+                                enemy_defeated = True
+                                battle_over = True
+                        if not living_party_members(state):
+                            state.auto_hunt = False
+                            state.in_battle = False
+                            stop_reason = "Seluruh party tumbang saat auto hunting."
+                            state.flags["LAST_BATTLE_RESULT"] = "LOSE"
+                            battle_over = True
+                    if action_logs:
+                        log_lines.extend(action_logs)
+                        log_lines = log_lines[-5:]
+                        await send_auto_hunt_state(update, context, state, log_lines)
+                        await asyncio.sleep(0.6)
+                    if battle_over:
+                        break
+                if battle_over:
+                    break
+                async with lock:
+                    stats = state.auto_hunt_stats
+                    if not stats or not state.auto_hunt:
+                        stop_reason = stats.get("stop_reason") or stop_reason or "Auto hunting dihentikan."
+                        state.in_battle = False
+                        battle_over = True
+                        enemy_logs: List[str] = []
+                    else:
+                        enemy = state.battle_enemies[0]
+                        enemy_logs, party_defeated = perform_auto_enemy_attack(state, enemy)
+                        if party_defeated:
+                            state.auto_hunt = False
+                            state.in_battle = False
+                            stop_reason = "Seluruh party tumbang saat auto hunting."
+                            state.flags["LAST_BATTLE_RESULT"] = "LOSE"
+                            battle_over = True
+                if enemy_logs:
+                    log_lines.extend(enemy_logs)
+                    log_lines = log_lines[-5:]
+                    await send_auto_hunt_state(update, context, state, log_lines)
+                    await asyncio.sleep(0.6)
+                if battle_over:
+                    break
+                if enemy.get("hp", 0) <= 0:
+                    enemy_defeated = True
+                    battle_over = True
+            if not state.auto_hunt:
+                break
+            if enemy_defeated:
+                async with lock:
+                    stats = state.auto_hunt_stats
+                    if not stats:
+                        break
+                    enemy_data = state.battle_enemies[0] if state.battle_enemies else enemy
+                    total_xp = enemy_data.get("xp", 0)
+                    total_gold = enemy_data.get("gold", 0)
+                    stats["kills"] = stats.get("kills", 0) + 1
+                    stats["gained_gold"] = stats.get("gained_gold", 0) + total_gold
+                    before_levels = {
+                        cid: state.party[cid].level for cid in state.party_order if state.party.get(cid)
+                    }
+                    for cid in state.party_order:
+                        stats["gained_xp"].setdefault(cid, 0)
+                        stats["gained_xp"][cid] += total_xp
+                        state.xp_pool[cid] = state.xp_pool.get(cid, 0) + total_xp
+                    state.gold += total_gold
+                    check_level_up(state)
+                    leveled = []
+                    for cid in state.party_order:
+                        character = state.party.get(cid)
+                        if not character:
+                            continue
+                        prev = before_levels.get(cid, character.level)
+                        if character.level > prev:
+                            stats["last_level_up_xp"][cid] = state.xp_pool.get(cid, 0)
+                            leveled.append(f"{character.name} naik ke Level {character.level}!")
+                    drop_logs, drop_details = grant_battle_drops(state)
+                    for item_id, qty in drop_details:
+                        stats["items_gained"][item_id] = stats["items_gained"].get(item_id, 0) + qty
+                    quest_logs = update_hunt_quest_progress(state, [enemy_data.get("id")])
+                    state.flags["LAST_BATTLE_RESULT"] = "WIN"
+                    state.in_battle = False
+                    state.battle_enemies = []
+                summary_lines = [
+                    f"{enemy_data['name']} dikalahkan!",
+                    f"EXP +{total_xp} / Gold +{total_gold}",
+                ]
+                if drop_logs:
+                    summary_lines.append("Drop: " + ", ".join(drop_logs))
+                if quest_logs:
+                    summary_lines.extend(quest_logs)
+                summary_lines.extend(leveled)
+                log_lines.extend(summary_lines)
+                log_lines = log_lines[-5:]
+                await send_auto_hunt_state(update, context, state, log_lines)
+                await asyncio.sleep(0.6)
+                continue
+            break
+    except Exception:
+        logger.exception("Terjadi error di auto hunting user %s", state.user_id)
+        stop_reason = stop_reason or "Auto hunting dihentikan karena terjadi kesalahan."
+    finally:
+        async with lock:
+            stats = state.auto_hunt_stats
+            if stats:
+                stats["loop_active"] = False
+                if not stop_reason:
+                    stop_reason = stats.get("stop_reason") or "Auto hunting selesai."
+    await stop_auto_hunt(update, context, state, reason=stop_reason or "Auto hunting selesai.")
 
 
 async def send_shop_buy_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
@@ -5640,6 +6279,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     if not state.in_battle:
                         await safe_edit_text(query, "Kamu tidak sedang dalam battle.")
                         return
+                    if state.auto_hunt:
+                        await query.answer(
+                            "Kamu sedang auto hunting. Tekan '⛔ Hentikan Auto Hunting' untuk kembali ke mode manual.",
+                            show_alert=True,
+                        )
+                        return
                     await process_battle_action(update, context, state, data)
                     return
 
@@ -5654,6 +6299,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     if not state.in_battle:
                         await safe_edit_text(query, "Kamu tidak sedang dalam battle.")
                         return
+                    if state.auto_hunt:
+                        await query.answer(
+                            "Kamu sedang auto hunting. Tekan '⛔ Hentikan Auto Hunting' untuk kembali ke mode manual.",
+                            show_alert=True,
+                        )
+                        return
                     await process_use_skill(update, context, state, char_id, skill_id)
                     return
 
@@ -5667,6 +6318,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     if not state.in_battle:
                         await safe_edit_text(query, "Kamu tidak sedang dalam battle.")
                         return
+                    if state.auto_hunt:
+                        await query.answer(
+                            "Kamu sedang auto hunting. Tekan '⛔ Hentikan Auto Hunting' untuk kembali ke mode manual.",
+                            show_alert=True,
+                        )
+                        return
                     await process_use_item(update, context, state, item_id)
                     return
 
@@ -5675,12 +6332,18 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     if not state.in_battle:
                         await safe_edit_text(query, "Kamu tidak sedang dalam battle.")
                         return
+                    if state.auto_hunt:
+                        await query.answer(
+                            "Kamu sedang auto hunting. Tekan '⛔ Hentikan Auto Hunting' untuk kembali ke mode manual.",
+                            show_alert=True,
+                        )
+                        return
                     await process_target_selection(update, context, state, data)
                     return
 
                 if data == "RETURN_TO_CITY":
                     handled = True
-                    stop_auto_hunt(state)
+                    reset_auto_hunt_state(state)
                     await send_city_menu(update, context, state)
                     return
 
