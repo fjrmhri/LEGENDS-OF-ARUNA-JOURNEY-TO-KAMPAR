@@ -4410,6 +4410,41 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
 
+async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        lines = [
+            "✨ Legends of Aruna: Journey to Kampar",
+            "RPG teks taktis di mana kamu memimpin Aruna dan kawan-kawan menuju Kampar.",
+            "",
+            "==============================",
+            "Perintah Utama:",
+            "• /start – Mulai petualangan atau lanjutkan dari progress terakhir.",
+            "• /status – Lihat status party dan kondisi terkini.",
+            "• /map – Buka peta dunia dan pilih kota atau hutan.",
+            "• /inventory – Lihat dan gunakan item di luar battle.",
+            "• /save – Simpan progress secara manual.",
+            "• /load – Muat progress dari file save.",
+            "• /help – Lihat bantuan ini.",
+            "",
+            "==============================",
+            "Tips Singkat:",
+            "• Kamu hanya bisa bertarung di hutan/dungeon, bukan di dalam kota.",
+            "• Di kota, gunakan job untuk mendapatkan Gold, beli equipment, dan istirahat di penginapan.",
+            "• Kampar adalah area akhir dengan monster sangat kuat – pastikan levelmu cukup dan quest penting sudah selesai.",
+        ]
+        text = "\n".join(lines)
+        if update.message:
+            await update.message.reply_text(text)
+        elif update.effective_chat:
+            await update.effective_chat.send_message(text)
+    except Exception:
+        logger.exception("Error di handler /help untuk user %s", update.effective_user.id)
+        if update.message:
+            await update.message.reply_text(
+                "Terjadi kesalahan tak terduga. Silakan coba lagi. Jika masalah berlanjut, hubungi admin."
+            )
+
+
 async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     try:
@@ -4976,6 +5011,7 @@ def main():
     application.add_handler(CommandHandler("save", save_cmd))
     application.add_handler(CommandHandler("load", load_cmd))
     application.add_handler(CommandHandler("inventory", inventory_cmd))
+    application.add_handler(CommandHandler("help", help_cmd))
     application.add_handler(CommandHandler("force_save", force_save_cmd))
     application.add_handler(CommandHandler("show_state", show_state_cmd))
 
