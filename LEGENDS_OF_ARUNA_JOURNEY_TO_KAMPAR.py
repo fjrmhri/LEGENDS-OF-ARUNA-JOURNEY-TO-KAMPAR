@@ -1716,49 +1716,36 @@ def check_level_up(state: GameState) -> List[str]:
     for cid in state.party_order:
         character = state.party[cid]
         pool = state.xp_pool.get(cid, 0)
-        leveled = False
         while pool >= xp_required_for_next_level(character.level):
             requirement = xp_required_for_next_level(character.level)
             pool -= requirement
-            increments = apply_growth(character) or {}
-            leveled = True
-            inc_parts = []
-            for key, label in [
-                ("hp", "HP"),
-                ("mp", "MP"),
-                ("atk", "ATK"),
-                ("defense", "DEF"),
-                ("mag", "MAG"),
-                ("spd", "SPD"),
-            ]:
-                if increments.get(key):
-                    inc_parts.append(f"{label} +{increments[key]}")
-            inc_text = ", ".join(inc_parts) if inc_parts else "Stat meningkat."
-            messages.append(
-                f"==== LEVEL UP ====\n{character.name} naik ke Level {character.level}! {inc_text}."
-            )
+            before_stats = get_effective_combat_stats(character)
+            apply_growth(character)
+            after_stats = get_effective_combat_stats(character)
+            lines = [
+                "==== LEVEL UP ====",
+                f"{character.name} naik ke Level {character.level}!",
+                "",
+                f"HP: {before_stats['max_hp']} -> {after_stats['max_hp']}",
+                f"MP: {before_stats['max_mp']} -> {after_stats['max_mp']}",
+                f"ATK: {before_stats['atk']} -> {after_stats['atk']}",
+                f"DEF: {before_stats['defense']} -> {after_stats['defense']}",
+                f"MAG: {before_stats['mag']} -> {after_stats['mag']}",
+                f"SPD: {before_stats['spd']} -> {after_stats['spd']}",
+            ]
+            messages.append("\n".join(lines))
             for req_level, skill in CHAR_SKILL_UNLOCKS.get(cid, []):
                 if character.level >= req_level:
                     grant_skill_to_character(character, skill, messages)
         state.xp_pool[cid] = pool
-        if leveled:
-            effective = get_effective_combat_stats(character)
-            messages.append(
-                f"Stat baru {character.name}: HP {effective['max_hp']} | MP {effective['max_mp']} | ATK {effective['atk']} | DEF {effective['defense']} | MAG {effective['mag']}"
-            )
     return messages
 
 
 def handle_after_battle_xp_and_level_up(state: GameState, total_xp: int, total_gold: int) -> List[str]:
-    logs: List[str] = []
     for cid in state.party_order:
         state.xp_pool[cid] += total_xp
     state.gold += total_gold
-    logs.append(f"Kamu mendapatkan {total_xp} XP dan {total_gold} Gold.")
-    level_logs = check_level_up(state)
-    if level_logs:
-        logs.extend(level_logs)
-    return logs
+    return check_level_up(state)
 
 
 def manual_targeting_enabled(state: GameState) -> bool:
@@ -2017,22 +2004,31 @@ async def resolve_battle_outcome(
         return False
     enemy_keys = [enemy.get("id") for enemy in state.battle_enemies]
     if outcome == "WIN":
-        log.insert(0, "==== KEMENANGAN ====")
         total_xp = sum(enemy.get("xp", 0) for enemy in state.battle_enemies)
         total_gold = sum(enemy.get("gold", 0) for enemy in state.battle_enemies)
         state.in_battle = False
         state.battle_enemies = []
         state.flags["LAST_BATTLE_RESULT"] = "WIN"
         reward_logs = handle_after_battle_xp_and_level_up(state, total_xp, total_gold)
-        if reward_logs:
-            log.extend(reward_logs)
         drop_logs = grant_battle_drops(state)
+        drop_section = ["Drop:"]
         if drop_logs:
-            log.append("Kamu mendapatkan:")
-            for entry in drop_logs:
-                log.append(f"- {entry}")
+            drop_section.extend(f"- {entry}" for entry in drop_logs)
         else:
-            log.append("Kamu tidak menemukan apa-apa.")
+            drop_section.append("- (tidak ada)")
+        summary_lines = [
+            "==== VICTORY ====",
+            "Kamu mengalahkan musuh!",
+            "",
+            f"EXP diperoleh: {total_xp}",
+            f"Gold diperoleh: {total_gold}",
+            "",
+            *drop_section,
+        ]
+        combined_log = summary_lines + [""] + log
+        if reward_logs:
+            combined_log.extend([""] + reward_logs)
+        log = combined_log
         logger.info(
             "User %s menyelesaikan battle vs %s dengan hasil WIN",
             state.user_id,
@@ -2049,13 +2045,17 @@ async def resolve_battle_outcome(
         )
         return True
     # LOSE
-    log.insert(0, "==== KEKALAHAN ====")
+    summary_lines = [
+        "==== KALAH ====",
+        "Kamu tumbang dalam pertarungan ini...",
+    ]
     for cid in state.party_order:
         member = state.party[cid]
         member.hp = max(1, get_effective_max_hp(member) // 3)
     state.in_battle = False
     state.battle_enemies = []
-    log.append("Seluruh party tumbang! Kamu kalah dalam pertarungan ini...")
+    log.append("Seluruh party tumbang! Kamu terlempar keluar dari pertarungan.")
+    log = summary_lines + [""] + log
     state.flags["LAST_BATTLE_RESULT"] = "LOSE"
     logger.info(
         "User %s menyelesaikan battle vs %s dengan hasil LOSE",
@@ -2651,7 +2651,7 @@ def battle_status_text(
             cid = token.split(":", 1)[1]
             actor = state.party.get(cid)
             if actor:
-                lines.append(f"Giliran saat ini: {actor.name}")
+                lines.append(f"Giliran: {actor.name}")
         elif token.startswith("ENEMY:"):
             try:
                 idx = int(token.split(":", 1)[1])
@@ -2659,12 +2659,14 @@ def battle_status_text(
                 idx = -1
             if 0 <= idx < len(state.battle_enemies):
                 enemy = state.battle_enemies[idx]
-                lines.append(f"Giliran saat ini: {enemy['name']}")
+                lines.append(f"Giliran: {enemy['name']}")
 
-    if action_text:
-        lines.append("")
-        lines.append("Aksi:")
+    lines.append("")
+    lines.append("Aksi Terakhir:")
+    if action_text.strip():
         lines.extend(action_text.splitlines())
+    else:
+        lines.append("(belum ada aksi)")
     return "\n".join(lines)
 
 
@@ -3275,11 +3277,17 @@ async def execute_story_command(
         if umar:
             grant_skill_to_character(umar, "SAFIYA_GRACE")
         state.scene_id = "SQ_UMAR_REWARD"
+        quest_block = [
+            "==== QUEST SELESAI ====",
+            '"Warisan Safiya" telah diselesaikan.',
+            "Umar mendapatkan skill Grace Safiya!",
+        ]
+        quest_text = extra_text or "\n".join(quest_block)
         await send_scene(
             update,
             context,
             state,
-            extra_text=extra_text or "Umar mempelajari skill baru: Grace Safiya!",
+            extra_text=quest_text,
         )
         maybe_autosave(state, "umar_quest_completed")
         return True
@@ -3289,11 +3297,17 @@ async def execute_story_command(
         if reza:
             grant_skill_to_character(reza, "MASTER_LEGACY")
         state.scene_id = "SQ_REZA_REWARD"
+        quest_block = [
+            "==== QUEST SELESAI ====",
+            '"Suara dari Segel" telah diselesaikan.',
+            "Reza mendapatkan skill Warisan Sang Guru!",
+        ]
+        quest_text = extra_text or "\n".join(quest_block)
         await send_scene(
             update,
             context,
             state,
-            extra_text=extra_text or "Reza mempelajari skill baru: Warisan Sang Guru!",
+            extra_text=quest_text,
         )
         maybe_autosave(state, "reza_quest_completed")
         return True
@@ -3346,11 +3360,14 @@ def handle_scene_side_effects(state: GameState) -> str:
         aruna = state.party.get("ARUNA")
         if aruna:
             grant_skill_to_character(aruna, "LEGACY_RADIANCE")
-        extras.append(
-            "Pedang warisan keluarga Harsan bangkit kembali saat bersatu dengan Aruna Core!\n"
-            + equip_msg
-            + "\nSkill baru diperoleh: Legacy Radiance."
-        )
+        quest_lines = [
+            "==== QUEST SELESAI ====",
+            '"Jejak Pedang Warisan" telah diselesaikan.',
+            "Pedang warisan keluarga Harsan bangkit kembali saat bersatu dengan Aruna Core!",
+            equip_msg,
+            "Skill baru diperoleh: Legacy Radiance.",
+        ]
+        extras.append("\n".join(quest_lines))
         maybe_autosave(state, "weapon_quest_completed")
     if state.scene_id == "CH5_FLOOR5" and (
         state.flags.get("WEAPON_QUEST_DONE") or state.flags.get("QUEST_WEAPON_DONE")
