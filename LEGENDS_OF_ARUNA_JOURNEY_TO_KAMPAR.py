@@ -1219,6 +1219,7 @@ class BattleTurnState:
     enemies: List[Dict[str, Any]] = field(default_factory=list)
     awaiting_player_input: bool = False
     active_token: Optional[str] = None
+    pending_action: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -1922,6 +1923,96 @@ def living_enemies(state: GameState) -> List[tuple]:
 def get_first_alive_enemy(state: GameState) -> Optional[tuple]:
     alive = living_enemies(state)
     return alive[0] if alive else None
+
+
+def get_enemy_target(state: GameState, index: int) -> Optional[Tuple[int, Dict[str, Any]]]:
+    enemies = state.battle_state.enemies or state.battle_enemies
+    if 0 <= index < len(enemies):
+        enemy = enemies[index]
+        if enemy.get("hp", 0) > 0:
+            return index, enemy
+    return None
+
+
+def enemy_target_buttons(state: GameState) -> List[Tuple[str, str]]:
+    buttons: List[Tuple[str, str]] = []
+    for idx, enemy in living_enemies(state):
+        label = f"{enemy['name']} (HP {enemy['hp']}/{enemy['max_hp']})"
+        buttons.append((label, f"TARGET_ENEMY|{idx}"))
+    return buttons
+
+
+def ally_target_buttons(state: GameState) -> List[Tuple[str, str]]:
+    buttons: List[Tuple[str, str]] = []
+    for cid in state.party_order:
+        member = state.party[cid]
+        if member.hp <= 0:
+            continue
+        effective_hp = get_effective_max_hp(member)
+        label = f"{member.name} (HP {member.hp}/{effective_hp})"
+        buttons.append((label, f"TARGET_ALLY|{cid}"))
+    return buttons
+
+
+def determine_skill_target_type(skill: Dict[str, Any]) -> Optional[str]:
+    skill_type = skill.get("type")
+    if skill_type in {"PHYS", "MAG", "DEBUFF_ENEMY"}:
+        return "ENEMY"
+    if skill_type in {"HEAL_SINGLE", "BUFF_DEF_SINGLE"}:
+        return "ALLY"
+    return None
+
+
+def build_skill_target_prompt(skill: Dict[str, Any], target_type: str) -> str:
+    name = skill.get("name", "skill ini")
+    skill_type = skill.get("type")
+    if target_type == "ENEMY":
+        if skill_type == "DEBUFF_ENEMY":
+            return f"Pilih musuh yang akan dilemahkan oleh {name}:"
+        return f"Pilih musuh yang akan terkena {name}:"
+    if skill_type == "HEAL_SINGLE":
+        return f"Pilih anggota party yang akan disembuhkan dengan {name}:"
+    return f"Pilih anggota party yang akan menerima {name}:"
+
+
+def clear_pending_action(state: GameState):
+    if state.battle_state:
+        state.battle_state.pending_action = None
+
+
+async def show_pending_target_prompt(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState
+):
+    action = state.battle_state.pending_action
+    if not action:
+        await send_battle_state(update, context, state)
+        return
+    target_type = action.get("target_type")
+    if target_type == "ENEMY":
+        options = enemy_target_buttons(state)
+        empty_message = "Tidak ada musuh yang bisa ditarget."
+    else:
+        options = ally_target_buttons(state)
+        empty_message = "Tidak ada anggota party yang bisa menerima aksi ini."
+    if not options:
+        clear_pending_action(state)
+        if target_type == "ENEMY":
+            if await resolve_battle_outcome(update, context, state, []):
+                return
+        await send_battle_state(update, context, state, extra_text=empty_message)
+        return
+    rows = [
+        [InlineKeyboardButton(text=label, callback_data=data)] for label, data in options
+    ]
+    actor_id = action.get("actor_id")
+    rows.append([InlineKeyboardButton("⬅️ Batalkan", f"BATTLE_MENU|{actor_id}")])
+    prompt_text = action.get("prompt", "Pilih target:")
+    markup = InlineKeyboardMarkup(rows)
+    query = update.callback_query
+    if query:
+        await query.edit_message_text(text=prompt_text, reply_markup=markup)
+    else:
+        await update.message.reply_text(text=prompt_text, reply_markup=markup)
 
 
 def choose_random_party_target(state: GameState) -> Optional[str]:
@@ -2728,6 +2819,274 @@ async def send_battle_state(
         await update.message.reply_text(text=text, reply_markup=keyboard)
 
 
+async def execute_basic_attack(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    attacker_id: str,
+    enemy_index: int,
+) -> bool:
+    character = state.party.get(attacker_id)
+    target_info = get_enemy_target(state, enemy_index)
+    if not character or not target_info:
+        await send_battle_state(
+            update, context, state, extra_text="Target musuh tidak valid untuk serangan ini."
+        )
+        return False
+    _, enemy = target_info
+    weapon_element = get_character_weapon_element(character)
+    dmg, hit_weakness, hit_resist = calc_physical_damage(
+        character,
+        enemy["defense"],
+        element=weapon_element,
+        target_weakness=enemy.get("weakness"),
+        target_resist=enemy.get("resist"),
+        target_element=enemy.get("element"),
+    )
+    enemy["hp"] -= dmg
+    element_text = f" ({weapon_element})" if weapon_element != "NETRAL" else ""
+    log = [f"{character.name} menebas {enemy['name']}! Damage {dmg}{element_text}."]
+    if hit_weakness:
+        log.append("Serangan itu mengenai kelemahan musuh!")
+    if hit_resist:
+        log.append("Musuh menahan sebagian seranganmu.")
+    await conclude_player_turn(update, context, state, log)
+    return True
+
+
+async def execute_skill_action(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    user: str,
+    skill_id: str,
+    *,
+    target_enemy_index: Optional[int] = None,
+    target_ally_id: Optional[str] = None,
+) -> bool:
+    character = state.party.get(user)
+    skill = SKILLS.get(skill_id)
+    if not character or not skill:
+        await send_battle_state(update, context, state)
+        return False
+    mp_cost = skill.get("mp_cost", 0)
+    if character.mp < mp_cost:
+        await send_battle_state(
+            update,
+            context,
+            state,
+            intro=False,
+            extra_text=f"{character.name} tidak punya MP yang cukup untuk menggunakan {skill['name']}!",
+        )
+        return False
+
+    character.mp -= mp_cost
+    log: List[str] = []
+    skill_type = skill.get("type")
+    element = skill.get("element", "NETRAL")
+
+    if skill_type in ("PHYS", "MAG"):
+        target_info: Optional[Tuple[int, Dict[str, Any]]]
+        if target_enemy_index is not None:
+            target_info = get_enemy_target(state, target_enemy_index)
+        else:
+            target_info = get_first_alive_enemy(state)
+        if not target_info:
+            character.mp += mp_cost
+            if await resolve_battle_outcome(update, context, state, log):
+                return False
+            return False
+        idx, enemy = target_info
+        hits = max(1, int(skill.get("hits", 1))) if skill_type == "PHYS" else 1
+        total_dmg = 0
+        per_hit_logs: List[str] = []
+        hit_weakness = False
+        hit_resist = False
+        header = f"{character.name} melancarkan {skill['name']}!"
+        if element != "NETRAL":
+            header += f" ({element})"
+        log.append(header)
+        for hit in range(hits):
+            if skill_type == "PHYS":
+                dmg, h_weak, h_res = calc_physical_damage(
+                    character,
+                    enemy["defense"],
+                    skill.get("power", 1.0),
+                    element,
+                    enemy.get("weakness"),
+                    enemy.get("resist"),
+                    enemy.get("element"),
+                )
+            else:
+                dmg, h_weak, h_res = calc_magic_damage(
+                    character,
+                    enemy["defense"],
+                    skill.get("power", 1.0),
+                    element,
+                    enemy.get("weakness"),
+                    enemy.get("resist"),
+                    enemy.get("element"),
+                )
+            if element == "CAHAYA" and state.flags.get("LIGHT_BUFF_TURNS"):
+                dmg = int(dmg * 1.2)
+            enemy["hp"] -= dmg
+            total_dmg += dmg
+            hit_weakness = hit_weakness or h_weak
+            hit_resist = hit_resist or h_res
+            per_hit_logs.append(f"Hit {hit + 1}: {dmg} damage.")
+        if hits > 1:
+            log.extend(per_hit_logs)
+            log.append(f"Total damage ke {enemy['name']}: {total_dmg}.")
+        else:
+            log.append(f"{enemy['name']} menerima {total_dmg} damage.")
+        if hit_weakness:
+            log.append("Serangan ini menghantam kelemahan musuh!")
+        if hit_resist:
+            log.append("Musuh menahan sebagian energi seranganmu.")
+    elif skill_type == "HEAL_SINGLE":
+        target = (
+            state.party.get(target_ally_id)
+            if target_ally_id
+            else pick_lowest_hp_ally(state)
+        )
+        if not target or target.hp <= 0:
+            character.mp += mp_cost
+            log.append("Tidak ada target untuk disembuhkan.")
+            await send_battle_state(update, context, state, extra_text="\n".join(log))
+            return False
+        heal_amount = calc_heal_amount(character, skill.get("power", 0.3))
+        before = target.hp
+        target.hp = min(get_effective_max_hp(target), target.hp + heal_amount)
+        healed = target.hp - before
+        log.append(
+            f"{character.name} merapal {skill['name']} dan memulihkan {target.name} sebesar {healed} HP."
+        )
+    elif skill_type == "HEAL_ALL":
+        total = []
+        for cid in state.party_order:
+            member = state.party[cid]
+            if member.hp <= 0:
+                continue
+            heal_amount = calc_heal_amount(character, skill.get("power", 0.25))
+            before = member.hp
+            member.hp = min(get_effective_max_hp(member), member.hp + heal_amount)
+            total.append(f"{member.name}+{member.hp - before}HP")
+        log.append(f"{character.name} menyalurkan {skill['name']} ke seluruh party.")
+        log.append("Pemulihan: " + ", ".join(total))
+    elif skill_type == "BUFF_DEF_SELF":
+        buffs = skill.get("buffs", {"defense": 3})
+        duration = skill.get("duration", 3)
+        for stat, amount in buffs.items():
+            apply_temporary_modifier(state, make_char_buff_key(user), stat, amount, duration)
+        log.append(
+            f"{character.name} memperkuat pertahanan dengan {skill['name']}! DEF meningkat selama {duration} giliran."
+        )
+    elif skill_type == "BUFF_DEF_SINGLE":
+        target = state.party.get(target_ally_id) if target_ally_id else pick_lowest_hp_ally(state)
+        if not target:
+            target = character
+        buffs = skill.get("buffs", {"defense": 3})
+        duration = skill.get("duration", 3)
+        for stat, amount in buffs.items():
+            apply_temporary_modifier(state, make_char_buff_key(target.id), stat, amount, duration)
+        log.append(
+            f"{character.name} menyalurkan {skill['name']} pada {target.name}! Pertahanan meningkat selama {duration} giliran."
+        )
+    elif skill_type == "LIMIT_HEAL":
+        state.flags["ARUNA_LIMIT_USED"] = True
+        state.flags["LIGHT_BUFF_TURNS"] = 3
+        total = []
+        for cid in state.party_order:
+            member = state.party[cid]
+            heal_amount = max(1, int(get_effective_max_hp(member) * 0.4))
+            before = member.hp
+            member.hp = min(get_effective_max_hp(member), member.hp + heal_amount)
+            total.append(f"{member.name}+{member.hp - before}HP")
+        log.append(
+            "==== CAHAYA BANGKIT ====\nAruna Core Awakening memulihkan party dan memberkati serangan cahaya!"
+        )
+        log.append("Pemulihan: " + ", ".join(total))
+    elif skill_type == "BUFF_TEAM":
+        buffs = skill.get("buffs", {})
+        duration = skill.get("duration", 3)
+        affected = []
+        for cid in state.party_order:
+            member = state.party[cid]
+            if member.hp <= 0:
+                continue
+            for stat, amount in buffs.items():
+                apply_temporary_modifier(state, make_char_buff_key(cid), stat, amount, duration)
+            affected.append(member.name)
+        log.append(
+            f"{character.name} menyalurkan {skill['name']}! Buff menyelimuti {', '.join(affected)} selama {duration} giliran."
+        )
+    elif skill_type == "DEBUFF_ENEMY":
+        target_info = (
+            get_enemy_target(state, target_enemy_index)
+            if target_enemy_index is not None
+            else get_first_alive_enemy(state)
+        )
+        if not target_info:
+            character.mp += mp_cost
+            log.append("Tidak ada musuh untuk didebuff.")
+            await send_battle_state(update, context, state, extra_text="\n".join(log))
+            return False
+        idx, enemy = target_info
+        duration = skill.get("duration", 3)
+        for stat, amount in skill.get("debuffs", {}).items():
+            apply_temporary_modifier(state, make_enemy_buff_key(idx), stat, amount, duration)
+        log.append(
+            f"{character.name} melempar {skill['name']}! Statistik {enemy['name']} melemah selama {duration} giliran."
+        )
+    elif skill_type == "CLEANSE":
+        target_mode = skill.get("target", "party")
+        total_removed = 0
+        if target_mode == "party":
+            for cid in state.party_order:
+                total_removed += cleanse_character(state, cid)
+        else:
+            total_removed = cleanse_character(state, user)
+        if total_removed:
+            log.append(
+                f"{character.name} membersihkan {total_removed} debuff dengan {skill['name']}!"
+            )
+        else:
+            log.append(f"{character.name} menggunakan {skill['name']}, tetapi tidak ada debuff yang perlu dibersihkan.")
+    elif skill_type == "BUFF_SELF":
+        duration = skill.get("duration", 3)
+        for stat, amount in skill.get("buffs", {}).items():
+            apply_temporary_modifier(state, make_char_buff_key(user), stat, amount, duration)
+        for stat, amount in skill.get("penalties", {}).items():
+            apply_temporary_modifier(state, make_char_buff_key(user), stat, amount, duration)
+        log.append(
+            f"{character.name} memfokuskan energi melalui {skill['name']} untuk {duration} giliran."
+        )
+    elif skill_type == "BUFF_SPECIAL":
+        duration = skill.get("duration", 3)
+        shields = state.flags.setdefault("MANA_SHIELD", {})
+        shields[user] = duration
+        log.append(
+            f"{character.name} menciptakan {skill['name']}! Damage akan menguras MP lebih dulu selama {duration} giliran."
+        )
+    elif skill_type == "REVIVE":
+        target = find_revive_target(state)
+        if not target:
+            character.mp += mp_cost
+            log.append("Tidak ada ally yang butuh dihidupkan.")
+            await send_battle_state(update, context, state, extra_text="\n".join(log))
+            return False
+        ratio = skill.get("revive_ratio", 0.4)
+        target.hp = max(1, int(get_effective_max_hp(target) * ratio))
+        log.append(
+            f"{character.name} menghidupkan {target.name} dengan {skill['name']}! HP pulih {target.hp}."
+        )
+    else:
+        log.append(f"{skill['name']} belum bisa digunakan di sistem battle sederhana ini.")
+        await send_battle_state(update, context, state, intro=False, extra_text="\n".join(log))
+        return False
+
+    await conclude_player_turn(update, context, state, log)
+    return True
 async def process_battle_action(
     update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, action: str
 ):
@@ -2749,6 +3108,8 @@ async def process_battle_action(
 
     character = state.party[active_char_id]
 
+    clear_pending_action(state)
+
     if action_key in {"BATTLE_MENU", "BATTLE_BACK"}:
         await send_battle_state(update, context, state)
         return
@@ -2763,30 +3124,21 @@ async def process_battle_action(
     log: List[str] = []
 
     if action_key == "BATTLE_ATTACK":
-        target_info = get_first_alive_enemy(state)
-        if not target_info:
+        if not enemy_target_buttons(state):
             if await resolve_battle_outcome(update, context, state, log):
                 return
-        else:
-            idx, enemy = target_info
-            weapon_element = get_character_weapon_element(character)
-            dmg, hit_weakness, hit_resist = calc_physical_damage(
-                character,
-                enemy["defense"],
-                element=weapon_element,
-                target_weakness=enemy.get("weakness"),
-                target_resist=enemy.get("resist"),
-                target_element=enemy.get("element"),
+            await send_battle_state(
+                update, context, state, extra_text="Tidak ada musuh yang tersisa untuk diserang."
             )
-            enemy["hp"] -= dmg
-            element_text = f" ({weapon_element})" if weapon_element != "NETRAL" else ""
-            log.append(
-                f"{character.name} menebas {enemy['name']}! Damage {dmg}{element_text}."
-            )
-            if hit_weakness:
-                log.append("Serangan itu mengenai kelemahan musuh!")
-            if hit_resist:
-                log.append("Musuh menahan sebagian seranganmu.")
+            return
+        state.battle_state.pending_action = {
+            "actor_id": active_char_id,
+            "action_kind": "ATTACK",
+            "target_type": "ENEMY",
+            "prompt": "Pilih musuh yang akan diserang:",
+        }
+        await show_pending_target_prompt(update, context, state)
+        return
 
     elif action_key == "BATTLE_DEFEND":
         defend_flags = state.flags.setdefault("DEFENDING", {})
@@ -2846,7 +3198,8 @@ async def process_use_skill(
         )
         return
 
-    if character.mp < skill.get("mp_cost", 0):
+    mp_cost = skill.get("mp_cost", 0)
+    if character.mp < mp_cost:
         await send_battle_state(
             update,
             context,
@@ -2856,201 +3209,116 @@ async def process_use_skill(
         )
         return
 
-    character.mp -= skill.get("mp_cost", 0)
-    log: List[str] = []
-    skill_type = skill.get("type")
-    element = skill.get("element", "NETRAL")
-
-    if skill_type in ("PHYS", "MAG"):
-        target_info = get_first_alive_enemy(state)
-        if not target_info:
-            character.mp += skill.get("mp_cost", 0)
-            if await resolve_battle_outcome(update, context, state, log):
-                return
-        else:
-            idx, enemy = target_info
-            hits = max(1, int(skill.get("hits", 1))) if skill_type == "PHYS" else 1
-            total_dmg = 0
-            per_hit_logs: List[str] = []
-            hit_weakness = False
-            hit_resist = False
-            header = f"{character.name} melancarkan {skill['name']}!"
-            if element != "NETRAL":
-                header += f" ({element})"
-            log.append(header)
-            for hit in range(hits):
-                if skill_type == "PHYS":
-                    dmg, h_weak, h_res = calc_physical_damage(
-                        character,
-                        enemy["defense"],
-                        skill.get("power", 1.0),
-                        element,
-                        enemy.get("weakness"),
-                        enemy.get("resist"),
-                        enemy.get("element"),
-                    )
-                else:
-                    dmg, h_weak, h_res = calc_magic_damage(
-                        character,
-                        enemy["defense"],
-                        skill.get("power", 1.0),
-                        element,
-                        enemy.get("weakness"),
-                        enemy.get("resist"),
-                        enemy.get("element"),
-                    )
-                if element == "CAHAYA" and state.flags.get("LIGHT_BUFF_TURNS"):
-                    dmg = int(dmg * 1.2)
-                enemy["hp"] -= dmg
-                total_dmg += dmg
-                hit_weakness = hit_weakness or h_weak
-                hit_resist = hit_resist or h_res
-                per_hit_logs.append(f"Hit {hit + 1}: {dmg} damage.")
-
-            if hits > 1:
-                log.extend(per_hit_logs)
-                log.append(f"Total damage ke {enemy['name']}: {total_dmg}.")
-            else:
-                log.append(f"{enemy['name']} menerima {total_dmg} damage.")
-            if hit_weakness:
-                log.append("Serangan ini menghantam kelemahan musuh!")
-            if hit_resist:
-                log.append("Musuh menahan sebagian energi seranganmu.")
-    elif skill_type == "HEAL_SINGLE":
-        target = pick_lowest_hp_ally(state)
-        if not target:
-            character.mp += skill.get("mp_cost", 0)
-            log.append("Tidak ada target untuk disembuhkan.")
-            await send_battle_state(update, context, state, extra_text="\n".join(log))
+    target_type = determine_skill_target_type(skill)
+    if target_type == "ENEMY" and not enemy_target_buttons(state):
+        if await resolve_battle_outcome(update, context, state, []):
             return
-        heal_amount = calc_heal_amount(character, skill.get("power", 0.3))
-        before = target.hp
-        target.hp = min(get_effective_max_hp(target), target.hp + heal_amount)
-        healed = target.hp - before
-        log.append(
-            f"{character.name} merapal {skill['name']} dan memulihkan {target.name} sebesar {healed} HP."
+        await send_battle_state(
+            update,
+            context,
+            state,
+            extra_text="Tidak ada musuh yang bisa ditarget saat ini.",
         )
-    elif skill_type == "HEAL_ALL":
-        total = []
-        for cid in state.party_order:
-            member = state.party[cid]
-            if member.hp <= 0:
-                continue
-            heal_amount = calc_heal_amount(character, skill.get("power", 0.25))
-            before = member.hp
-            member.hp = min(get_effective_max_hp(member), member.hp + heal_amount)
-            total.append(f"{member.name}+{member.hp - before}HP")
-        log.append(f"{character.name} menyalurkan {skill['name']} ke seluruh party.")
-        log.append("Pemulihan: " + ", ".join(total))
-    elif skill_type == "BUFF_DEF_SELF":
-        buffs = skill.get("buffs", {"defense": 3})
-        duration = skill.get("duration", 3)
-        for stat, amount in buffs.items():
-            apply_temporary_modifier(state, make_char_buff_key(user), stat, amount, duration)
-        log.append(
-            f"{character.name} memperkuat pertahanan dengan {skill['name']}! DEF meningkat selama {duration} giliran."
+        return
+    if target_type == "ALLY" and not ally_target_buttons(state):
+        await send_battle_state(
+            update,
+            context,
+            state,
+            extra_text="Tidak ada anggota party yang bisa menerima skill ini.",
         )
-    elif skill_type == "BUFF_DEF_SINGLE":
-        target = pick_lowest_hp_ally(state) or character
-        buffs = skill.get("buffs", {"defense": 3})
-        duration = skill.get("duration", 3)
-        for stat, amount in buffs.items():
-            apply_temporary_modifier(
-                state, make_char_buff_key(target.id), stat, amount, duration
-            )
-        log.append(
-            f"{character.name} menyalurkan {skill['name']} pada {target.name}! Pertahanan meningkat selama {duration} giliran."
-        )
-    elif skill_type == "LIMIT_HEAL":
-        state.flags["ARUNA_LIMIT_USED"] = True
-        state.flags["LIGHT_BUFF_TURNS"] = 3
-        total = []
-        for cid in state.party_order:
-            member = state.party[cid]
-            heal_amount = max(1, int(get_effective_max_hp(member) * 0.4))
-            before = member.hp
-            member.hp = min(get_effective_max_hp(member), member.hp + heal_amount)
-            total.append(f"{member.name}+{member.hp - before}HP")
-        log.append(
-            "==== CAHAYA BANGKIT ====\nAruna Core Awakening memulihkan party dan memberkati serangan cahaya!"
-        )
-        log.append("Pemulihan: " + ", ".join(total))
-    elif skill_type == "BUFF_TEAM":
-        buffs = skill.get("buffs", {})
-        duration = skill.get("duration", 3)
-        affected = []
-        for cid in state.party_order:
-            member = state.party[cid]
-            if member.hp <= 0:
-                continue
-            for stat, amount in buffs.items():
-                apply_temporary_modifier(state, make_char_buff_key(cid), stat, amount, duration)
-            affected.append(member.name)
-        log.append(
-            f"{character.name} menyalurkan {skill['name']}! Buff menyelimuti {', '.join(affected)} selama {duration} giliran."
-        )
-    elif skill_type == "DEBUFF_ENEMY":
-        target_info = get_first_alive_enemy(state)
-        if not target_info:
-            character.mp += skill.get("mp_cost", 0)
-            log.append("Tidak ada musuh untuk didebuff.")
-            await send_battle_state(update, context, state, extra_text="\n".join(log))
-            return
-        idx, enemy = target_info
-        duration = skill.get("duration", 3)
-        for stat, amount in skill.get("debuffs", {}).items():
-            apply_temporary_modifier(state, make_enemy_buff_key(idx), stat, amount, duration)
-        log.append(
-            f"{character.name} melempar {skill['name']}! Statistik {enemy['name']} melemah selama {duration} giliran."
-        )
-    elif skill_type == "CLEANSE":
-        target_mode = skill.get("target", "party")
-        total_removed = 0
-        if target_mode == "party":
-            for cid in state.party_order:
-                total_removed += cleanse_character(state, cid)
-        else:
-            total_removed = cleanse_character(state, user)
-        if total_removed:
-            log.append(
-                f"{character.name} membersihkan {total_removed} debuff dengan {skill['name']}!"
-            )
-        else:
-            log.append(f"{character.name} menggunakan {skill['name']}, tetapi tidak ada debuff yang perlu dibersihkan.")
-    elif skill_type == "BUFF_SELF":
-        duration = skill.get("duration", 3)
-        for stat, amount in skill.get("buffs", {}).items():
-            apply_temporary_modifier(state, make_char_buff_key(user), stat, amount, duration)
-        for stat, amount in skill.get("penalties", {}).items():
-            apply_temporary_modifier(state, make_char_buff_key(user), stat, amount, duration)
-        log.append(
-            f"{character.name} memfokuskan energi melalui {skill['name']} untuk {duration} giliran."
-        )
-    elif skill_type == "BUFF_SPECIAL":
-        duration = skill.get("duration", 3)
-        shields = state.flags.setdefault("MANA_SHIELD", {})
-        shields[user] = duration
-        log.append(
-            f"{character.name} menciptakan {skill['name']}! Damage akan menguras MP lebih dulu selama {duration} giliran."
-        )
-    elif skill_type == "REVIVE":
-        target = find_revive_target(state)
-        if not target:
-            character.mp += skill.get("mp_cost", 0)
-            log.append("Tidak ada ally yang butuh dihidupkan.")
-            await send_battle_state(update, context, state, extra_text="\n".join(log))
-            return
-        ratio = skill.get("revive_ratio", 0.4)
-        target.hp = max(1, int(get_effective_max_hp(target) * ratio))
-        log.append(
-            f"{character.name} menghidupkan {target.name} dengan {skill['name']}! HP pulih {target.hp}."
-        )
-    else:
-        log.append(f"{skill['name']} belum bisa digunakan di sistem battle sederhana ini.")
-        await send_battle_state(update, context, state, intro=False, extra_text="\n".join(log))
         return
 
-    await conclude_player_turn(update, context, state, log)
+    if target_type:
+        prompt = build_skill_target_prompt(skill, target_type)
+        state.battle_state.pending_action = {
+            "actor_id": user,
+            "action_kind": "SKILL",
+            "skill_id": skill_id,
+            "target_type": target_type,
+            "prompt": prompt,
+        }
+        await show_pending_target_prompt(update, context, state)
+        return
+
+    await execute_skill_action(update, context, state, user, skill_id)
+
+
+async def process_target_selection(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState, data: str
+):
+    action = state.battle_state.pending_action
+    if not action:
+        await send_battle_state(update, context, state)
+        return
+    actor_id = action.get("actor_id")
+    token = state.battle_state.active_token
+    if not token or token != f"CHAR:{actor_id}":
+        clear_pending_action(state)
+        await send_battle_state(
+            update, context, state, extra_text="Giliran sudah berganti sebelum aksi dijalankan."
+        )
+        return
+
+    if data.startswith("TARGET_ENEMY|"):
+        if action.get("target_type") != "ENEMY":
+            await show_pending_target_prompt(update, context, state)
+            return
+        try:
+            idx = int(data.split("|", 1)[1])
+        except ValueError:
+            await show_pending_target_prompt(update, context, state)
+            return
+        target_info = get_enemy_target(state, idx)
+        if not target_info:
+            await show_pending_target_prompt(update, context, state)
+            return
+        if action.get("action_kind") == "ATTACK":
+            success = await execute_basic_attack(update, context, state, actor_id, idx)
+        elif action.get("action_kind") == "SKILL":
+            success = await execute_skill_action(
+                update,
+                context,
+                state,
+                actor_id,
+                action.get("skill_id"),
+                target_enemy_index=idx,
+            )
+        else:
+            success = False
+        if success:
+            clear_pending_action(state)
+        else:
+            await show_pending_target_prompt(update, context, state)
+        return
+
+    if data.startswith("TARGET_ALLY|"):
+        if action.get("target_type") != "ALLY":
+            await show_pending_target_prompt(update, context, state)
+            return
+        target_id = data.split("|", 1)[1]
+        target = state.party.get(target_id)
+        if not target or target.hp <= 0:
+            await show_pending_target_prompt(update, context, state)
+            return
+        if action.get("action_kind") != "SKILL":
+            await show_pending_target_prompt(update, context, state)
+            return
+        success = await execute_skill_action(
+            update,
+            context,
+            state,
+            actor_id,
+            action.get("skill_id"),
+            target_ally_id=target_id,
+        )
+        if success:
+            clear_pending_action(state)
+        else:
+            await show_pending_target_prompt(update, context, state)
+        return
+
+    await send_battle_state(update, context, state)
 
 
 async def end_battle_and_return(
@@ -4236,6 +4504,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         await query.edit_message_text("Kamu tidak sedang dalam battle.")
                         return
                     await process_use_item(update, context, state, item_id)
+                    return
+
+                if data.startswith("TARGET_ENEMY|") or data.startswith("TARGET_ALLY|"):
+                    handled = True
+                    if not state.in_battle:
+                        await query.edit_message_text("Kamu tidak sedang dalam battle.")
+                        return
+                    await process_target_selection(update, context, state, data)
                     return
 
                 if data == "DUNGEON_BATTLE_AGAIN":
