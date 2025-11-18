@@ -44,6 +44,7 @@ from telegram.ext import (
 # ==========================
 
 TOKEN_BOT = "8565685476:AAEX1AaCELoIJkhisYSN3jJ8zapKKRL6xZc"  # <--- Ganti dengan token bot dari BotFather
+ADMIN_USER_IDS = [123456789]  # <--- Ganti dengan daftar ID Telegram admin/developer
 
 LOG_LEVEL = logging.INFO
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -65,13 +66,15 @@ try:
 except Exception:
     logger.warning("File logging tidak aktif karena konfigurasi gagal.", exc_info=True)
 
-AUTOSAVE_ENABLED = False
+AUTOSAVE_ENABLED = True
 AUTOSAVE_BOSS_KEYS = {
     "CORRUPTED_FOREST_GOLEM",
     "HOUND_OF_VOID",
     "VOID_SENTINEL",
     "FEBRI_LORD",
 }
+AUTOSAVE_NOTICE_TEXT = "Progress otomatis disimpan."
+PENDING_AUTOSAVE_FLAG = "_PENDING_AUTOSAVE"
 
 # ==========================
 # DATA DASAR DARI GDD
@@ -1437,21 +1440,55 @@ def load_game_state(user_id: int) -> Optional["GameState"]:
         return None
 
 
-def maybe_autosave(state: "GameState", reason: str = "checkpoint") -> None:
-    """Hook ringan untuk autosave di titik penting.
+def maybe_autosave(state: "GameState", reason: str = "checkpoint") -> bool:
+    """Simpan otomatis state pemain bila fitur aktif."""
 
-    Aktifkan dengan menyetel AUTOSAVE_ENABLED=True. Untuk saat ini, kita hanya
-    mencatat kapan checkpoint tercapai agar mudah diaktifkan nanti.
-    """
+    if not AUTOSAVE_ENABLED:
+        logger.debug(
+            "Autosave dimatikan. Checkpoint user %s (%s) dilewati.",
+            state.user_id,
+            reason,
+        )
+        return False
 
-    if AUTOSAVE_ENABLED:
-        success = save_game_state(state.user_id, state)
-        if success:
-            logger.info("Autosave berhasil untuk user %s (%s)", state.user_id, reason)
-        else:
-            logger.warning("Autosave gagal untuk user %s (%s)", state.user_id, reason)
+    success = save_game_state(state.user_id, state)
+    if success:
+        logger.info("Autosave berhasil untuk user %s (%s)", state.user_id, reason)
     else:
-        logger.info("Autosave checkpoint tercapai untuk user %s (%s)", state.user_id, reason)
+        logger.warning("Autosave gagal untuk user %s (%s)", state.user_id, reason)
+    return success
+
+
+def queue_pending_autosave(state: "GameState", reason: str, notify: bool = False) -> None:
+    state.flags[PENDING_AUTOSAVE_FLAG] = {"reason": reason, "notify": notify}
+
+
+def flush_pending_autosave(state: "GameState") -> Optional[str]:
+    payload = state.flags.pop(PENDING_AUTOSAVE_FLAG, None)
+    if not payload:
+        return None
+    reason = payload.get("reason", "checkpoint")
+    notify = bool(payload.get("notify"))
+    saved = maybe_autosave(state, reason)
+    if saved and notify:
+        return AUTOSAVE_NOTICE_TEXT
+    return None
+
+
+def trigger_checkpoint_autosave(
+    state: "GameState", reason: str, notify: bool = False
+) -> Optional[str]:
+    saved = maybe_autosave(state, reason)
+    if saved and notify:
+        return AUTOSAVE_NOTICE_TEXT
+    return None
+
+
+def append_optional_text(base: Optional[str], addition: Optional[str]) -> str:
+    base = base or ""
+    if addition:
+        return f"{base}\n\n{addition}" if base else addition
+    return base
 
 
 def get_game_state(user_id: int) -> "GameState":
@@ -2146,7 +2183,7 @@ async def resolve_battle_outcome(
         )
         if any(key in AUTOSAVE_BOSS_KEYS for key in enemy_keys if key):
             boss_key = next((key for key in enemy_keys if key in AUTOSAVE_BOSS_KEYS), "boss")
-            maybe_autosave(state, f"battle_win_{boss_key}")
+            queue_pending_autosave(state, f"battle_win_{boss_key}", notify=True)
         await end_battle_and_return(
             update,
             context,
@@ -3333,11 +3370,17 @@ async def end_battle_and_return(
     """
     last_result = state.flags.pop("LAST_BATTLE_RESULT", None)
     reset_battle_flags(state)
+    autosave_note = flush_pending_autosave(state)
 
     # Deteksi: kalau scene main prolog battle tutorial
     if state.scene_id == "CH0_S3" or state.scene_id.startswith("BATTLE_TUTORIAL"):
         state.scene_id = "CH0_S4_POST_BATTLE"
-        await send_scene(update, context, state, extra_text=log_text)
+        await send_scene(
+            update,
+            context,
+            state,
+            extra_text=append_optional_text(log_text, autosave_note),
+        )
         return
 
     if state.return_scene_after_battle:
@@ -3348,11 +3391,17 @@ async def end_battle_and_return(
         state.loss_scene_after_battle = None
         if next_scene:
             state.scene_id = next_scene
-            await send_scene(update, context, state, extra_text=log_text)
+            await send_scene(
+                update,
+                context,
+                state,
+                extra_text=append_optional_text(log_text, autosave_note),
+            )
             return
 
     # Battle random biasa
-    text = log_text + "\n\nKamu kembali ke area hutan."
+    text = append_optional_text(log_text, autosave_note)
+    text = append_optional_text(text, "Kamu kembali ke area hutan.")
     keyboard = make_keyboard(
         [
             ("Cari monster lagi", "DUNGEON_BATTLE_AGAIN"),
@@ -3535,11 +3584,13 @@ async def execute_story_command(
     if command == "SET_MAIN_RENGAT":
         state.main_progress = "Menuju Rengat (Lv 5+)"
         state.flags["SIAK_GATE_EVENT_DONE"] = True
-        await send_world_map(update, context, state)
+        note = trigger_checkpoint_autosave(state, "chapter_unlock_rengat", notify=True)
+        await send_world_map(update, context, state, extra_text=note or "")
         return True
     if command == "SET_MAIN_PEKANBARU":
         state.main_progress = "Menuju Pekanbaru (Lv 8+)"
-        await send_world_map(update, context, state)
+        note = trigger_checkpoint_autosave(state, "chapter_unlock_pekanbaru", notify=True)
+        await send_world_map(update, context, state, extra_text=note or "")
         return True
     if command == "SET_MAIN_KAMPAR":
         state.main_progress = "Menuju Kampar (Lv 12+)"
@@ -3547,7 +3598,8 @@ async def execute_story_command(
         aruna = state.party.get("ARUNA")
         if aruna:
             grant_skill_to_character(aruna, "ARUNA_CORE_AWAKENING")
-        await send_world_map(update, context, state)
+        note = trigger_checkpoint_autosave(state, "chapter_unlock_kampar", notify=True)
+        await send_world_map(update, context, state, extra_text=note or "")
         return True
     if command == "SQ_HARSAN_SHRINE":
         state.scene_id = "SQ_HARSAN_BLADE_SHRINE"
@@ -3570,13 +3622,16 @@ async def execute_story_command(
             "Umar mendapatkan skill Grace Safiya!",
         ]
         quest_text = extra_text or "\n".join(quest_block)
+        autosave_note = trigger_checkpoint_autosave(
+            state, "umar_quest_completed", notify=True
+        )
+        quest_text = append_optional_text(quest_text, autosave_note)
         await send_scene(
             update,
             context,
             state,
             extra_text=quest_text,
         )
-        maybe_autosave(state, "umar_quest_completed")
         return True
     if command == "COMPLETE_REZA_QUEST":
         state.flags["REZA_QUEST_DONE"] = True
@@ -3590,13 +3645,16 @@ async def execute_story_command(
             "Reza mendapatkan skill Warisan Sang Guru!",
         ]
         quest_text = extra_text or "\n".join(quest_block)
+        autosave_note = trigger_checkpoint_autosave(
+            state, "reza_quest_completed", notify=True
+        )
+        quest_text = append_optional_text(quest_text, autosave_note)
         await send_scene(
             update,
             context,
             state,
             extra_text=quest_text,
         )
-        maybe_autosave(state, "reza_quest_completed")
         return True
     return False
 
@@ -3654,8 +3712,12 @@ def handle_scene_side_effects(state: GameState) -> str:
             equip_msg,
             "Skill baru diperoleh: Legacy Radiance.",
         ]
-        extras.append("\n".join(quest_lines))
-        maybe_autosave(state, "weapon_quest_completed")
+        quest_text = "\n".join(quest_lines)
+        autosave_note = trigger_checkpoint_autosave(
+            state, "weapon_quest_completed", notify=True
+        )
+        quest_text = append_optional_text(quest_text, autosave_note)
+        extras.append(quest_text)
     if state.scene_id == "CH5_FLOOR5" and (
         state.flags.get("WEAPON_QUEST_DONE") or state.flags.get("QUEST_WEAPON_DONE")
     ):
@@ -3819,11 +3881,19 @@ async def handle_scene_choice(
 # WORLD MAP & CITY MENU
 # ==========================
 
-async def send_world_map(update: Update, context: ContextTypes.DEFAULT_TYPE, state: GameState):
+async def send_world_map(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    extra_text: str = "",
+):
     text = "WORLD MAP\n" + WORLD_MAP_ASCII + "\n\n"
     text += "Lokasi kamu sekarang: " + LOCATIONS[state.location]["name"] + "\n"
     text += f"Main Quest: {state.main_progress}\n"
     text += "Pilih tujuan:"
+
+    if extra_text:
+        text += "\n\n" + extra_text
 
     # buat tombol kota + dungeon
     choices = []
@@ -4439,6 +4509,80 @@ async def load_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
 
+async def force_save_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_USER_IDS:
+        if update.message:
+            await update.message.reply_text("Perintah ini khusus admin.")
+        logger.warning("User %s mencoba /force_save tanpa izin", user_id)
+        return
+    try:
+        async with get_user_lock(user_id):
+            state = get_game_state(user_id)
+            success = save_game_state(user_id, state)
+        if update.message:
+            if success:
+                await update.message.reply_text("Save paksa berhasil.")
+            else:
+                await update.message.reply_text(
+                    "Save paksa gagal. Periksa log server atau folder saves."
+                )
+    except Exception:
+        logger.exception("Error di handler /force_save untuk user %s", user_id)
+        if update.message:
+            await update.message.reply_text(
+                "Terjadi kesalahan saat menjalankan force save."
+            )
+
+
+async def show_state_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_USER_IDS:
+        if update.message:
+            await update.message.reply_text("Perintah ini khusus admin.")
+        logger.warning("User %s mencoba /show_state tanpa izin", user_id)
+        return
+    try:
+        async with get_user_lock(user_id):
+            state = get_game_state(user_id)
+        loc_name = LOCATIONS.get(state.location, {}).get("name", state.location)
+        lines = [
+            "=== DEBUG STATE ===",
+            f"Scene: {state.scene_id}",
+            f"Lokasi: {loc_name}",
+            f"Main Quest: {state.main_progress}",
+            f"Gold: {state.gold}",
+        ]
+        lines.append("Party:")
+        for cid in state.party_order:
+            member = state.party.get(cid)
+            if not member:
+                continue
+            lines.append(
+                f"- {member.name} Lv{member.level} ({member.hp}/{get_effective_max_hp(member)} HP)"
+            )
+        quest_flags = [
+            ("Warisan Safiya", state.flags.get("UMAR_QUEST_DONE")),
+            ("Suara dari Segel", state.flags.get("REZA_QUEST_DONE")),
+            ("Pedang Harsan", state.flags.get("WEAPON_QUEST_DONE") or state.flags.get("QUEST_WEAPON_DONE")),
+            ("Gerbang Siak", state.flags.get("SIAK_GATE_EVENT_DONE")),
+            ("Rumor Pekanbaru", state.flags.get("PEKANBARU_RUMOR_DONE")),
+            ("Kampar", state.flags.get("VISITED_KAMPAR")),
+        ]
+        lines.append("Quest Flag:")
+        for label, value in quest_flags:
+            indicator = "✅" if value else "❌"
+            lines.append(f"- {label}: {indicator}")
+        if update.message:
+            await update.message.reply_text("\n".join(lines))
+    except Exception:
+        logger.exception("Error di handler /show_state untuk user %s", user_id)
+        if update.message:
+            await update.message.reply_text(
+                "Terjadi kesalahan saat mengambil state pemain."
+            )
+
+
 async def inventory_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     try:
@@ -4554,16 +4698,52 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                     if loc_id == "SIAK" and not state.flags.get("VISITED_SIAK"):
                         state.flags["VISITED_SIAK"] = True
-                        await render_scene(update, context, state, "CH1_SIAK_ENTRY")
+                        note = trigger_checkpoint_autosave(
+                            state, "visit_siak", notify=True
+                        )
+                        await render_scene(
+                            update,
+                            context,
+                            state,
+                            "CH1_SIAK_ENTRY",
+                            extra_text=note or "",
+                        )
                     elif loc_id == "RENGAT" and not state.flags.get("VISITED_RENGAT"):
                         state.flags["VISITED_RENGAT"] = True
-                        await render_scene(update, context, state, "CH2_RENGAT_GATE")
+                        note = trigger_checkpoint_autosave(
+                            state, "visit_rengat", notify=True
+                        )
+                        await render_scene(
+                            update,
+                            context,
+                            state,
+                            "CH2_RENGAT_GATE",
+                            extra_text=note or "",
+                        )
                     elif loc_id == "PEKANBARU" and not state.flags.get("VISITED_PEKANBARU"):
                         state.flags["VISITED_PEKANBARU"] = True
-                        await render_scene(update, context, state, "CH3_PEKANBARU_ENTRY")
+                        note = trigger_checkpoint_autosave(
+                            state, "visit_pekanbaru", notify=True
+                        )
+                        await render_scene(
+                            update,
+                            context,
+                            state,
+                            "CH3_PEKANBARU_ENTRY",
+                            extra_text=note or "",
+                        )
                     elif loc_id == "KAMPAR" and not state.flags.get("VISITED_KAMPAR"):
                         state.flags["VISITED_KAMPAR"] = True
-                        await render_scene(update, context, state, "CH4_KAMPAR_ENTRY")
+                        note = trigger_checkpoint_autosave(
+                            state, "visit_kampar", notify=True
+                        )
+                        await render_scene(
+                            update,
+                            context,
+                            state,
+                            "CH4_KAMPAR_ENTRY",
+                            extra_text=note or "",
+                        )
                     else:
                         await send_city_menu(update, context, state)
                     return
@@ -4796,6 +4976,8 @@ def main():
     application.add_handler(CommandHandler("save", save_cmd))
     application.add_handler(CommandHandler("load", load_cmd))
     application.add_handler(CommandHandler("inventory", inventory_cmd))
+    application.add_handler(CommandHandler("force_save", force_save_cmd))
+    application.add_handler(CommandHandler("show_state", show_state_cmd))
 
     application.add_handler(CallbackQueryHandler(button))
 
