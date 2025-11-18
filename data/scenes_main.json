@@ -1,14 +1,12 @@
 {
   "CH0_S1": {
     "text": [
-      "Selatpanjang, kota pelabuhan kecil di selatan.",
-      "Di sebuah rumah kayu sederhana, seorang pemuda bernama Aruna memandang laut yang memerah oleh senja.",
-      "",
-      "Paman:\n\"Aruna, sudah waktunya makan. Jangan bengong terus di depan jendela.\"",
-      "",
-      "Aruna:\n\"Iya, Paman. Entah kenapa... hari ini terasa berbeda.\"",
-      "",
-      "Paman:\n\"Kalau berbeda, berarti sesuatu akan berubah. Nikmati saja makan malammu.\""
+      "500 tahun lalu, langit ibu kota kekaisaran runtuh oleh api iblis.",
+      "{PLAYER_NAME}, ksatria kerajaan yang disumpah menjaga sang putri, berdiri di gerbang yang retak.",
+      "Almighty Zabx memimpin badai api dari singgasana hitamnya, menertawakan manusia terakhir.",
+      "Zabx: \"Kau gagal melindungi rakyatmu. Menyerahlah.\"",
+      "{PLAYER_NAME}: \"Selama aku bernapas, istana ini tidak jatuh.\"",
+      "Pedang pusaka memanas di tanganmu sementara jeritan rakyat berpadu dengan auman iblis."
     ],
     "choices": [
       {
@@ -19,15 +17,11 @@
   },
   "CH0_S2": {
     "text": [
-      "Malam turun. Aruna duduk di ranjang, memegang kalung bercahaya lembut yang selalu menggantung di lehernya.",
-      "",
-      "Paman:\n\"Suatu hari, kau akan mengerti kenapa kalung itu penting. Tapi belum sekarang.\"",
-      "",
-      "Kalung berpendar lemah.",
-      "",
-      "Aruna:\n\"Kalung ini... satu-satunya peninggalan Harsan dan Rusmini. Siapa kalian sebenarnya?\"",
-      "",
-      "Paman hanya tersenyum getir."
+      "Pertempuran menelan semua sekutu. Para magi kerajaan membentuk lingkaran di aula singgasana.",
+      "Mereka menyalakan sihir warisan untuk memerangkap Zabx di kastilnya sendiri.",
+      "Putri: \"Kaburlah bersamaku, {PLAYER_NAME}!\"",
+      "{PLAYER_NAME}: \"Jika aku pergi, tidak ada yang mengulur Zabx. Segelkan dia sekarang!\"",
+      "Cahaya kuno memeluk kastil dan menarik seluruh struktur ke alam bayangan."
     ],
     "choices": [
       {
@@ -38,19 +32,11 @@
   },
   "CH0_S3": {
     "text": [
-      "Jeritan memecah malam. Tanah bergetar dan udara dipenuhi bau belerang.",
-      "",
-      "Penduduk:\n\"MONSTER!! LARI!!\"",
-      "",
-      "Aruna berlari keluar dan melihat bayangan besar di kejauhan: Shadow Fiend.",
-      "",
-      "Paman:\n\"Aruna! Mundur! Itu bukan monster biasa!\"",
-      "",
-      "Aruna:\n\"Aku tidak bisa diam saja! Mereka butuh bantuan!\"",
-      "",
-      "Paman:\n\"Mulai dari minion-nya! Habisi Shadow Slime itu!\"",
-      "",
-      ">> Battle tutorial melawan Shadow Slime."
+      "Zabx menancapkan cakar kegelapan ke dadamu tepat sebelum segel mengatup.",
+      "Zabx: \"Sebagai hadiah atas kegagalanmu, hiduplah selamanya dalam penyesalan.\"",
+      "Kutukan itu menahan tubuhmu di ambang kematian, membuatmu abadi.",
+      "Kau jatuh di tangga istana, menyaksikan para magi lenyap dan sang putri terpisah oleh reruntuhan.",
+      "Kemenangan terasa pahit: kau selamat, tapi tidak bisa menyelamatkan siapa pun."
     ],
     "choices": [
       {
@@ -61,15 +47,11 @@
   },
   "CH0_S4_POST_BATTLE": {
     "text": [
-      "Setelah mengalahkan Shadow Slime, kamu kembali ke rumah. Dinding runtuh dan paman tergeletak, napasnya tersengal.",
-      "",
-      "Paman:\n\"Dengarkan aku... pergilah ke barat, ke Siak. Di sana kebenaranmu menunggu. Kau keturunan Penjaga Cahaya...\"",
-      "",
-      "Kalung menyala terang.",
-      "",
-      "Paman:\n\"Teruslah berjalan sampai Kampar... di sanalah takdirmu...\"",
-      "",
-      "Tangannya terkulai. Di luar, suara monster memudar."
+      "Ratusan tahun berlalu. Kerajaan runtuh, nama-nama kota berubah, namun wajahmu tetap sama.",
+      "Orang-orang dari berbagai era berbisik: \"Itu ksatria abadi dari kisah runtuhnya imperium.\"",
+      "Segel Zabx melemah, membuat dunia modern membentuk guild pemburu untuk bertahan.",
+      "Kau menahan rasa bersalah sambil menunggu tanda dari para magi.",
+      "Bisikan samar akhirnya membawamu ke arah Pekanbaru, pusat penelitian segel."
     ],
     "choices": [
       {
@@ -80,11 +62,11 @@
   },
   "CH0_S5": {
     "text": [
-      "Fajar menyingsing. Dengan tas kecil dan kalung bercahaya di dada, Aruna berdiri di tepi pelabuhan.",
-      "",
-      "Aruna:\n\"Paman... aku janji. Aku akan ke Siak. Aku akan cari kebenaran, dan aku akan mengakhiri kegelapan ini.\"",
-      "",
-      ">> MAIN QUEST: Pergi ke Siak (Lv 2)."
+      "Dengan zirah tua disembunyikan di balik jubah kelana, kau menuju kota-kota baru.",
+      "Kapal dagang menurunkanmu di Selatpanjang sebelum melanjutkan perjalanan.",
+      "Para pelaut bercerita tentang Siak yang memiliki guild serta penyembuh bernama Umar.",
+      "Untuk memahami dunia ini dan mengawasi aktivitas iblis, kau memutuskan memulai perjalanan dari Siak.",
+      ">> PROLOG selesai. Tujuan utama: masuk ke Siak dan kumpulkan informasi tentang segel Zabx."
     ],
     "choices": [
       {
@@ -95,9 +77,10 @@
   },
   "CH1_SIAK_ENTRY": {
     "text": [
-      "Kamu tiba di gerbang Siak. Sungai tenang membelah kota panggung kayu.",
-      "",
-      "Penjaga:\n\"Selamat datang di Kota Siak. Di dalam kota tidak ada monster, jadi manfaatkan untuk istirahat dan bekerja.\""
+      "Gerbang Siak berdiri di atas sungai berkabut.",
+      "Penjaga: \"Guild kota ini merekrut pemburu untuk menahan sisa pasukan Zabx.\"",
+      "Tatapan mereka terhenti pada wajahmu yang tidak menua.",
+      "Penjaga: \"Kau mirip ksatria dari cerita lama... tapi siapa pun kau, masuklah dan istirahat.\""
     ],
     "choices": [
       {
@@ -108,11 +91,10 @@
   },
   "CH1_UMAR_CLINIC": {
     "text": [
-      "Klinik sederhana itu dipenuhi aroma herbal. Seorang pemuda healer menyambutmu.",
-      "",
-      "Umar:\n\"Selamat datang di klinik Safiya. Kau tampak babak belur. Monster di jalan, ya?\"",
-      "",
-      "Kalungmu tiba-tiba berpendar dan Umar menatap serius."
+      "Klinik Safiya penuh aroma herbal. Umar menyambutmu dengan senyum gugup.",
+      "Umar: \"Luka di tubuhmu seperti bekas sihir abad lampau.\"",
+      "Sigil kutukan di dadamu berpendar saat Umar mendekat.",
+      "Umar: \"Kakek buyutku melayani istana. Ia menulis tentang seorang ksatria abadi... wajahmu sama persis.\""
     ],
     "choices": [
       {
@@ -127,13 +109,11 @@
   },
   "CH1_UMAR_CORE": {
     "text": [
-      "Umar:\n\"Kalung itu simbol Aruna Core. Ibuku, Safiya, pernah menolong Penjaga Cahaya yang membawa simbol yang sama.\"",
-      "",
-      "Aruna:\n\"Kampar... lagi-lagi nama itu.\"",
-      "",
-      "Umar:\n\"Ibu meninggalkan pesan: 'Jika pembawa cahaya datang, bantu dia apapun yang terjadi.' Aku yakin orang itu adalah kamu.\"",
-      "",
-      ">> Umar bergabung sebagai healer party."
+      "Umar membuka jurnal tua bergambar sigil kekaisaran.",
+      "Umar: \"Kau mencoba menyelamatkan kaisar dan putrinya, bukan?\"",
+      "{PLAYER_NAME}: \"Aku gagal. Itu saja yang perlu kau tahu.\"",
+      "Umar: \"Safiya, ibuku, berjanji menolongmu jika suatu saat kau kembali. Izinkan aku menebus utang keluarga kami.\"",
+      ">> Umar bergabung sebagai healer dan mewarisi teknik pemurnian Safiya."
     ],
     "choices": [
       {
@@ -144,11 +124,9 @@
   },
   "CH1_GATE_ALERT": {
     "text": [
-      "Alarm kota meraung. Para penjaga berlari menuju gerbang kayu.",
-      "",
-      "Penjaga:\n\"Monster bayangan menyerang gerbang! Siapapun yang bisa bertarung, ikut kami!\"",
-      "",
-      "Umar:\n\"Aruna! Ini kesempatan membuktikan kenapa aku harus ikut kamu.\""
+      "Sirene guild meraung. Kabut ungu menutupi sungai.",
+      "Penjaga: \"Gerombolan iblis air menerobos! Semua pemburu ke gerbang!\"",
+      "Umar: \"{PLAYER_NAME}, dunia ingin tahu apakah legenda itu nyata. Buktikan pada mereka.\""
     ],
     "choices": [
       {
@@ -159,15 +137,11 @@
   },
   "CH1_GATE_AFTER": {
     "text": [
-      "Shadow Bandit terakhir jatuh. Para penjaga bersorak lega.",
-      "",
-      "Penjaga:\n\"Kalian menyelamatkan kami. Terima kasih!\"",
-      "",
-      "Umar:\n\"Keputusan sudah jelas. Aku akan ikutmu sampai Kampar.\"",
-      "",
-      "Aruna:\n\"Kenapa sejauh itu?\"",
-      "",
-      "Umar:\n\"Ibu meninggal dengan penyesalan. Aku tidak akan membiarkan warisan Safiya hilang.\""
+      "Serangan berhasil dipukul mundur. Penduduk memanggilmu 'Ksatria Abadi'.",
+      "Penjaga: \"Siak berhutang pada kalian.\"",
+      "Umar: \"Kau tidak harus memikul semuanya sendiri. Biar aku ikut.\"",
+      "{PLAYER_NAME}: \"Aku butuh informasi, bukan pengikut.\"",
+      "Umar: \"Kalau begitu kita ke Rengat. Reza meneliti segel Zabx di sana.\""
     ],
     "choices": [
       {
@@ -178,13 +152,10 @@
   },
   "CH1_POINTER_RENGAT": {
     "text": [
-      "Umar:\n\"Kalau soal Kampar dan Penjaga Cahaya, hanya ada satu nama di kepalaku: Reza, penyihir agung dari Rengat.\"",
-      "",
-      "Aruna:\n\"Penyihir?\"",
-      "",
-      "Umar:\n\"Katanya ia punya hubungan langsung dengan Kampar. Jika ada yang tahu masa lalumu, itu dia.\"",
-      "",
-      ">> MAIN QUEST diperbarui: Pergi ke Rengat (Lv 5)."
+      "Umar: \"Menara Rengat menyimpan arsip peninggalan kekaisaran.\"",
+      "Umar: \"Reza bisa membaca rune segel yang menjaga kastil Zabx.\"",
+      "Umar: \"Latih dirimu di guild sampai cukup kuat, lalu temui dia.\"",
+      ">> MAIN QUEST diperbarui: Cari Reza di Rengat (Lv 5)."
     ],
     "choices": [
       {
@@ -195,11 +166,9 @@
   },
   "CH2_RENGAT_GATE": {
     "text": [
-      "Aura magis menyelimuti gerbang Rengat. Rune bercahaya mengambang di udara.",
-      "",
-      "Penjaga:\n\"Selamat datang di kota para penyihir. Banyak yang datang belajar, tapi mereka yang berjalan ke Kampar... tidak pernah kembali.\"",
-      "",
-      "Penjaga:\n\"Kampar memakan para penyihir kami. Kalau kalian ke sini untuk main-main, pulanglah sebelum terlambat.\""
+      "Runik biru menyelimuti gerbang Rengat.",
+      "Penjaga: \"Kami mengenali wajahmu dari lukisan istana tua... kau benar-benar hidup?\"",
+      "Penjaga: \"Kalau kau mencari Kampar, bicaralah dengan Reza. Tapi jangan seret rakyat kami ke kutukan lagi.\""
     ],
     "choices": [
       {
@@ -210,30 +179,24 @@
   },
   "CH2_REZA_TOWER": {
     "text": [
-      "Menara batu sunyi menjulang. Reza menatapmu dari balik buku tebal.",
-      "",
-      "Reza:\n\"Aku tidak punya waktu mengantar petualang menuju neraka Kampar. Pulanglah sebelum kau ikut lenyap.\"",
-      "",
-      "Aruna:\n\"Kami tidak mencari guru. Kami mencari kebenaran tentang Kampar.\"",
-      "",
-      "Kalungmu kembali berpendar terang, memantulkan simbol yang pernah ia lihat."
+      "Menara batu Rengat sunyi kecuali suara halaman buku yang dibalik.",
+      "Reza: \"Guild sudah memperingatkanmu untuk pulang? Bagus. Lakukan itu.\"",
+      "{PLAYER_NAME}: \"Aku datang untuk memeriksa segel Zabx.\"",
+      "Sigil kutukanmu bersinar, membuat Reza terdiam."
     ],
     "choices": [
       {
-        "label": "Tunjukkan kalung Aruna Core",
+        "label": "Tunjukkan sigil kutukan abadi",
         "next_scene": "CH2_REZA_REVEAL"
       }
     ]
   },
   "CH2_REZA_REVEAL": {
     "text": [
-      "Reza (tertegun):\n\"Kalung itu... simbol Aruna Core. Dari mana kau mendapatkannya?\"",
-      "",
-      "Aruna:\n\"Ini satu-satunya peninggalan dari orang tuaku.\"",
-      "",
-      "Reza:\n\"Guruku menyerahkannya pada Harsan, Penjaga Cahaya terakhir. Simbol ini adalah inti Aruna Core.\"",
-      "",
-      "Reza menatap tajam:\n\"Jika ini kalung yang sama... berarti kau adalah anak Harsan.\""
+      "Reza menatapmu lekat-lekat.",
+      "Reza: \"Lukisan di arsip menunjukkan ksatria yang sama... kaisar memanggilmu 'perisai terakhir'.\"",
+      "{PLAYER_NAME}: \"Perisai itu pecah.\"",
+      "Reza: \"Jika kau masih hidup, berarti kutukan Zabx nyata. Aku ingin tahu kenapa segelnya retak lagi.\""
     ],
     "choices": [
       {
@@ -244,17 +207,11 @@
   },
   "CH2_REZA_PAST": {
     "text": [
-      "Reza:\n\"Lima belas tahun lalu, Harsan—ayahmu—berangkat ke Kampar mengejar muridnya sendiri, Febri.\"",
-      "",
-      "Reza:\n\"Febri adalah murid berbakat, tapi ia mengkhianati guruku demi kekuatan terlarang Abyss. Ia percaya bisa membalikkan waktu dan menyelamatkan seseorang.\"",
-      "",
-      "Reza:\n\"Harsan mencoba menghentikannya sebagai Penjaga Cahaya terakhir, tapi sejak itu tak ada kabar dari mereka.\"",
-      "",
-      "Umar:\n\"Jadi Kampar berubah karena ambisi satu orang?\"",
-      "",
-      "Reza:\n\"Ambisi dan keputusasaan. Abyss selalu meminta harga.\"",
-      "",
-      "Tiba-tiba tanah bergetar. Suara berat mendekat dari hutan magis. Para penyihir berteriak ketakutan."
+      "Reza: \"Setelah kekaisaran jatuh, para magus menyegel Zabx di kamarnya sendiri.\"",
+      "Reza: \"Segel itu bertahan lima abad, tapi energi baru di Kampar membuatnya goyah.\"",
+      "Reza: \"Jika Zabx bebas, kota-kota baru seperti Siak dan Pekanbaru akan luluh dalam sehari.\"",
+      "Umar: \"Apa yang bisa kita lakukan?\"",
+      "Reza: \"Cari sumber retakan di Kampar... tapi sebelum itu, lindungi kota ini dari penjaga yang terkorupsi.\""
     ],
     "choices": [
       {
@@ -265,11 +222,9 @@
   },
   "CH2_GOLEM_ALERT": {
     "text": [
-      "NPC:\n\"Golem hutan datang lagi!\"",
-      "",
-      "Reza:\n\"Dia dulu penjaga rimba Rengat. Aura Kampar membuatnya gila.\"",
-      "",
-      "Umar:\n\"Kalau begitu kita bebaskan dia dari kutukan Abyss.\""
+      "Tanah berguncang. Golem hutan muncul dengan tubuh penuh rune rusak.",
+      "Reza: \"Dia dulu pelindung Rengat. Sekarang energi Zabx merusaknya.\"",
+      "Umar: \"Bebaskan dia dari pengaruh iblis!\""
     ],
     "choices": [
       {
@@ -280,13 +235,10 @@
   },
   "CH2_GOLEM_AFTER": {
     "text": [
-      "Corrupted Forest Golem runtuh dan kembali tenang. Cahaya Aruna Core menenangkan tanah yang retak.",
-      "",
-      "Reza:\n\"Kekuatan kalian... tidak buruk. Tanpa Aruna Core, segel Abyss di sini pasti jebol.\"",
-      "",
-      "Umar:\n\"Jadi kau akan ikut?\"",
-      "",
-      "Reza:\n\"Guruku mungkin masih terjerat di Kampar. Hanya Aruna Core milik keturunan Harsan yang bisa menembus segel itu. Aku ikut.\""
+      "Golem runtuh dan berubah menjadi serpihan lumut.",
+      "Sigil kutukanmu meredup setelah menyerap energi liar.",
+      "Reza: \"Kutukanmu menstabilkan retakan... menarik.\"",
+      "Reza: \"Aku ikut. Kampar tidak boleh dibiarkan bangkit.\""
     ],
     "choices": [
       {
@@ -297,11 +249,9 @@
   },
   "CH2_REZA_JOINS": {
     "text": [
-      "Reza resmi bergabung dalam party. Cahaya Aruna Core terasa lebih stabil.",
-      "",
-      "Reza:\n\"Sebelum Kampar, kita perlu menguatkan diri di Pekanbaru. Itu kota besar terakhir sebelum neraka.\"",
-      "",
-      "Reza:\n\"Di sana mungkin ada orang yang tahu kenapa Febri memilih jalan Abyss, dan kenapa banyak penyihir Rengat hilang.\""
+      "Reza resmi bergabung dan membawa grimoire segel kuno.",
+      "Reza: \"Sebelum Kampar, kita butuh logistik dari Pekanbaru.\"",
+      "Reza: \"Di sana ada akademisi yang meneliti kabar tentang Zabx.\""
     ],
     "choices": [
       {
@@ -312,9 +262,8 @@
   },
   "CH2_PEKANBARU_POINTER": {
     "text": [
-      "Reza:\n\"Kumpulkan gear terbaik di Pekanbaru. Dengarkan rumor tentang Febri di sana.\"",
-      "",
-      ">> MAIN QUEST: Pergi ke Pekanbaru (Lv 8)."
+      "Reza: \"Kumpulkan peralatan terbaik di Pekanbaru dan cari rumor tentang elemen-elemen yang muncul di Kampar.\"",
+      ">> MAIN QUEST: Pergi ke Pekanbaru (Lv 8) untuk mempersiapkan penyerbuan Kampar."
     ],
     "choices": [
       {
@@ -325,11 +274,9 @@
   },
   "CH3_PEKANBARU_ENTRY": {
     "text": [
-      "Pekanbaru terlihat muram. Toko-toko tutup lebih awal dan orang-orang berbisik tentang Kampar.",
-      "",
-      "NPC:\n\"Kampar bukan lagi kota. Itu neraka.\"",
-      "",
-      "NPC lain:\n\"Kota itu memanggil siapapun yang punya cahaya... lalu menelannya. Kastil hitam muncul begitu saja.\""
+      "Pekanbaru penuh spanduk peringatan mengenai ancaman Kampar.",
+      "Pedagang berbisik bahwa pasukan Zabx kadang terlihat di utara.",
+      "NPC: \"Kastil hitam itu menarik para pemburu seperti lalat. Mereka jarang kembali.\""
     ],
     "choices": [
       {
@@ -340,17 +287,11 @@
   },
   "CH3_PEKANBARU_CAFE": {
     "text": [
-      "Kafe remang penuh asap. Seorang orang tua menatap kalungmu lama sekali.",
-      "",
-      "Orang Tua:\n\"Kalung cahaya itu... sudah lama sekali aku tak melihat simbol seperti itu.\"",
-      "",
-      "Orang Tua:\n\"Dulu, aku melihat Febri sebelum ia berubah. Ia masih manusia, murid penyihir agung dari Rengat.\"",
-      "",
-      "Reza (terkejut):\n\"Itu... guruku. Jadi Febri adalah murid guruku.\"",
-      "",
-      "Orang Tua:\n\"Febri ingin membalikkan waktu untuk menyelamatkan seseorang. Ia mengejar kekuatan Abyss dan perlahan tubuhnya berubah menjadi iblis.\"",
-      "",
-      "Orang Tua:\n\"Kau membawa cahaya yang sama dengan gurunya. Kalau ke Kampar, jangan terjebak ambisi yang sama.\""
+      "Di kafe remang, seorang tetua menatap wajahmu lama sekali.",
+      "Tetua: \"Aku pernah melihat lukisanmu di arsip kerajaan. Kau ksatria yang gagal menyelamatkan putri, bukan?\"",
+      "{PLAYER_NAME}: \"Aku tidak butuh pengingat.\"",
+      "Tetua: \"Zabx juga gagal. Itu sebabnya ia meronta di segelnya. Kampar memanggil kalian berdua.\"",
+      "Tetua: \"Jika pergi ke Kampar, bawalah pedangmu sendiri. Kastil itu mengenali pemiliknya.\""
     ],
     "choices": [
       {
@@ -361,15 +302,11 @@
   },
   "CH3_DREAM": {
     "text": [
-      "Malam itu Aruna bermimpi. Harsan berdiri di hadapan Febri muda di tengah ritual Abyss.",
-      "",
-      "Harsan:\n\"Berhentilah, Febri! Kekuatan itu bukan milik manusia.\"",
-      "",
-      "Febri:\n\"Aku tidak peduli! Jika dengan ini aku bisa membalikkan waktu dan menyelamatkannya... aku akan menanggung apa pun!\"",
-      "",
-      "Cahaya dan kegelapan bertubrukan. Harsan menggunakan Aruna Core untuk menahan ledakan, sementara bayangan Febri meraung.",
-      "Suara Rusmini menggema lembut di kejauhan: \"Harsan... lindungi Aruna... jangan biarkan Abyss menyentuhnya.\"",
-      "Cahaya menelan semua. Harsan menghilang bersama segel sementara Febri terperangkap. Di kejauhan, Rusmini membawa bayi Aruna menuju perahu ke Selatpanjang, menyelipkan kalung Aruna Core dan meninggalkan petunjuk untuk menyatukan pedang keluarga kelak."
+      "Malam itu, mimpi menenggelamkanmu kembali ke hari terakhir kekaisaran.",
+      "Kau melihat sang putri memohon agar kau pergi, sementara Zabx menertawakan kelemahan manusia.",
+      "Zabx: \"Aku akan menghapus namamu dari sejarah.\"",
+      "Putri: \"Tidak... {PLAYER_NAME}, hiduplah meski tanpa kami.\"",
+      "Segel tertutup, meninggalkanmu seorang diri."
     ],
     "choices": [
       {
@@ -380,11 +317,9 @@
   },
   "CH3_WAKE": {
     "text": [
-      "Aruna terbangun berkeringat, kalungnya berpendar kuat.",
-      "",
-      "Aruna:\n\"Aku melihat ayahku. Dia menyegel Febri dengan Aruna Core... lalu lenyap.\"",
-      "",
-      "Reza:\n\"Seal itu melemah. Kampar memanggilmu. Jika kita terlambat, Abyss akan bangkit penuh.\""
+      "Kau terbangun dengan dada berdenyut.",
+      "{PLAYER_NAME}: \"Aku mendengar suara putri lagi. Segel Zabx memanggilku.\"",
+      "Reza: \"Kalau begitu kita tidak punya waktu. Kampar harus ditangani sebelum elemen gelapnya meluber.\""
     ],
     "choices": [
       {
@@ -395,9 +330,8 @@
   },
   "CH3_KAMPAR_POINTER": {
     "text": [
-      ">> MAIN QUEST: Pergi ke Kampar – Kota Terkutuk (Lv 12).",
-      "",
-      "Umar:\n\"Apapun yang menunggu di sana, kita hadapi bersama.\""
+      ">> MAIN QUEST: Menuju Kampar – pusat segel Zabx (Lv 12).",
+      "Umar: \"Apapun luka masa lalu, kali ini kita hadapi bersama.\""
     ],
     "choices": [
       {
@@ -408,17 +342,12 @@
   },
   "SQ_HARSAN_BLADE_INTRO": {
     "text": [
-      "Di perpustakaan senyap Pekanbaru, seorang arsiparis menatap kalungmu lama sekali.",
-      "",
-      "Arsiparis:\n\"Kalungmu itu... aku pernah melihat simbol yang sama di relief tua.\"",
-      "",
-      "Arsiparis:\n\"Konon, simbol itu pernah terukir di sebuah pedang cahaya yang kini hilang.\"",
-      "",
-      "Arsiparis:\n\"Itu bilah warisan keluarga Harsan. Mereka memisahkannya dari Aruna Core agar Abyss tidak melahap dunia; pedang itu tidak pernah diperjualbelikan di toko mana pun.\"",
-      "",
-      "Aruna:\n\"Kau tahu di mana pedang itu disembunyikan?\"",
-      "",
-      "Arsiparis:\n\"Antara Rengat dan Kampar ada Kuil Cahaya Terlupakan. Hanya Aruna Core yang bisa membuka jalur masuknya.\""
+      "Di perpustakaan Pekanbaru, arsiparis tua menatap wajahmu dengan mata melebar.",
+      "Arsiparis: \"Ada relief kuno bergambar ksatria abadi... kau mirip sosok itu.\"",
+      "Arsiparis: \"Relief itu menyebut pedang imperial yang hilang saat kekaisaran jatuh.\"",
+      "Arsiparis: \"Katanya pedang itu disembunyikan di kuil terpencil agar Zabx tidak bisa menggunakannya.\"",
+      "{PLAYER_NAME}: \"Di mana kuil itu?\"",
+      "Arsiparis: \"Antara Rengat dan Kampar ada Kuil Cahaya Terlupakan. Hanya pemilik sigil yang bisa membukanya.\""
     ],
     "choices": [
       {
@@ -433,13 +362,10 @@
   },
   "SQ_HARSAN_SHRINE_TRAVEL": {
     "text": [
-      "Perjalanan mengikuti sungai berkabut membawamu ke celah batu bertanda simbol Harsan.",
-      "",
-      "Reza:\n\"Ini di luar rute biasa antara Rengat dan Kampar. Tidak ada pedagang yang lewat.\"",
-      "",
-      "Umar:\n\"Kalau ini jebakan Abyss, kita siap?\"",
-      "",
-      "Aruna:\n\"Kuil itu memanggil kalungku. Pedang itu harus kembali ke tuannya.\""
+      "Perjalanan menyusuri sungai berkabut membawamu ke celah batu bermotif lambang kerajaan.",
+      "Reza: \"Rune-nya mirip catatan tentang pedang imperialmu.\"",
+      "Umar: \"Kutukanmu berdenyut kencang. Pedang itu masih mengenalmu.\"",
+      "{PLAYER_NAME}: \"Kalau Zabx menemukannya lebih dulu, dunia tamat. Kita masuk.\""
     ],
     "choices": [
       {
@@ -454,12 +380,13 @@
   },
   "SQ_HARSAN_BLADE_SHRINE": {
     "text": [
-      "Kuil Cahaya Terlupakan sunyi. Pilar berlumut menampilkan relief Harsan dan Rusmini memisahkan pedang dari kalung.",
-      "Di tengah aula ada empat tumpuan batu yang redup. Kalung Aruna berpendar seolah bereaksi, memanggil jalan tersembunyi."
+      "Kuil sunyi dipenuhi patung ksatria yang patah.",
+      "Di tengah ruangan ada empat tumpuan batu yang menunggu sigilmu.",
+      "Udara terasa berat seolah pedang itu menahan napas selama lima abad."
     ],
     "choices": [
       {
-        "label": "Tempelkan Aruna Core pada tumpuan",
+        "label": "Tempelkan sigil ke tumpuan",
         "next_scene": "SQ_HARSAN_SHRINE_PILLARS"
       },
       {
@@ -470,13 +397,9 @@
   },
   "SQ_HARSAN_SHRINE_PILLARS": {
     "text": [
-      "Saat Aruna menyentuhkan kalungnya, setiap tumpuan memancarkan pola cahaya yang menyusun gerbang altar.",
-      "",
-      "Narasi:\n\"Kalung Aruna memancarkan cahaya yang sama dengan simbol di gagang pedang.\"",
-      "",
-      "Aruna:\n\"Seolah-olah... mereka saling memanggil.\"",
-      "",
-      "Namun bayangan Abyss merembes dari sela batu, membentuk sosok gelap."
+      "Begitu kau menyentuhkan sigil pada tumpuan, jalur cahaya terbuka.",
+      "Rune-rune menyusun ulang simbol keluarga kerajaan.",
+      "Bayangan kutukan mencoba merembes keluar dari celah altar."
     ],
     "choices": [
       {
@@ -491,11 +414,9 @@
   },
   "SQ_HARSAN_SHRINE_CORE": {
     "text": [
-      "Cahaya tumpuan menyatu membuka jalan ke ruang terdalam. Di sana, sebuah pedang kusam tergeletak di altar berdebu.",
-      "",
-      "Umar:\n\"Tidak ada jebakan lain? Seakan pedang itu menunggu.\"",
-      "",
-      "Reza:\n\"Energi cahaya dan Abyss bercampur di sini. Jangan ragu, Aruna.\""
+      "Di ruang terdalam terdapat pedang kusam dengan sarung retak.",
+      "Umar: \"Aura pedang itu seperti menahan diri untuk tidak menyakitimu.\"",
+      "Reza: \"Energi Zabx masih menempel. Bersihkan dengan sigilmu.\""
     ],
     "choices": [
       {
@@ -514,19 +435,10 @@
   },
   "SQ_HARSAN_BLADE_VISION": {
     "text": [
-      "Begitu Aruna menyentuhkan kalung ke pedang, Aruna Core memancarkan cahaya yang menyelimuti altar.",
-      "",
-      "Harsan:\n\"Jika Febri atau Abyss mendapatkan pedang dan kalung dalam satu tempat, dunia akan runtuh; kami memisahkannya demi menunda bencana.\"",
-      "",
-      "Rusmini:\n\"Kalau suatu hari keduanya bersatu kembali... biarlah itu terjadi karena takdir, bukan karena kerakusan.\"",
-      "",
-      "Narasi:\n\"Kilatan memperlihatkan Rusmini menggendong bayi Aruna menuju Selatpanjang, sementara Harsan menyembunyikan pedang ini di altar jauh dari Aruna Core.\"",
-      "",
-      "Narasi:\n\"Cahaya dari kalung dan pedang menyatu, menghapus karat dan retakan.\"",
-      "",
-      "Narasi:\n\"Pedang itu tampak baru ditempa, memancarkan aura lembut namun tajam.\"",
-      "",
-      "Sistem:\n\">> Kamu memperoleh: Pedang Warisan Harsan — pedang warisan keluarga Harsan yang bangkit kembali saat bersatu dengan Aruna Core!\""
+      "Saat sigil menyentuh pedang, kau melihat kilasan para magi menyembunyikan senjata itu.",
+      "Mereka berpesan: \"Pedang ini hanya boleh bangkit jika ksatria abadi siap menanggungnya lagi.\"",
+      "Cahaya menghapus karat, mengembalikan bentuk asli pedang imperial.",
+      "Sistem: \" >> Kamu memperoleh Pedang Warisan Kekaisaran – bilah asli milik {PLAYER_NAME}.\""
     ],
     "choices": [
       {
@@ -537,11 +449,10 @@
   },
   "CH4_KAMPAR_ENTRY": {
     "text": [
-      "Begitu melewati perbatasan Kampar, langit kehilangan warnanya. Rumah-rumah hancur, jalan retak, tak ada suara manusia.",
-      "",
-      "Umar:\n\"Aku tidak merasakan satu pun kehidupan...\"",
-      "",
-      "Reza:\n\"Ini adalah napas Abyss. Kota ini sudah mati, tapi segelnya memanggil kita. Tidak ada toko, tidak ada warga... hanya kutukan.\""
+      "Begitu melewati batas Kampar, warna dunia pudar.",
+      "Rumah-rumah hancur dan udara dipenuhi abu.",
+      "Umar: \"Tidak ada nyawa manusia di sini... hanya kutukan.\"",
+      "Reza: \"Segel utama berada di kastil Zabx di tengah kota.\""
     ],
     "choices": [
       {
@@ -552,12 +463,10 @@
   },
   "CH4_FLASHBACK": {
     "text": [
-      "Kalung Aruna menyala menyilaukan. Kilasan masa lalu muncul seakan diproyeksikan dari Aruna Core.",
-      "Harsan berdiri sebagai Penjaga Cahaya terakhir, sementara Febri menatapnya dengan mata yang dipenuhi iri.",
-      "",
-      "Febri:\n\"Kenapa kau yang selalu dipilih? Aku juga pantas merasakan kekuatan itu.\"",
-      "",
-      "Untuk melindungi bayi Aruna dan mencegah Abyss meledakkan dunia, Harsan dan Rusmini memutuskan memisahkan pedang warisan dan kalung Aruna Core lalu menyerahkannya pada wali di Selatpanjang."
+      "Sigil di dadamu menyala, memperlihatkan kilas balik lima abad silam.",
+      "Kau melihat dirimu tersungkur di tangga istana.",
+      "Para magi memisahkan pedang pusaka dari sigilmu agar Zabx tidak menguasainya.",
+      "Mereka berbisik: \"Jika pedang dan sigil bersatu lagi, pastikan itu terjadi karena pilihan sang ksatria.\""
     ],
     "choices": [
       {
@@ -568,44 +477,37 @@
   },
   "CH4_FLASHBACK_2": {
     "text": [
-      "Flashback berlanjut. Febri membuat perjanjian dengan Abyss, memanggil kastil hitam dari tanah Kampar.",
-      "",
-      "Harsan:\n\"Rusmini... jika aku tidak kembali, lindungi Aruna.\"",
-      "",
-      "Rusmini:\n\"Jika dunia menuntut pengorbanan kita, jangan biarkan ia ikut terbakar.\"",
-      "",
-      "Harsan menahan ledakan kegelapan dengan Aruna Core, menyegel Febri sementara dan menghilang bersama cahaya.",
-      "Bayangan pendulum kalung menarikmu ke pusat kota yang kini hanya tersisa kastil hitam. Langkahmu otomatis menuju gerbangnya."
+      "Kilas balik berlanjut. Zabx menciptakan kastil hitam di Kampar untuk melawan segel.",
+      "Para magi memancingnya masuk sebelum mengunci pintu antara dunia.",
+      "Kau memohon agar pedangmu disembunyikan sampai kau siap menebus kegagalan.",
+      "Kilatan cahaya menarikmu kembali ke masa kini, tepat di depan gerbang kastil Zabx."
     ],
     "choices": [
       {
-        "label": "Menuju kastil Febri",
+        "label": "Menuju kastil Zabx",
         "next_scene": "CH4_CASTLE_APPROACH"
       }
     ]
   },
   "CH4_CASTLE_APPROACH": {
     "text": [
-      "Kastil hitam menjulang di tengah Kampar, seolah mencakar langit. Pintu gerbangnya terbuka seperti undangan.",
-      "",
-      "Umar:\n\"Di sanalah semuanya akan berakhir.\"",
-      "",
-      "Reza:\n\"Atau dimulai lagi dari awal.\""
+      "Kastil Zabx menjulang, seolah menghirup cahaya dari seluruh Kampar.",
+      "Umar: \"Di sinilah sejarahmu berhenti... dan dimulai lagi.\"",
+      "Reza: \"Jangan biarkan penyesalan menguasai langkahmu.\""
     ],
     "choices": [
       {
-        "label": "Masuk ke Kastil Febri",
+        "label": "Masuk ke Kastil Zabx",
         "next_scene": "CH5_CASTLE_ENTRY"
       }
     ]
   },
   "CH5_CASTLE_ENTRY": {
     "text": [
-      "Lantai 1 – Koridor Bayangan. Dinding hidup dan bayangan merayap mengikuti langkahmu, setiap langkah seperti menguras stamina.",
-      "",
-      "Umar:\n\"Monster di sini jauh lebih kuat dari luar.\"",
-      "",
-      "Reza:\n\"Ini baru pintu depan. Jangan lengah. Jalan kembali tidak ada.\""
+      "Lantai 1 – Koridor bayangan berisi patung ksatria yang meleleh.",
+      "Aura Zabx membuat langkah terasa berat.",
+      "Umar: \"Kutukan ini ingin membuat kita lupa tujuan.\"",
+      "Reza: \"Jangan berhenti. Gerbang berikutnya akan menguji tekadmu.\""
     ],
     "choices": [
       {
@@ -616,11 +518,9 @@
   },
   "CH5_FLOOR2": {
     "text": [
-      "Lantai 2 – Balai Kekosongan. Hound of Void menatap dengan mata ungu menyala dan taring meneteskan kabut hitam.",
-      "",
-      "Umar:\n\"Aura kegelapannya membuat napasku sesak!\"",
-      "",
-      "Reza:\n\"Ini penjaga pertama Abyss. Jangan biarkan dia memisahkan kita.\""
+      "Lantai 2 – Balai Kehampaan dijaga Hound of Void berbalut api hitam.",
+      "Umar: \"Elemen apinya akan melahap siapa pun yang lambat.\"",
+      "Reza: \"Gunakan elemen yang tepat. Air atau cahaya bisa mematahkan pertahanannya.\""
     ],
     "choices": [
       {
@@ -631,11 +531,10 @@
   },
   "CH5_FLOOR2_AFTER": {
     "text": [
-      "Hound of Void runtuh. Cakar terakhirnya hampir merobek Umar, tapi Aruna Core memancarkan cahaya dan menyembuhkannya.",
-      "",
-      "Umar:\n\"Aku... tidak boleh mati di sini. Aku masih punya janji pada ibuku...\"",
-      "",
-      "Sistem:\n\"Aruna Core bereaksi! Umar dipulihkan oleh Cahaya Aruna.\""
+      "Hound runtuh, tapi sebelum mati ia menyayat dada Umar.",
+      "Sigilmu bergetar, memulihkan Umar dengan kilatan kutukan yang berbalik arah.",
+      "Umar: \"Kutukanmu... bisa menyembuhkan?\"",
+      "{PLAYER_NAME}: \"Jika aku bisa mencegah kematian lagi, aku akan melakukannya.\""
     ],
     "choices": [
       {
@@ -646,11 +545,9 @@
   },
   "CH5_FLOOR3": {
     "text": [
-      "Ruang segel lama dipenuhi rune retak. Di tengahnya hanya tersisa jubah tua dan lingkaran rune yang patah.",
-      "",
-      "Reza:\n\"...Ini jubah guruku. Febri... kau bahkan memakan jiwanya.\"",
-      "",
-      "Reza menatap Aruna:\n\"Mulai sekarang, aku bersumpah melindungimu sampai akhir.\""
+      "Ruang segel lama dipenuhi rune pecah dan sisa pakaian para magi kerajaan.",
+      "Reza memungut jubah tuanya.",
+      "Reza: \"Guru-guru kita mengorbankan segalanya di ruangan ini. Jangan buat sia-sia.\""
     ],
     "choices": [
       {
@@ -661,9 +558,9 @@
   },
   "CH5_FLOOR4": {
     "text": [
-      "Void Sentinel, armor besar tanpa tubuh, melayang di depan gerbang terakhir.",
-      "",
-      "Febri (suara bergema):\n\"Kalian benar-benar datang sejauh ini hanya untuk mati di hadapanku?\""
+      "Void Sentinel melayang di depan gerbang akhir.",
+      "Zabx (suara): \"Ksatria gagal... apakah kau datang untuk menontonku bebas?\"",
+      "{PLAYER_NAME}: \"Aku datang untuk menutup luka yang kau buka.\""
     ],
     "choices": [
       {
@@ -674,9 +571,8 @@
   },
   "CH5_FLOOR4_AFTER": {
     "text": [
-      "Sentinel runtuh. Energi gelap berputar membuka jalan menuju tahta.",
-      "",
-      "Umar:\n\"Itu dia... akhir segala mimpi buruk.\""
+      "Armor sentinel pecah, menyisakan jalan ke tahta.",
+      "Energi gelap berputar seperti badai menunggu di atas."
     ],
     "choices": [
       {
@@ -687,17 +583,12 @@
   },
   "CH5_FLOOR5": {
     "text": [
-      "Tahta Kegelapan – Febri berdiri dengan tubuh setengah manusia setengah iblis.",
-      "",
-      "Febri:\n\"Harsan... kau akhirnya datang kembali?\"",
-      "",
-      "Aruna:\n\"Aku bukan ayahku. Aku Aruna, putra Harsan. Dan aku akan mengakhiri ini!\"",
-      "",
-      "Febri tertawa:\n\"Hahaha... jadi anak kecil itu masih hidup. Ayahmu mengorbankan segalanya demi kamu. Seharusnya kaulah yang mati saat itu!\"",
-      "",
-      "Febri:\n\"Aku hanya ingin memutar waktu dan menyelamatkannya... tapi Harsan dan guruku menutup jalannya, memaksaku merengkuh Abyss!\"",
-      "",
-      "Detak Aruna Core mengingatkanmu pada luka Umar dan Reza; menyembuhkan mereka mungkin kunci akhir yang berbeda."
+      "Tahta Kegelapan – Almighty Zabx duduk sambil terbelenggu rune retak.",
+      "Zabx: \"Wajah itu... ksatria yang gagal menyelamatkan putri kecilnya.\"",
+      "{PLAYER_NAME}: \"Kutukanmu tidak akan mengikat dunia lagi.\"",
+      "Zabx: \"Kutukanku membuatmu abadi, jadi kau bisa menyaksikan dunia runtuh lagi dan lagi.\"",
+      "Zabx: \"Serahkan pedangmu, biar aku gunakan untuk memecah segel terakhir.\"",
+      "Detak sigilmu mengingatkanmu akan Umar dan Reza; kehadiran mereka menentukan cara pertempuran berakhir."
     ],
     "choices": [
       {
@@ -708,11 +599,9 @@
   },
   "CH5_FINAL_WIN": {
     "text": [
-      "Febri jatuh berlutut. Aura Abyss goyah.",
-      "",
-      "Febri:\n\"Harsan... maafkan aku...\"",
-      "",
-      "Aruna memegang Aruna Core yang menyala hebat. Saatnya menentukan akhir perang ini."
+      "Zabx jatuh berlutut, rantai rune menahan tubuhnya.",
+      "Zabx: \"Mengapa kau masih berjuang? Kau sudah kehilangan segalanya.\"",
+      "{PLAYER_NAME} menatap sigil yang menyala—waktunya menentukan akhir perang ini."
     ],
     "choices": [
       {
@@ -723,23 +612,24 @@
   },
   "RESOLVE_ENDING": {
     "text": [
-      "Aruna Core bergetar di tanganmu, mengingatkanmu pada sumpah Harsan untuk melindungi dunia tanpa kebencian.",
-      "Jika Warisan Safiya dan Suara dari Segel telah tuntas, niat Umar dan Reza beresonansi, membuka celah bagi Febri menemukan kembali kemanusiaannya.",
-      "Jika belum, cahaya hanya mampu menghancurkan iblis yang lahir dari keputusasaannya."
+      "Sigilmu bergetar, mengingatkan pada janji Umar dan Reza.",
+      "Jika Warisan Safiya dan Warisan Sang Guru telah terpenuhi, empati mereka menembus kutukan Zabx.",
+      "Jika belum, satu-satunya pilihan adalah menebasnya dan menerima akhir pahit."
     ],
     "choices": [
       {
-        "label": "Biarkan Aruna Core memilih jalannya",
+        "label": "Biarkan sigil keabadian memilih jalannya",
         "callback_data": "TRUE_ENDING_TRIGGER"
       }
     ]
   },
   "GOOD_ENDING": {
     "text": [
-      "Cahaya Aruna Core menghancurkan Febri yang sudah menjadi iblis sepenuhnya. Ia lenyap tanpa kata maaf.",
-      "Kampar perlahan pulih, tapi luka Abyss masih menganga. Aura gelap di sudut-sudut kota menunggu waktu untuk sembuh.",
-      "Aruna kembali ke Selatpanjang sebagai Penjaga Cahaya baru. Umar membuka klinik besar di Siak, Reza memimpin akademi sihir Rengat.",
-      "Namun jauh di dalam hati, kau tahu ada cara yang lebih damai... jika saja luka lama bisa disembuhkan."
+      "Kau menebas Zabx dengan seluruh kekuatan pedang warisan.",
+      "Segel menutup kembali, tetapi energi kebencian masih bergema.",
+      "Kampar stabil sementara, namun luka dunia belum sembuh.",
+      "{PLAYER_NAME} kembali mengembara sebagai penjaga sunyi, Umar membuka rumah penyembuhan, Reza memimpin akademi segel.",
+      "Namun kau tahu masih ada cara yang lebih damai jika luka lama disembuhkan."
     ],
     "choices": [
       {
@@ -750,14 +640,11 @@
   },
   "TRUE_ENDING": {
     "text": [
-      "Aruna menggunakan Aruna Core bukan untuk membunuh, tapi untuk menyegel Febri tanpa kebencian.",
-      "",
-      "Febri kembali manusia sejenak:\n\"Harsan... Aruna... maafkan aku...\"",
-      "",
-      "Aruna:\n\"Ayahku tidak ingin kau mati. Dia ingin kau berhenti tenggelam dalam kebencian.\"",
-      "",
-      "Segel cahaya menenangkan Abyss. Kampar pulih sepenuhnya; kastil hitam runtuh menjadi serpihan cahaya.",
-      "Umar dan Reza menutup penyesalan masa lalu, dan dunia memiliki Penjaga Cahaya yang memilih belas kasih."
+      "Alih-alih menghabisi, kau menggunakan sigil kutukan untuk menyalurkan penyesalanmu sendiri.",
+      "Zabx merasakan rasa bersalahmu dan berhenti mengamuk.",
+      "{PLAYER_NAME}: \"Kutukanmu berakhir ketika kita berhenti saling membenci.\"",
+      "Segel cahaya memulihkan Kampar, kastil hitam runtuh menjadi partikel bercahaya.",
+      "Umar dan Reza menutup penyesalan masa lalu, dan dunia menyebutmu 'Ksatria Abadi yang memutus rantai kebencian'."
     ],
     "choices": [
       {
@@ -768,9 +655,9 @@
   },
   "BAD_ENDING": {
     "text": [
-      "Teriakan Aruna tenggelam dalam tawa Febri. Kampar tidak lagi sekadar kota terkutuk—ia menjadi pusat kegelapan yang menelan dunia.",
-      "Kegelapan menyebar. Siak, Rengat, Pekanbaru tumbang satu per satu. Umar dan Reza gugur, Aruna Core hancur.",
-      "Febri menjadi dewa Abyss, dan hanya kenangan tentang cahaya yang tersisa di dunia yang runtuh."
+      "Zabx meledakkan segel dengan tawa kejam. Kampar menjadi pusat kegelapan baru.",
+      "Gelombang iblis menyapu Siak, Rengat, dan Pekanbaru; Umar dan Reza gugur satu per satu.",
+      "Kutukan abadi memaksa {PLAYER_NAME} menyaksikan dunia runtuh lagi tanpa bisa menghentikannya."
     ],
     "choices": [
       {
@@ -781,11 +668,9 @@
   },
   "SQ_UMAR_INTRO": {
     "text": [
-      "Begitu Umar bergabung, rumor baru terdengar di Siak.",
-      "",
-      "NPC:\n\"Kau anak Safiya, bukan? Ada keluarga di ujung kota yang masih menyalahkannya atas kematian anak mereka.\"",
-      "",
-      "Umar menunduk sejenak, menggenggam tongkat warisan Safiya."
+      "Setelah Umar bergabung, desas-desus muncul di Siak.",
+      "NPC: \"Keluarga di ujung kota masih menyalahkan Safiya, ibumu, atas kematian anak mereka.\"",
+      "Umar menggenggam tas obat warisan keluarganya."
     ],
     "choices": [
       {
@@ -796,15 +681,9 @@
   },
   "SQ_UMAR_FAMILY": {
     "text": [
-      "Rumah panggung di ujung kota terasa dingin. Tatapan keluarga itu menusuk.",
-      "",
-      "Orang Tua:\n\"Safiya... mereka memujanya sebagai penyembuh hebat. Tapi anak kami mati di tangannya.\"",
-      "",
-      "Orang Tua:\n\"Sekarang kau datang membawa namanya?\"",
-      "",
-      "Umar:\n\"Ibu tidak pernah memilih siapa yang diselamatkan. Ia hanya punya satu tubuh, satu jiwa...\"",
-      "",
-      "Umar:\n\"Jika seseorang mati di pelukannya, itu bukan karena ia tidak peduli. Tapi karena dunia terlalu kejam.\""
+      "Rumah panggung di ujung kota penuh tatapan marah.",
+      "Orang Tua: \"Safiya menjanjikan keselamatan tapi anak kami tetap mati.\"",
+      "Umar: \"Ibu menahan luka sampai akhir. Aku datang bukan untuk membela diri, tapi untuk menebus utang.\""
     ],
     "choices": [
       {
@@ -815,13 +694,10 @@
   },
   "SQ_UMAR_CHILD": {
     "text": [
-      "Dari balik pintu terdengar batuk kecil. Ada anak lain yang terbaring pucat.",
-      "",
-      "Orang Tua:\n\"Kami sudah lama takut... Anak kami yang tersisa kini demam aneh.\"",
-      "",
-      "Umar:\n\"Biarkan aku mencoba menolong. Kalau aku gagal, kebencian itu cukup padaku.\"",
-      "",
-      "Untuk meracik obat, Umar butuh herb langka di rawa Siak. Kabarnya, rawa itu kini dikuasai monster yang melindungi tanaman suci."
+      "Dari balik pintu terdengar batuk lemah anak kecil lain.",
+      "Orang Tua: \"Anak kami yang tersisa terjangkit demam yang sama.\"",
+      "Umar: \"Berikan aku kesempatan. Jika gagal, benci aku, bukan ibuku.\"",
+      "Untuk ramuan, Umar butuh herb langka di rawa Siak yang dijaga monster."
     ],
     "choices": [
       {
@@ -832,9 +708,9 @@
   },
   "SQ_UMAR_MINIDUNGEON": {
     "text": [
-      "Rawa berkabut di pinggir Siak terasa berat. Cahaya samar dari herb suci terhalang akar hitam dan monster yang berpatroli.",
-      "",
-      "Umar:\n\"Ibu, bimbing aku. Aku harus membuka jalan pengobatan ini.\""
+      "Rawa berkabut memantulkan cahaya hijau dari herb suci.",
+      "Monster berlapis lumpur melindungi tanaman itu.",
+      "Umar: \"Safiya, bimbing aku melewati ketakutan ini.\""
     ],
     "choices": [
       {
@@ -845,17 +721,10 @@
   },
   "SQ_UMAR_HEAL": {
     "text": [
-      "Herb suci berubah menjadi ramuan hangat di tangan Umar. Cahaya lembut menyelimuti anak yang sakit.",
-      "",
-      "Umar:\n\"Ibu selalu bilang, 'Kalau bisa menyelamatkan satu nyawa lagi, lakukan.' Ini warisan yang ingin kubawa.\"",
-      "",
-      "Orang Tua terisak melihat napas anaknya stabil.",
-      "",
-      "Orang Tua:\n\"Kalau kau benar-benar anak Safiya... kau baru saja membuktikan bahwa hatinya hidup di dalam dirimu.\"",
-      "",
-      "Orang Tua:\n\"Maafkan kami... sudah membenci orang yang hanya ingin menolong.\"",
-      "",
-      "Umar:\n\"Ibu akan senang mendengar kalian memaafkannya. Meski... ia sudah tidak di sini lagi.\""
+      "Ramuan hangat menyelubungi tubuh anak yang demam.",
+      "Napasnya kembali teratur.",
+      "Orang Tua: \"Safiya... maafkan kami sudah membencimu.\"",
+      "Umar: \"Yang kalian butuhkan hanyalah harapan baru. Itulah warisan keluargaku.\""
     ],
     "choices": [
       {
@@ -866,11 +735,9 @@
   },
   "SQ_UMAR_REWARD": {
     "text": [
-      "Umar menatap langit Siak, membayangkan Safiya tersenyum.",
-      "",
-      "Umar:\n\"Warisan Safiya bukan hanya ramuan—ini keberanian menolong meski disalahpahami.\"",
-      "",
-      "(Umar mempelajari ultimate: Grace Safiya.)"
+      "Umar memandang langit Siak.",
+      "Umar: \"Aku akan melindungi siapa pun yang percaya pada penyembuhan, sama seperti ibu.\"",
+      "(Umar mempelajari ultimate: Anugerah Safiya.)"
     ],
     "choices": [
       {
@@ -881,11 +748,9 @@
   },
   "SQ_REZA_INTRO": {
     "text": [
-      "Seorang NPC tua di Rengat menepuk bahu Reza dengan gugup.",
-      "",
-      "NPC Tua:\n\"Kadang... di malam hari, aku mendengar suara dari hutan. Pelan, memanggil nama 'Reza'...\"",
-      "",
-      "Reza menatap hutan gelap yang membatasi kota, rahangnya mengeras."
+      "Di Rengat, seorang tetua menghampiri Reza.",
+      "Tetua: \"Hutan utara memanggil namamu dengan suara yang sama seperti guru-gurumu.\"",
+      "Reza menegang, mendengar gemuruh energi segel."
     ],
     "choices": [
       {
@@ -896,9 +761,8 @@
   },
   "SQ_REZA_FOREST": {
     "text": [
-      "Hutan magis di pinggir Rengat terasa lebih sunyi dari biasanya. Rune bekas segel retak berpendar lemah.",
-      "",
-      "Reza:\n\"Ada gema sihir yang tertahan. Febri meninggalkan luka bahkan di sini.\""
+      "Hutan magis terasa kosong namun dipenuhi rune retak.",
+      "Reza: \"Energi Zabx merembes sampai sini.\""
     ],
     "choices": [
       {
@@ -909,11 +773,9 @@
   },
   "SQ_REZA_SEAL": {
     "text": [
-      "Di tengah hutan, ada segel patah yang menggaungkan suara samar.",
-      "",
-      "Suara Guru:\n\"Reza... kau masih hidup.\"",
-      "",
-      "Reza:\n\"Guru...? Di mana Anda? Febri mengambil semuanya dariku... bahkan Anda.\""
+      "Di tengah hutan terdapat segel patah yang menyalakan gema suara.",
+      "Suara Guru: \"Reza... apakah kau mengejar kebencian?\"",
+      "Reza: \"Aku mengejar kebenaran agar Zabx tidak membunuh siapa pun lagi.\""
     ],
     "choices": [
       {
@@ -924,13 +786,9 @@
   },
   "SQ_REZA_MASTER": {
     "text": [
-      "Suara Guru:\n\"Aku tidak butuh balas dendam. Aku hanya ingin kau tidak menghancurkan dirimu sendiri.\"",
-      "",
-      "Suara Guru:\n\"Jaga Aruna. Jaga cahaya yang ia bawa. Harsan mempercayakan dunia padanya... dan padamu.\"",
-      "",
-      "Reza:\n\"Aku ingin membenci Febri. Aku ingin melihatnya hancur. Tapi kalau aku hanya hidup untuk kebencian... apa bedanya aku dengan dia?\"",
-      "",
-      "Suara Guru:\n\"Kebencianmu tidak akan mengembalikanku. Tapi pilihanmu bisa menyelamatkan mereka yang masih hidup.\""
+      "Suara Guru: \"Balas dendam hanya akan menjadikanmu cermin Zabx.\"",
+      "Suara Guru: \"Lindungi ksatria abadi itu. Dia membawa harapan yang kita korbankan.\"",
+      "Reza menunduk: \"Aku akan memilih perlindungan, bukan kebencian.\""
     ],
     "choices": [
       {
@@ -941,10 +799,8 @@
   },
   "SQ_REZA_RESOLVE": {
     "text": [
-      "Segel patah itu perlahan luruh setelah pertempuran, meninggalkan ketenangan.",
-      "Reza menatap Aruna Core yang berpendar di dadamu, wajahnya melunak.",
-      "",
-      "Reza:\n\"Guruku tidak ingin aku dikendalikan dendam. Aku akan melindungi Aruna sampai akhir, bukan karena benci Febri, tapi karena aku memilih jalan berbeda.\""
+      "Segel menjadi tenang setelah pertempuran.",
+      "Reza menatapmu: \"Aku akan menjaga langkahmu, bukan karena dendam, tapi karena pilihan.\""
     ],
     "choices": [
       {
@@ -955,10 +811,8 @@
   },
   "SQ_REZA_REWARD": {
     "text": [
-      "Cahaya biru lembut menyelimuti party, seperti pelukan guru yang lama hilang.",
-      "",
-      "Reza:\n\"Warisan Sang Guru akan menjaga kita. Aku tidak akan jatuh dalam kebencian lagi.\"",
-      "",
+      "Gelombang sihir biru memeluk party.",
+      "Reza: \"Warisan Sang Guru akan menjadi tembok baru bagi segel Zabx.\"",
       "(Reza mempelajari ultimate: Warisan Sang Guru.)"
     ],
     "choices": [
