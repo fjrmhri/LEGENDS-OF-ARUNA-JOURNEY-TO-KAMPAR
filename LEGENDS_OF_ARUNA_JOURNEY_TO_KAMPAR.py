@@ -2033,6 +2033,13 @@ def living_enemies(state: GameState) -> List[tuple]:
     ]
 
 
+def get_living_enemies(state: GameState) -> List[Dict[str, Any]]:
+    """
+    Mendapatkan list musuh yang masih hidup.
+    """
+    return [enemy for enemy in state.battle_enemies if enemy.get("hp", 0) > 0]
+
+
 def get_first_alive_enemy(state: GameState) -> Optional[tuple]:
     alive = living_enemies(state)
     return alive[0] if alive else None
@@ -2605,6 +2612,31 @@ def create_enemy_from_key(monster_key: str) -> Dict[str, Any]:
         "encounter_weight": base.get("encounter_weight", 1.0),
         "can_escape": base.get("can_escape", False),
     }
+
+
+async def start_fixed_battle(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    state: GameState,
+    monster_key: str,
+):
+    """
+    Mulai battle dengan monster spesifik (untuk tutorial atau story battle spesial).
+    Tidak ada return scene karena akan dihandle oleh end_battle_and_return.
+    """
+    enemy = create_enemy_from_key(monster_key)
+    logger.info(
+        "User %s memulai fixed battle melawan %s", state.user_id, monster_key
+    )
+    state.in_battle = True
+    state.battle_enemies = [enemy]
+    state.battle_turn = "PLAYER"
+    state.return_scene_after_battle = None
+    state.loss_scene_after_battle = None
+    reset_battle_flags(state)
+    state.flags["CURRENT_BATTLE_AREA"] = enemy.get("area")
+    initialize_battle_turn_state(state)
+    await send_battle_state(update, context, state, intro=True)
 
 
 async def start_story_battle(
@@ -3285,21 +3317,49 @@ async def process_battle_action(
     log: List[str] = []
 
     if action_key == "BATTLE_ATTACK":
-        if not enemy_target_buttons(state):
+        living = get_living_enemies(state)
+        if not living:
             if await resolve_battle_outcome(update, context, state, log):
                 return
             await send_battle_state(
                 update, context, state, extra_text="Tidak ada musuh yang tersisa untuk diserang."
             )
             return
-        state.battle_state.pending_action = {
-            "actor_id": active_char_id,
-            "action_kind": "ATTACK",
-            "target_type": "ENEMY",
-            "prompt": "Pilih musuh yang akan diserang:",
-        }
-        await show_pending_target_prompt(update, context, state)
-        return
+
+        # Jika hanya 1 musuh, langsung serang tanpa menu
+        if len(living) == 1:
+            target_idx = state.battle_enemies.index(living[0])
+            target = living[0]
+            damage, hit_weak, hit_resist = calc_physical_damage(
+                character,
+                target.get("defense", 0),
+                power=1.0,
+                element="NETRAL",
+                target_weakness=target.get("weakness"),
+                target_resist=target.get("resist"),
+                target_element=target.get("element"),
+            )
+            damage = apply_mana_shield_absorption(state, active_char_id, damage, log)
+            defending = state.flags.get("DEFENDING", {})
+            if defending.get(active_char_id):
+                damage = max(1, damage // 2)
+                log.append(f"{character.name} menyerang sambil bertahan, damage berkurang.")
+            target["hp"] -= damage
+            log.append(f"{character.name} menyerang {target['name']} → {damage} damage!")
+            if hit_weak:
+                log.append("Mengenai kelemahan musuh!")
+            if hit_resist:
+                log.append("Musuh resisten terhadap serangan ini.")
+        else:
+            # Jika lebih dari 1 musuh, tampilkan menu pemilihan target
+            state.battle_state.pending_action = {
+                "actor_id": active_char_id,
+                "action_kind": "ATTACK",
+                "target_type": "ENEMY",
+                "prompt": "Pilih musuh yang akan diserang:",
+            }
+            await show_pending_target_prompt(update, context, state)
+            return
 
     elif action_key == "BATTLE_DEFEND":
         defend_flags = state.flags.setdefault("DEFENDING", {})
@@ -3398,6 +3458,16 @@ async def process_use_skill(
         return
 
     if target_type:
+        # Untuk skill single-target enemy, cek jumlah musuh hidup
+        if target_type == "ENEMY":
+            living = get_living_enemies(state)
+            if len(living) == 1:
+                # Langsung eksekusi ke musuh tunggal
+                target_idx = state.battle_enemies.index(living[0])
+                await execute_skill_action(update, context, state, user, skill_id, target_enemy_index=target_idx)
+                await conclude_player_turn(update, context, state, [])
+                return
+
         prompt = build_skill_target_prompt(skill, target_type)
         state.battle_state.pending_action = {
             "actor_id": user,
@@ -3810,7 +3880,11 @@ async def handle_story_battle_trigger(
     if set_scene:
         state.scene_id = set_scene
     if route.get("type") == "random":
-        await start_random_battle(update, context, state)
+        # Untuk BATTLE_TUTORIAL_1, gunakan Shadow Slime secara spesifik
+        if battle_key == "BATTLE_TUTORIAL_1":
+            await start_fixed_battle(update, context, state, "SHADOW_SLIME")
+        else:
+            await start_random_battle(update, context, state)
         return True
     enemy = route.get("enemy")
     return_scene = next_scene or route.get("return_scene")
